@@ -1,0 +1,21 @@
+{
+  "created": "2026-07-07 03:27:20",
+  "target_extract_folder": "D:\\git\\apiarylens",
+  "target_repo": "D:\\git\\apiarylens\\apiarylens",
+  "project": "ApiaryLens",
+  "domains": [
+    "apiarylens.org",
+    "apiarylens.com",
+    "apiarylens.app",
+    "apiarylens.dev"
+  ],
+  "included": [
+    "repo-overlay",
+    "prompts",
+    "source-documents",
+    "conversation-transcript",
+    "previous-generated-drafts",
+    "assets/diagrams"
+  ],
+  "notes": "Contains complete visible project conversation available in this chat context, not hidden model reasoning."
+}

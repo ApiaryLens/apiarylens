@@ -1,0 +1,10 @@
+flowchart TD
+    User[Beekeeper / Family / Club / Researcher] --> PWA[ApiaryLens PWA]
+    PWA --> API[Backend API]
+    API --> DB[(PostgreSQL)]
+    API --> Media[(Local or S3-Compatible Media Storage)]
+    API --> Worker[Background Worker]
+    Worker --> Weather[Weather Providers]
+    Worker --> Bloom[Bloom/Forage Data]
+    Worker --> AI[Optional AI Providers]
+    API --> Export[Data Export]

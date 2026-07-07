@@ -1,0 +1,15 @@
+erDiagram
+    Organization ||--o{ Membership : has
+    User ||--o{ Membership : belongs_to
+    Organization ||--o{ Apiary : owns
+    Apiary ||--o{ Hive : contains
+    Hive ||--o{ HiveComponent : has
+    Hive ||--o{ Queen : has_history
+    Hive ||--o{ Inspection : inspected
+    Inspection ||--o{ MediaAsset : includes
+    Inspection ||--o{ MiteCount : records
+    Inspection ||--o{ Treatment : may_include
+    Hive ||--o{ Feeding : receives
+    Hive ||--o{ Harvest : produces
+    Apiary ||--o{ WeatherRecord : has
+    Apiary ||--o{ BloomRecord : has

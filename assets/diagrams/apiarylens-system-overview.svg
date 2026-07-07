@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+<rect width="1200" height="675" fill="#fff8e8"/>
+<text x="60" y="70" font-family="Arial" font-size="42" font-weight="700" fill="#264d36">ApiaryLens System Overview</text>
+<rect x="70" y="140" width="220" height="90" rx="18" fill="#f4c542" stroke="#264d36" stroke-width="4"/><text x="105" y="193" font-family="Arial" font-size="24" fill="#1d1d1d">PWA / Mobile</text>
+<rect x="390" y="140" width="220" height="90" rx="18" fill="#80c7e8" stroke="#264d36" stroke-width="4"/><text x="438" y="193" font-family="Arial" font-size="24" fill="#1d1d1d">Backend API</text>
+<rect x="710" y="110" width="220" height="70" rx="18" fill="#c7e7c2" stroke="#264d36" stroke-width="4"/><text x="754" y="154" font-family="Arial" font-size="22" fill="#1d1d1d">PostgreSQL</text>
+<rect x="710" y="210" width="220" height="70" rx="18" fill="#c7e7c2" stroke="#264d36" stroke-width="4"/><text x="750" y="254" font-family="Arial" font-size="22" fill="#1d1d1d">Media Store</text>
+<rect x="390" y="350" width="220" height="90" rx="18" fill="#e7d0f4" stroke="#264d36" stroke-width="4"/><text x="422" y="403" font-family="Arial" font-size="24" fill="#1d1d1d">Worker Jobs</text>
+<rect x="710" y="340" width="220" height="70" rx="18" fill="#ffd6a5" stroke="#264d36" stroke-width="4"/><text x="762" y="384" font-family="Arial" font-size="22" fill="#1d1d1d">Weather</text>
+<rect x="710" y="440" width="220" height="70" rx="18" fill="#ffd6a5" stroke="#264d36" stroke-width="4"/><text x="780" y="484" font-family="Arial" font-size="22" fill="#1d1d1d">AI</text>
+<line x1="290" y1="185" x2="390" y2="185" stroke="#264d36" stroke-width="5" marker-end="url(#a)"/>
+<line x1="610" y1="185" x2="710" y2="145" stroke="#264d36" stroke-width="5" marker-end="url(#a)"/>
+<line x1="610" y1="185" x2="710" y2="245" stroke="#264d36" stroke-width="5" marker-end="url(#a)"/>
+<line x1="500" y1="230" x2="500" y2="350" stroke="#264d36" stroke-width="5" marker-end="url(#a)"/>
+<line x1="610" y1="395" x2="710" y2="375" stroke="#264d36" stroke-width="5" marker-end="url(#a)"/>
+<line x1="610" y1="395" x2="710" y2="475" stroke="#264d36" stroke-width="5" marker-end="url(#a)"/>
+<defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#264d36"/></marker></defs>
+<text x="70" y="610" font-family="Arial" font-size="26" fill="#264d36">Open-source, self-hosted, offline-first apiary intelligence.</text>
+</svg>
