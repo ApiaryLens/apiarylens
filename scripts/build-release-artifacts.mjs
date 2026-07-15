@@ -20,6 +20,7 @@ const identity = Buffer.from(
       productVersion: version,
       channel: manifest.channel,
       sourceCommit: manifest.sourceCommit,
+      buildTime: manifest.buildTime,
       contracts: manifest.contracts,
     },
     null,

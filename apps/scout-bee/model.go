@@ -68,6 +68,8 @@ type releaseManifest struct {
 	Product        string             `json:"product"`
 	ProductVersion string             `json:"productVersion"`
 	Channel        string             `json:"channel"`
+	SourceCommit   string             `json:"sourceCommit"`
+	BuildTime      string             `json:"buildTime"`
 	Contracts      manifestContracts  `json:"contracts"`
 	Artifacts      []manifestArtifact `json:"artifacts"`
 }

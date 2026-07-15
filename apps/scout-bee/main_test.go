@@ -355,6 +355,25 @@ func TestCloudflareOperatorRequestWaitsForSecretPropagation(t *testing.T) {
 	}
 }
 
+func TestCloudflareHealthRejectsBuildIdentityMismatch(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"status": "ok", "product": "ApiaryLens", "version": "0.1.0-rc.1",
+			"build": map[string]string{
+				"sourceCommit": "wrong", "buildTime": "wrong", "artifactIdentity": "wrong",
+			},
+		})
+	}))
+	defer server.Close()
+	adapter := &cloudflareAdapter{executor: &executor{client: server.Client()}}
+	err := adapter.verifyHealth(context.Background(), server.URL, releaseManifest{
+		ProductVersion: "0.1.0-rc.1", SourceCommit: strings.Repeat("a", 40), BuildTime: "2026-07-15T00:00:00Z",
+	})
+	if err == nil || !strings.Contains(err.Error(), "build identity") {
+		t.Fatalf("expected build identity mismatch, got %v", err)
+	}
+}
+
 func TestCloudflareKeepDataUninstallRetainsRecoverableServiceSecrets(t *testing.T) {
 	p := validPlan()
 	p.Operation = "uninstall"

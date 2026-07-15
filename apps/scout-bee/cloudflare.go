@@ -136,7 +136,7 @@ func (a *cloudflareAdapter) maintain(ctx context.Context, input request, manifes
 		}
 		response.Body.Close()
 		phases = append(phases, pass("Restore records and private media", "The compatible database and private media archive was restored; prior sessions were revoked."))
-		if err = a.verifyHealth(ctx, strings.TrimSuffix(cf.CustomDomain, "/")+"/health", manifest.ProductVersion); err != nil {
+		if err = a.verifyHealth(ctx, strings.TrimSuffix(cf.CustomDomain, "/")+"/health", manifest); err != nil {
 			return append(phases, failed("Verify restored deployment health", err)), err
 		}
 		return append(phases, pass("Verify restored deployment health", "The restored service reports the expected release identity.")), nil
@@ -279,9 +279,14 @@ func (a *cloudflareAdapter) deploy(ctx context.Context, input request, manifest 
 		"compatibility_flags": []string{"nodejs_compat"}, "send_metrics": false,
 		"account_id": cf.AccountReference, "workers_dev": workersDev,
 		"observability": map[string]any{"enabled": false},
-		"d1_databases":  []map[string]string{{"binding": "DB", "database_name": cf.D1DatabaseName, "database_id": databaseID, "migrations_dir": "worker/migrations"}},
-		"r2_buckets":    []map[string]string{{"binding": "MEDIA", "bucket_name": cf.R2BucketName}},
-		"assets":        map[string]any{"directory": "web", "binding": "ASSETS", "not_found_handling": "single-page-application", "run_worker_first": []string{"/api/*", "/health"}},
+		"vars": map[string]string{
+			"APIARYLENS_SOURCE_COMMIT":     manifest.SourceCommit,
+			"APIARYLENS_BUILD_TIME":        manifest.BuildTime,
+			"APIARYLENS_ARTIFACT_IDENTITY": "ApiaryLens@" + manifest.ProductVersion + "+" + shortCommit(manifest.SourceCommit),
+		},
+		"d1_databases": []map[string]string{{"binding": "DB", "database_name": cf.D1DatabaseName, "database_id": databaseID, "migrations_dir": "worker/migrations"}},
+		"r2_buckets":   []map[string]string{{"binding": "MEDIA", "bucket_name": cf.R2BucketName}},
+		"assets":       map[string]any{"directory": "web", "binding": "ASSETS", "not_found_handling": "single-page-application", "run_worker_first": []string{"/api/*", "/health"}},
 	}
 	if cf.CustomDomain != "" && !workersDev {
 		parsed, _ := url.Parse(cf.CustomDomain)
@@ -334,7 +339,7 @@ func (a *cloudflareAdapter) deploy(ctx context.Context, input request, manifest 
 	if address == "" {
 		return append(phases, failed("Verify deployment health", errors.New("Wrangler did not report a deployment address"))), errors.New("deployment address was not reported")
 	}
-	if err = a.verifyHealth(ctx, strings.TrimSuffix(address, "/")+"/health", manifest.ProductVersion); err != nil {
+	if err = a.verifyHealth(ctx, strings.TrimSuffix(address, "/")+"/health", manifest); err != nil {
 		return append(phases, failed("Verify deployment health", err)), err
 	}
 	phases = append(phases, pass("Verify deployment health", "The deployed service reports the expected product and release version."))
@@ -431,7 +436,7 @@ func (a *cloudflareAdapter) ensureR2(ctx context.Context, name string, environme
 	return err
 }
 
-func (a *cloudflareAdapter) verifyHealth(ctx context.Context, address, version string) error {
+func (a *cloudflareAdapter) verifyHealth(ctx context.Context, address string, manifest releaseManifest) error {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, address, nil)
 	if err != nil {
 		return err
@@ -444,14 +449,29 @@ func (a *cloudflareAdapter) verifyHealth(ctx context.Context, address, version s
 	if response.StatusCode != http.StatusOK {
 		return fmt.Errorf("health endpoint returned HTTP %d", response.StatusCode)
 	}
-	var result struct{ Status, Product, Version string }
+	var result struct {
+		Status, Product, Version string
+		Build                    struct {
+			SourceCommit, BuildTime, ArtifactIdentity string
+		}
+	}
 	if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
 		return err
 	}
-	if result.Status != "ok" || result.Product != "ApiaryLens" || result.Version != version {
+	if result.Status != "ok" || result.Product != "ApiaryLens" || result.Version != manifest.ProductVersion {
 		return errors.New("health identity does not match the requested release")
 	}
+	if manifest.SourceCommit != "" && (result.Build.SourceCommit != manifest.SourceCommit || result.Build.BuildTime != manifest.BuildTime || result.Build.ArtifactIdentity != "ApiaryLens@"+manifest.ProductVersion+"+"+shortCommit(manifest.SourceCommit)) {
+		return errors.New("health build identity does not match the release manifest")
+	}
 	return nil
+}
+
+func shortCommit(value string) string {
+	if len(value) <= 7 {
+		return value
+	}
+	return value[:7]
 }
 
 var httpsURLPattern = regexp.MustCompile(`https://[^\s]+`)

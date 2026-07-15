@@ -120,6 +120,9 @@ func (a *composeAdapter) apply(ctx context.Context, input request, manifest rele
 		strconv.FormatBool(input.Plan.KeepDataOnUninstall),
 		base64.RawURLEncoding.EncodeToString([]byte(remoteBootstrap)),
 		base64.RawURLEncoding.EncodeToString([]byte(remoteAuthRoot)),
+		base64.RawURLEncoding.EncodeToString([]byte(manifest.SourceCommit)),
+		base64.RawURLEncoding.EncodeToString([]byte(manifest.BuildTime)),
+		base64.RawURLEncoding.EncodeToString([]byte("ApiaryLens@"+manifest.ProductVersion+"+"+shortCommit(manifest.SourceCommit))),
 	)
 	output, err := a.executor.runner.Run(ctx, command{Executable: "ssh", Args: args, Stdin: []byte(composeRemoteScript)}, input.Secrets)
 	if err != nil {
@@ -127,7 +130,7 @@ func (a *composeAdapter) apply(ctx context.Context, input request, manifest rele
 	}
 	phases = append(phases, pass("Apply remote Compose operation", strings.TrimSpace(output)))
 	if input.Plan.Operation == "install" || input.Plan.Operation == "update" {
-		if err = (&cloudflareAdapter{executor: a.executor}).verifyHealth(ctx, strings.TrimSuffix(compose.PublicURL, "/")+"/health", manifest.ProductVersion); err != nil {
+		if err = (&cloudflareAdapter{executor: a.executor}).verifyHealth(ctx, strings.TrimSuffix(compose.PublicURL, "/")+"/health", manifest); err != nil {
 			return append(phases, failed("Verify public HTTPS health", err)), err
 		}
 		phases = append(phases, pass("Verify public HTTPS health", "The remote deployment reports the expected ApiaryLens release over HTTPS."))
@@ -214,6 +217,9 @@ bundle=$(decode "$6")
 keep_data=$7
 bootstrap_file=$(decode "$8")
 auth_root_file=$(decode "$9")
+source_commit=$(decode "${10}")
+build_time=$(decode "${11}")
+artifact_identity=$(decode "${12}")
 release_dir="$target/releases/$version"
 current="$target/current"
 backups="$target/backups"
@@ -258,7 +264,7 @@ case "$operation" in
       chmod 600 "$secrets_dir/bootstrap-token"
       chmod 600 "$secrets_dir/auth-root"
     fi
-    printf 'APIARYLENS_VERSION=%s\nAPIARYLENS_SITE_ADDRESS=%s\nAPIARYLENS_BOOTSTRAP_SECRET_FILE=%s\nAPIARYLENS_AUTH_ROOT_SECRET_FILE=%s\n' "$version" "${public_url#https://}" "$secrets_dir/bootstrap-token" "$secrets_dir/auth-root" > "$release_dir/docker/.env"
+    printf 'APIARYLENS_VERSION=%s\nAPIARYLENS_SITE_ADDRESS=%s\nAPIARYLENS_BOOTSTRAP_SECRET_FILE=%s\nAPIARYLENS_AUTH_ROOT_SECRET_FILE=%s\nAPIARYLENS_SOURCE_COMMIT=%s\nAPIARYLENS_BUILD_TIME=%s\nAPIARYLENS_ARTIFACT_IDENTITY=%s\n' "$version" "${public_url#https://}" "$secrets_dir/bootstrap-token" "$secrets_dir/auth-root" "$source_commit" "$build_time" "$artifact_identity" > "$release_dir/docker/.env"
     chmod 600 "$release_dir/docker/.env"
     ln -sfn "$release_dir" "$current.next"
     if ! docker compose -p "$project" --env-file "$release_dir/docker/.env" -f "$release_dir/docker/compose.yaml" up -d --build --wait; then
