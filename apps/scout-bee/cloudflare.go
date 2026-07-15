@@ -19,7 +19,11 @@ import (
 	"time"
 )
 
-type cloudflareAdapter struct{ executor *executor }
+type cloudflareAdapter struct {
+	executor         *executor
+	healthAttempts   int
+	healthRetryDelay time.Duration
+}
 
 func (a *cloudflareAdapter) preflight(ctx context.Context, input request) ([]phase, error) {
 	if err := a.executor.runner.Find("wrangler"); err != nil {
@@ -437,6 +441,32 @@ func (a *cloudflareAdapter) ensureR2(ctx context.Context, name string, environme
 }
 
 func (a *cloudflareAdapter) verifyHealth(ctx context.Context, address string, manifest releaseManifest) error {
+	attempts := a.healthAttempts
+	if attempts <= 0 {
+		attempts = 120
+	}
+	delay := a.healthRetryDelay
+	if delay <= 0 {
+		delay = 500 * time.Millisecond
+	}
+	var lastErr error
+	for attempt := 0; attempt < attempts; attempt++ {
+		if lastErr = a.checkHealth(ctx, address, manifest); lastErr == nil {
+			return nil
+		}
+		if attempt == attempts-1 {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+		}
+	}
+	return fmt.Errorf("deployment health did not converge: %w", lastErr)
+}
+
+func (a *cloudflareAdapter) checkHealth(ctx context.Context, address string, manifest releaseManifest) error {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, address, nil)
 	if err != nil {
 		return err

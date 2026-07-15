@@ -365,12 +365,43 @@ func TestCloudflareHealthRejectsBuildIdentityMismatch(t *testing.T) {
 		})
 	}))
 	defer server.Close()
-	adapter := &cloudflareAdapter{executor: &executor{client: server.Client()}}
+	adapter := &cloudflareAdapter{executor: &executor{client: server.Client()}, healthAttempts: 1}
 	err := adapter.verifyHealth(context.Background(), server.URL, releaseManifest{
 		ProductVersion: "0.1.0-rc.1", SourceCommit: strings.Repeat("a", 40), BuildTime: "2026-07-15T00:00:00Z",
 	})
 	if err == nil || !strings.Contains(err.Error(), "build identity") {
 		t.Fatalf("expected build identity mismatch, got %v", err)
+	}
+}
+
+func TestCloudflareHealthWaitsForExactBuildIdentityPropagation(t *testing.T) {
+	attempts := 0
+	expectedCommit := strings.Repeat("a", 40)
+	expectedBuildTime := "2026-07-15T00:00:00Z"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		attempts++
+		commit, buildTime, identity := "predecessor", "earlier", "ApiaryLens@0.1.0-rc.1+earlier"
+		if attempts > 1 {
+			commit, buildTime, identity = expectedCommit, expectedBuildTime, "ApiaryLens@0.1.0-rc.1+aaaaaaa"
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"status": "ok", "product": "ApiaryLens", "version": "0.1.0-rc.1",
+			"build": map[string]string{
+				"sourceCommit": commit, "buildTime": buildTime, "artifactIdentity": identity,
+			},
+		})
+	}))
+	defer server.Close()
+	adapter := &cloudflareAdapter{
+		executor: &executor{client: server.Client()}, healthAttempts: 2, healthRetryDelay: time.Millisecond,
+	}
+	if err := adapter.verifyHealth(context.Background(), server.URL, releaseManifest{
+		ProductVersion: "0.1.0-rc.1", SourceCommit: expectedCommit, BuildTime: expectedBuildTime,
+	}); err != nil {
+		t.Fatalf("expected health identity to converge: %v", err)
+	}
+	if attempts != 2 {
+		t.Fatalf("expected two health attempts, got %d", attempts)
 	}
 }
 
