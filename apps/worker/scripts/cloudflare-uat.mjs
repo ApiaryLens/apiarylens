@@ -644,7 +644,6 @@ const exported = Buffer.from(
 const exportFiles = unzipSync(exported);
 for (const name of [
   'manifest.json',
-  'database/bootstrap_claims.json',
   'data.json',
   'csv/apiary.csv',
   'csv/hive.csv',
@@ -676,6 +675,7 @@ const backup = Buffer.from(
 const backupFiles = unzipSync(backup);
 for (const name of [
   'manifest.json',
+  'database/bootstrap_claims.json',
   'database/organizations.json',
   'database/users.json',
   'database/memberships.json',
