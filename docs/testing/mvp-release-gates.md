@@ -41,8 +41,9 @@
 - [ ] Hyper-V and isolated Cloudflare UAT targets pass Scout Bee preflight.
 - [x] The isolated Cloudflare family service passes protected bootstrap, roles, all
       P0 resource types, private media, sync, conflict/idempotency, negative viewer
-      authorization, portable export, destructive restore, session revocation, and
-      record/media recovery at runtime revision `d0f4320`.
+      authorization, portable export, destructive restore, session rotation and
+      revocation, atomic bootstrap claiming, and record/media recovery at migration
+      `0004` and runtime revision `037d548`.
 
 ## Deploy
 
@@ -64,13 +65,16 @@
 
 ## Isolated Cloudflare Evidence
 
-The automated Cloudflare journey is recorded in
-[`cloudflare-uat-evidence-2026-07-15.json`](cloudflare-uat-evidence-2026-07-15.json).
-After the passing restore, the target remained healthy at migration `0003`, bootstrap
-was closed, both temporary deployment secrets were removed, and the restored database
-contained three users, one organization, three memberships, and 13 P0 resources. This
-evidence advances the Cloudflare data-path gate but does not satisfy the remaining
-combined Cloudflare-plus-Compose or physical-device gates.
+The current automated Cloudflare journey is recorded in
+[`cloudflare-uat-evidence-2026-07-15-v2.json`](cloudflare-uat-evidence-2026-07-15-v2.json),
+with the earlier migration-0003 run retained as historical evidence. After the passing
+restore, the target remained healthy at migration `0004`, bootstrap was closed, both
+temporary deployment secrets were removed, and only the durable authentication-root
+secret remained configured. The restored database contained three users, one
+organization, three memberships, 13 P0 resources, one session, and one atomic
+bootstrap claim; private R2 held the recovered original and thumbnail. This evidence
+advances the Cloudflare data-path gate but does not satisfy the remaining combined
+Cloudflare-plus-Compose or physical-device gates.
 
 ## Rollback Triggers
 

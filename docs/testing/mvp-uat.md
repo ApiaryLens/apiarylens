@@ -57,13 +57,16 @@ not satisfy it.
 | 2026-07-15 | Release CDN | Three release downloads | Pass | Remote byte counts and SHA-256 equal manifest | Cloudflare, Compose, Scout Bee Windows |
 | 2026-07-15 | Hyper-V host | VM discovery | Blocked | `Get-VM` authorization failure | Requires elevated Hyper-V access or approved SSH target |
 | 2026-07-15 | Isolated Cloudflare family UAT | Protected bootstrap through destructive restore | Pass | [`cloudflare-uat-evidence-2026-07-15.json`](cloudflare-uat-evidence-2026-07-15.json) | Runtime `d0f4320`; 10 automated checks passed; temporary bootstrap and operator secrets removed after the run |
+| 2026-07-15 | Isolated Cloudflare family UAT | Migration 0004 identity hardening through destructive restore | Pass | [`cloudflare-uat-evidence-2026-07-15-v2.json`](cloudflare-uat-evidence-2026-07-15-v2.json) | Runtime `037d548`; 11 automated checks passed, including opaque session rotation; temporary bootstrap and operator secrets removed while the durable authentication root was retained |
 
-The isolated Cloudflare run additionally exercised invitations with three independent
-sessions, all 13 P0 resource types, original and thumbnail media, sync pull/push,
-follow-up completion, idempotent replay, a stale-version conflict, and session
-revocation after restore. Those results do not check the physical-device, offline PWA,
-Scout Bee deployment, Compose, update/rollback, accessibility, or uninstall steps
-whose wording requires separate evidence.
+The current isolated Cloudflare run additionally exercised invitations with three
+independent sessions, all 13 P0 resource types, original and thumbnail media, sync
+pull/push, follow-up completion, idempotent replay, a stale-version conflict, immediate
+rejection of a rotated session identifier, and session revocation after restore. The
+post-run target remained closed to bootstrap with one atomic bootstrap claim, and only
+the durable `AUTH_ROOT_SECRET` remained configured. Those results do not check the
+physical-device, offline PWA, Scout Bee deployment, Compose, update/rollback,
+accessibility, or uninstall steps whose wording requires separate evidence.
 
 ## Acceptance
 
