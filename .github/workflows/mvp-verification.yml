@@ -65,3 +65,18 @@ jobs:
 
       - name: Build released Compose images
         run: docker compose --env-file docker/.env.example -f docker/compose.yaml build
+
+      - name: Install checksum-verified Grype 0.115.0
+        run: |
+          curl --fail --silent --show-error --location \
+            --output /tmp/grype.tar.gz \
+            https://github.com/anchore/grype/releases/download/v0.115.0/grype_0.115.0_linux_amd64.tar.gz
+          echo "3fad92940650e514c0aa2dad83526942a055e210cec09a8a59d9c024adc2b90e  /tmp/grype.tar.gz" | sha256sum --check
+          tar --extract --gzip --file /tmp/grype.tar.gz --directory /tmp grype
+          /tmp/grype version
+
+      - name: Scan Compose API image for high or critical vulnerabilities
+        run: /tmp/grype apiarylens-api:0.1.0-rc.1 --fail-on high
+
+      - name: Scan Compose web image for high or critical vulnerabilities
+        run: /tmp/grype apiarylens-web:0.1.0-rc.1 --fail-on high

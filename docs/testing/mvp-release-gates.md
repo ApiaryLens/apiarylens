@@ -29,8 +29,8 @@
       implemented, partial, and non-applicable controls without claiming certification.
 - [x] Public MVP verification run `29437744204` passes for the exact product-source
       revision, including the secret scan and clean Compose image builds.
-- [ ] Container vulnerability scanning remains to be configured with a reviewed,
-      immutable scanner supply chain.
+- [ ] The SHA-256-pinned Grype 0.115.0 CI scan reports no unresolved high or critical
+      vulnerability in either released Compose image.
 - [ ] Manual keyboard, screen-reader, 200% zoom, and security review evidence has no
       open critical/high findings.
 - [x] Seven required Lucidchart pages have accessible PNG exports and are cataloged.
