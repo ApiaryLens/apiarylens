@@ -3,12 +3,12 @@
   "product": "ApiaryLens",
   "productVersion": "0.1.0-rc.1",
   "channel": "release-candidate",
-  "sourceCommit": "28dcfaac2261d6395d5b55eac5a5b81f134387fc",
-  "buildTime": "2026-07-15T18:57:00.6351700Z",
+  "sourceCommit": "037d54881f79a9381212b94d4d382dc716bbdffc",
+  "buildTime": "2026-07-15T19:54:48.2706596Z",
   "contracts": {
     "api": "1.0",
     "sync": 1,
-    "databaseMigration": "0003",
+    "databaseMigration": "0004",
     "deploymentPlan": 1,
     "export": 1,
     "localStore": 1
@@ -16,28 +16,28 @@
   "profiles": ["cloudflare", "compose"],
   "artifacts": [
     {
-      "name": "apiarylens-0.1.0-rc.1-cloudflare-6c52330f42d3.tar.gz",
+      "name": "apiarylens-0.1.0-rc.1-cloudflare-a0be34699eb7.tar.gz",
       "kind": "deployment-bundle",
       "target": "cloudflare",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-0.1.0-rc.1-cloudflare-6c52330f42d3.tar.gz",
-      "sha256": "6c52330f42d3d3054303e074963d13d32da15e7eaafb9c4b9a8b318339bc327b",
-      "bytes": 606244
+      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-0.1.0-rc.1-cloudflare-a0be34699eb7.tar.gz",
+      "sha256": "a0be34699eb706ecaa06b73c209a8769fa4eba43ef74a1c3ef8a97c686b61c85",
+      "bytes": 606980
     },
     {
-      "name": "apiarylens-0.1.0-rc.1-compose-7780e18b9254.tar.gz",
+      "name": "apiarylens-0.1.0-rc.1-compose-1da97168ae4e.tar.gz",
       "kind": "deployment-bundle",
       "target": "compose",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-0.1.0-rc.1-compose-7780e18b9254.tar.gz",
-      "sha256": "7780e18b9254297f34351f9cfa4c47edfe5fe9c050850a5e7716497bcb8b3cb2",
-      "bytes": 104351
+      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-0.1.0-rc.1-compose-1da97168ae4e.tar.gz",
+      "sha256": "1da97168ae4edd008ed3c8c0860da625c785623beac702a21f61edbad5bbd8c8",
+      "bytes": 105705
     },
     {
       "name": "apiarylens-scout-bee-0.1.0-rc.1-windows-amd64.exe",
       "kind": "deployment-tool",
       "target": "windows-amd64",
       "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-scout-bee-0.1.0-rc.1-windows-amd64.exe",
-      "sha256": "7fb001a705ff911f7335a0b6cfceb9d7a3fdc472d9750d0430b761cfec93546e",
-      "bytes": 7778816
+      "sha256": "55e77f6a8f9f57b3c5f9ab4e13f8ec5941f0cb889f743cc7e59bb8164175c376",
+      "bytes": 7793152
     },
     {
       "name": "apiarylens-sbom.cdx.json",
