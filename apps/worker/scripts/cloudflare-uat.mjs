@@ -7,6 +7,7 @@ const baseUrl = process.env.APIARYLENS_UAT_URL?.replace(/\/$/, '');
 const operatorToken = process.env.APIARYLENS_UAT_OPERATOR_TOKEN;
 const bootstrapToken = process.env.APIARYLENS_UAT_BOOTSTRAP_TOKEN;
 const evidencePath = process.env.APIARYLENS_UAT_EVIDENCE;
+const expectedSourceCommit = process.env.APIARYLENS_UAT_SOURCE_COMMIT;
 if (!baseUrl) throw new Error('APIARYLENS_UAT_URL is required');
 if (!operatorToken) throw new Error('APIARYLENS_UAT_OPERATOR_TOKEN is required');
 if (!bootstrapToken) throw new Error('APIARYLENS_UAT_BOOTSTRAP_TOKEN is required');
@@ -116,10 +117,31 @@ const ownerPassword = `Owner-${randomBytes(18).toString('base64url')}!`;
 const beekeeperPassword = `Keeper-${randomBytes(18).toString('base64url')}!`;
 const viewerPassword = `Viewer-${randomBytes(18).toString('base64url')}!`;
 
-const healthResponse = await expect(await anonymous.fetch('/health'), 200, 'health');
-const health = await healthResponse.json();
+let healthResponse;
+let health;
+for (let attempt = 0; attempt < 120; attempt += 1) {
+  const candidateResponse = await anonymous.fetch('/health');
+  if (candidateResponse.status === 200) {
+    const candidateHealth = await candidateResponse.json();
+    const sourceMatches =
+      !expectedSourceCommit || candidateHealth.build?.sourceCommit === expectedSourceCommit;
+    if (candidateHealth.build?.databaseMigration === '0004' && sourceMatches) {
+      healthResponse = candidateResponse;
+      health = candidateHealth;
+      break;
+    }
+  } else {
+    await candidateResponse.arrayBuffer();
+  }
+  if (attempt < 119) await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
+}
+assert(healthResponse && health, 'expected deployment did not become available');
 assert(health.status === 'ok' && health.profile === 'cloudflare', 'health identity is invalid');
 assert(health.build.databaseMigration === '0004', 'migration head is not 0004');
+assert(
+  !expectedSourceCommit || health.build.sourceCommit === expectedSourceCommit,
+  'source commit does not match the build under test',
+);
 assert(
   healthResponse.headers.get('x-content-type-options') === 'nosniff',
   'secure headers missing',
