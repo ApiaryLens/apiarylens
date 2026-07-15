@@ -34,7 +34,7 @@ foundation phase:
 | `apiarylens.org` | Private | Project, marketing, documentation, tutorial, release, roadmap, and community frontend |
 | `apiarylens.app` | Private | Hosted PWA/demo frontend and safe public deployment configuration |
 | `apiarylens.dev` | Private | Developer portal, generated API reference, SDK, integration, plugin, and contributor frontend |
-| `.github` | Private | Organization configuration, community health files, templates, and reusable workflows |
+| `.github` | Private | Internal organization configuration, reference templates, and private-repository workflow sources |
 
 Clone all six repositories under `D:\git\apiarylens`. Each newly activated
 repository receives a small responsibility-specific scaffold, its own agent and

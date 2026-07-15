@@ -144,7 +144,7 @@ and contribution model—not domain ownership alone.
 | `apiarylens.org` | Private | Marketing, public docs experience, tutorials, releases, roadmap, and community | Active foundation scaffold |
 | `apiarylens.app` | Private | Public demo deployment, safe seed data, and hosted-app configuration | Active foundation scaffold |
 | `apiarylens.dev` | Private | Developer portal, generated API reference, integrations, SDKs, plugins, contributor material | Active foundation scaffold |
-| `.github` | Private | Organization configuration, shared templates, health files, and reusable workflows | Active |
+| `.github` | Private | Internal organization configuration, reference templates, and private-repository workflow sources | Active |
 
 The main `apiarylens` repository remains authoritative for product behavior,
 contracts, self-hosted deployment, and releases. Domain repositories consume
@@ -152,7 +152,9 @@ versioned artifacts or generated documentation; they do not copy or fork the
 product implementation. Repository visibility and deployment visibility are
 separate: the `.org`, `.app`, and `.dev` sites are public properties deployed from
 private repositories. The core open-source repository is the only public repository
-in the initial portfolio.
+in the initial portfolio. It also carries its own public community-health files and
+issue templates because GitHub does not inherit them from a private `.github`
+repository.
 
 Future production SaaS infrastructure may require a private `apiarylens-cloud` or
 `apiarylens-infrastructure` repository. The private `apiarylens-ops` repository must

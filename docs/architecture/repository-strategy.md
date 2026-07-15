@@ -34,7 +34,7 @@ they do not exist solely because a domain name exists.
 | `apiarylens.org` | Private | Marketing, public docs experience, tutorials, releases, roadmap, and community | Active foundation scaffold |
 | `apiarylens.app` | Private | Demo deployment, safe seed data, and hosted-app configuration | Active foundation scaffold |
 | `apiarylens.dev` | Private | Developer portal, API reference, integrations, SDKs, plugins, and contributor docs | Active foundation scaffold |
-| `.github` | Private | Organization configuration, shared templates, and reusable workflows | Active |
+| `.github` | Private | Internal organization configuration, reference templates, and private-repository workflow sources | Active |
 
 Bootstrap each activated repository with a responsibility-specific README, agent
 guidance, governance baseline, and structure. The scaffold establishes ownership;
@@ -87,11 +87,14 @@ Its official frontend deploys through Cloudflare.
 
 ### `.github`
 
-The private organization configuration repository owns shared community health
-files, issue and pull-request templates, and the reusable workflow catalog. A
-public organization profile is not published from this private repository; if one
-is wanted later, expose only intentionally reviewed profile material. Product-specific
-workflows remain with the repository that executes them.
+The private organization configuration repository owns internal configuration,
+reference templates, and reusable workflow sources intended for compatible private
+repositories. GitHub does not apply default community-health files from a private
+`.github` repository, so the public `apiarylens` repository carries its own public
+contribution guidance and issue templates. A public organization profile is not
+published from this private repository; if one is wanted later, expose only
+intentionally reviewed profile material. Product-specific workflows remain with
+the repository that executes them.
 
 ## Future Galleries and Registries
 

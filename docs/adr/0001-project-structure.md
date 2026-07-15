@@ -34,11 +34,15 @@ Use separate repositories for independently owned or deployed properties:
 | `apiarylens.org` | Private | Marketing, public documentation experience, tutorials, releases, roadmap, and community site |
 | `apiarylens.app` | Private | Hosted demo deployment, demo configuration, and safe seeded content; future application entry point |
 | `apiarylens.dev` | Private | Developer portal, generated API reference, integrations, SDKs, plugins, and contributor resources |
-| `.github` | Private | Organization configuration, shared community health files, templates, and reusable workflows |
+| `.github` | Private | Internal organization configuration, reference templates, and private-repository workflow sources |
 
 The application source remains in `apiarylens`. Domain repositories consume
 versioned product artifacts or generated documentation instead of duplicating the
 product implementation.
+
+Because GitHub does not apply organization-wide community-health defaults from a
+private `.github` repository, the public `apiarylens` repository owns and publishes
+its own contributor-facing community files and issue templates.
 
 Future production SaaS infrastructure, billing, monitoring, and sensitive
 operational configuration may require a separate private repository such as
