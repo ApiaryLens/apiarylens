@@ -12,14 +12,14 @@
 - [x] Public properties use no telemetry and block automatic response transformation.
 - [x] Release artifacts are content-addressed and remotely digest verified.
 - [x] The live PWA/backend identity and manifest identify implementation commit
-      `28dcfaac2261d6395d5b55eac5a5b81f134387fc` and UTC build time
-      `2026-07-15T18:57:00.6351700Z`.
+      `037d54881f79a9381212b94d4d382dc716bbdffc` and UTC build time
+      `2026-07-15T19:54:48.2706596Z`.
 - [x] CycloneDX SBOM, license report, and unsigned provenance are published and
       remotely digest verified with the deployment bundles and Scout Bee executable.
 - [ ] Release artifacts and provenance are signed with the approved release identity.
-- [x] Compose and Cloudflare report the same immutable migration head (`0003`), the
+- [x] Compose and Cloudflare report the same immutable migration head (`0004`), the
       ordered Compose migration test passes, a production pre-migration snapshot was
-      captured, and Cloudflare applied `0003` successfully.
+      captured, and Cloudflare applied `0004` successfully.
 - [ ] Complete the seeded-predecessor update, interruption, rollback, and restore
       scenarios on the isolated Cloudflare and Compose UAT deployments.
 - [x] Automated axe checks report no violations on `.org`, documentation, `.app`, the
@@ -27,9 +27,9 @@
       high-severity vulnerabilities.
 - [x] The release-scope threat model and OWASP ASVS 5.0.0 chapter map document
       implemented, partial, and non-applicable controls without claiming certification.
-- [x] Public MVP verification run `29442732874` passes for release-evidence revision
-      `16ec120c0b5f40653e5149bcb62cd7bccf44a8a7`, whose manifest pins product-source
-      revision `28dcfaac2261d6395d5b55eac5a5b81f134387fc`, including the secret scan,
+- [x] Public MVP verification run `29446576722` passes for release-evidence revision
+      `f1cac5548f9376f4ab706fc343b185d037d34545`, whose manifest pins product-source
+      revision `037d54881f79a9381212b94d4d382dc716bbdffc`, including the secret scan,
       complete workspace verification, clean Compose image builds, and release checks.
 - [x] The SHA-256-pinned Grype 0.115.0 CI scan reports no unresolved high or critical
       vulnerability in either Compose runtime image at that revision.
