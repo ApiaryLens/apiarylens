@@ -17,10 +17,11 @@ RUN pnpm --filter @apiarylens/contracts build && \
     VITE_ARTIFACT_IDENTITY="$APIARYLENS_ARTIFACT_IDENTITY" \
     pnpm --filter @apiarylens/web build
 
-FROM caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+FROM caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
 LABEL org.opencontainers.image.title="ApiaryLens PWA" \
       org.opencontainers.image.version="0.1.0-rc.1" \
       org.opencontainers.image.licenses="Apache-2.0"
+RUN apk upgrade --no-cache
 COPY docker/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /workspace/apps/web/dist /srv
 EXPOSE 80 443
