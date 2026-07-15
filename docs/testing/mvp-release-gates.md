@@ -33,6 +33,9 @@
       complete workspace verification, clean Compose image builds, and release checks.
 - [x] The SHA-256-pinned Grype 0.115.0 CI scan reports no unresolved high or critical
       vulnerability in either Compose runtime image at that revision.
+- [x] Automated WCAG 2.1 A/AA scans and live browser-controlled structural,
+      responsive, icon, and 44-by-44-pixel target checks pass on the public `.org`,
+      `.app`, and `.dev` entry surfaces at 375- and 320-pixel widths.
 - [ ] Manual keyboard, screen-reader, 200% zoom, and security review evidence has no
       open critical/high findings.
 - [x] Seven required Lucidchart pages have accessible PNG exports and are cataloged.

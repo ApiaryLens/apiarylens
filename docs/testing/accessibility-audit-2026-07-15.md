@@ -10,7 +10,11 @@ Automated axe-core scans found zero WCAG 2.1 A/AA violations on the `.org` home 
 documentation hub, `.app` entry, isolated PWA demo, `.dev` home, and API reference.
 The mobile PWA has named landmarks, no unlabeled form controls, no horizontal
 overflow at 320 CSS pixels, visible native keyboard focus, and no visible interactive
-target below 44 by 44 CSS pixels after remediation.
+target below 44 by 44 CSS pixels after remediation. A subsequent browser-controlled
+inspection of the live `.org` home, docs, and support surfaces; `.app` entry; and
+`.dev` home and contracts surfaces confirmed explicit tab icons, one primary heading,
+named controls, landmark structure, no horizontal overflow, and no target below 44 by
+44 CSS pixels at both 375-pixel mobile and 320-pixel zoom-equivalent widths.
 
 Automated checks do not prove full conformance. Manual NVDA/VoiceOver reading,
 keyboard completion of every destructive/recovery flow, and 200% browser zoom on
@@ -25,6 +29,13 @@ the signed UAT device matrix remain release gates.
 | 3 | Form naming and landmarks | 1.3.1, 3.3.2, 4.1.2 | None | No unlabeled visible controls; header, main, and named primary navigation present |
 | 4 | Narrow reflow | 1.4.10 | None | No horizontal document overflow at 320 CSS pixels |
 | 5 | Keyboard focus | 2.4.7 | None | Focused demo exit link exposes a visible browser outline |
+| 6 | Public-site brand, footer, and inline-link targets rendered below the project's 44 by 44 CSS-pixel gate | 2.5.5 Target Size | Major | Fixed across `.org`, generated docs, `.app`, and `.dev`; live mobile recheck found no undersized visible targets |
+| 7 | Generated `.org` documentation pages relied on implicit root favicon discovery | 1.1.1 Non-text Content | Minor | Fixed with explicit SVG favicon and Apple touch-icon metadata on every generated document |
+
+The live browser pass also found no unnamed visible control, missing image alternative,
+or page-level horizontal overflow on the six inspected public entry surfaces. This is
+structural and responsive evidence only; it is not recorded as a substitute for the
+manual keyboard and assistive-technology steps below.
 
 ## Automated Scan Evidence
 
