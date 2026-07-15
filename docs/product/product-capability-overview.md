@@ -162,15 +162,16 @@ follow the
 - Protect privacy and local ownership of data.
 - Grow toward clubs, commercial users, and researchers without splitting the product.
 
-## Draft Visuals
+## Visual Summary
 
-Two graphics from the earlier draft were recovered and preserved under
-[`assets/graphics/drafts/`](../../assets/graphics/drafts/README.md). They are not
-approved brand assets or scope authorities:
+The following current visuals were rebuilt from this overview and the authoritative
+roadmap. Their editable sources are maintained in Lucidchart; the committed PNGs are
+public, accessible exports for Markdown and release material.
 
-- [Capability cards](../../assets/graphics/drafts/ApiaryLens_Capabilities_Cards.png)
-  remain directionally useful, but contain marketing shorthand such as “unlimited”
-  and should be revised before publication.
-- [Roadmap graphic](../../assets/graphics/drafts/ApiaryLens_Roadmap_Graphic.png) is
-  superseded. Its phase order and scope conflict with the current roadmap and it
-  must not be used to communicate delivery plans.
+![ApiaryLens planned capability map showing ten product areas and the family and hobbyist launch priority](../../assets/graphics/ApiaryLens_Capability_Map_2026-07.png)
+
+![ApiaryLens directional product roadmap from project foundation through commercial and research scale](../../assets/graphics/ApiaryLens_Roadmap_2026-07.png)
+
+See the [diagram catalog](../diagrams/README.md) for Lucid document identifiers,
+status, and export ownership. The written overview and roadmap remain authoritative
+if an export becomes stale.

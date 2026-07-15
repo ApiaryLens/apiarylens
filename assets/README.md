@@ -6,9 +6,11 @@ documentation, and public properties.
 The governing workflow is documented in
 [`docs/brand/README.md`](../docs/brand/README.md).
 
-Current imported graphics predate the formal brand workflow and should be reviewed
-for purpose, provenance, licensing, accessibility, and continued use before they are
-treated as final brand assets.
+Current product graphics live under [`graphics/`](graphics/). Structured diagrams
+have editable Lucidchart sources recorded in the diagram catalog. Generated
+marketing imagery records its prompt, method, review status, and intended use in the
+graphics catalog. Legacy scratch graphics under `D:\git\apiarylens\assets` are not
+repository assets and must not be published or referenced by product documentation.
 
 Future organization may include:
 

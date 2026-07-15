@@ -104,15 +104,14 @@ registries may be considered when justified, but no plugin marketplace is commit
 ApiaryLens should help people care for bees, remember what happened, learn over
 time, and keep control of the records they create.
 
-## Draft Brochure Artwork
+## Visual Overview
 
-Two brochure pages from the earlier marketing draft were recovered and preserved
-under [`assets/graphics/drafts/`](../../assets/graphics/drafts/README.md). They are
-design references only and should not be published without revision:
+The current marketing visual deliberately shows real family-scale beekeeping rather
+than a fictional finished application interface.
 
-- [Brochure page 1](../../assets/graphics/drafts/ApiaryLens_Brochure_Page_1.png)
-  implies a finished application, uses an unapproved visual identity, and includes
-  claims that require license and product verification.
-- [Brochure page 2](../../assets/graphics/drafts/ApiaryLens_Brochure_Page_2.png)
-  contains the superseded roadmap, unsupported “unlimited” language, and an
-  unapproved marketplace claim.
+![A family beekeeper and older teenage son reviewing hive records together at a small apiary](../../assets/graphics/ApiaryLens_Marketing_Hero_2026-07.png)
+
+The structured [capability map](../../assets/graphics/ApiaryLens_Capability_Map_2026-07.png)
+and [current roadmap](../../assets/graphics/ApiaryLens_Roadmap_2026-07.png) are
+maintained as Lucidchart diagrams and may be reused when detailed visual context is
+needed.
