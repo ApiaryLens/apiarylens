@@ -23,11 +23,13 @@ ApiaryLens turns hive records into a living history.
 - Educators
 - Researchers
 
-## MVP Capabilities
+## Initial Product Direction
 
-The first major version should focus on practical hive management.
+The first usable releases focus on practical family and hobbyist hive management.
+Discovery and architecture decisions will establish the final MVP boundary rather
+than treating every long-term capability as a launch requirement.
 
-MVP features:
+Current capability direction:
 
 - Multi-apiary tracking
 - Multi-hive tracking
@@ -49,6 +51,9 @@ MVP features:
 - Offline-first design
 - Docker self-hosted deployment
 - REST API
+- Guided installation, backup, restore, updates, and data export
+- Authenticated family synchronization across phones, tablets, and computers
+- Safe public demo
 
 ## Future Capabilities
 
@@ -65,7 +70,7 @@ Future features:
 - Native iOS and Android apps
 - Bee club mode
 - Research mode
-- Plugin marketplace
+- Optional community galleries or registries if later justified; no marketplace is committed
 - Home Assistant integration
 - Hive scales and sensors
 - Route planning
@@ -122,6 +127,16 @@ ApiaryLens is not SaaS at launch.
 But the architecture should allow a future hosted version for users who want easy onboarding and do not want to self-host.
 
 The open-source project remains first-class even if a hosted version exists later.
+
+## Public Web Experience
+
+- `apiarylens.org` is the project, learning, documentation, release, and community home.
+- `apiarylens.app` is the hosted PWA and safe public demo, with optional SaaS later.
+- `apiarylens.dev` is the developer, API, integration, SDK, and contributor portal.
+- `apiarylens.com` redirects to `.org` while reserved for future commercial use.
+
+All official public frontends are hosted on Cloudflare. The open-source server and
+self-hosted deployment remain portable and do not require Cloudflare.
 
 ## Brand Positioning
 

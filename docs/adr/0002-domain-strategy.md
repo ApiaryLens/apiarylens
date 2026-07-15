@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -21,17 +21,24 @@ commercial support or SaaS later.
 
 Use the domains as follows.
 
+The official public frontends and `.com` redirect are hosted on Cloudflare under
+[ADR 0006](0006-cloudflare-public-frontends.md). That hosting decision does not make
+Cloudflare a required ApiaryLens backend or self-hosting dependency.
+
 ## apiarylens.org
 
 Primary open-source project home.
 
 Use for:
 
-- Project website
-- Public docs
-- Install guide
+- Public project and marketing website
+- Documentation and how-to guides
+- Tutorials and videos
+- Downloads and installation guides
+- Release information and changelogs
 - Roadmap
 - Community
+- Self-hosting documentation
 - GitHub links
 - Bee club onboarding
 - Family/friends overview
@@ -42,7 +49,6 @@ Recommended DNS:
 apiarylens.org
 www.apiarylens.org
 docs.apiarylens.org
-demo.apiarylens.org
 ```
 
 ## apiarylens.com
@@ -56,44 +62,41 @@ apiarylens.com -> apiarylens.org
 www.apiarylens.com -> apiarylens.org
 ```
 
-Future possible use:
+Reserve for possible future commercial or company use, such as:
 
 - Commercial landing page
-- Hosted SaaS
 - Support plans
 - Sponsors
 - Partner ecosystem
 
 ## apiarylens.app
 
-Future app/PWA identity.
+The hosted application identity.
 
-For now:
+Use for:
 
-```text
-apiarylens.app -> apiarylens.org
-```
-
-Future possible use:
-
-- Hosted app entry point
-- PWA install landing page
-- Demo app
-- SaaS login portal
-- Mobile app landing page
+- The interactive public demo
+- The hosted app and PWA entry point
+- A future optional SaaS service
+- SaaS sign-in and onboarding
+- Mobile app landing or install experiences
 
 ## apiarylens.dev
 
 Developer ecosystem domain.
 
-Future possible use:
+Use for:
 
 - API docs
+- OpenAPI reference
 - SDK docs
 - Plugin docs
+- Integration docs
+- Architecture documentation
 - Contributor docs
 - ADRs
 - Developer portal
+- Development tools and sandbox environments
 
 Possible DNS:
 
@@ -118,6 +121,8 @@ SaaS-capable later.
 ## Consequences
 
 - The open-source project identity centers on `.org`.
-- `.com` stays available for defensive/commercial use without making SaaS the default posture.
-- `.app` remains reserved for a future hosted app, demo, or PWA entry point.
-- `.dev` can become the developer documentation and plugin/API ecosystem home.
+- `.org` is the public home for learning about, deploying, and participating in the project.
+- `.com` stays reserved for defensive or future commercial use and redirects to `.org` for now.
+- `.app` is the permanent home of the interactive demo and hosted application, including an optional future SaaS service.
+- `.dev` is the developer documentation, API, integration, contributor, and tooling home.
+- Each domain has a durable purpose that does not need to change as the project grows.

@@ -1,184 +1,84 @@
-# ApiaryLens Project Context
+# ApiaryLens Product Brief
 
-ApiaryLens is an open-source, self-hosted apiary intelligence and hive management platform for beekeepers.
+## Product
 
-The project began as a family beekeeping app idea and grew into a broader open-source product vision: a practical, mobile-first, offline-first, privacy-first platform that can support one backyard hive, family beekeeping, bee clubs, mentors, extension offices, researchers, and commercial apiaries.
+ApiaryLens is an open-source, self-hosted, offline-first apiary intelligence and hive
+management platform. It begins with a family or hobbyist managing a small number of
+hives and is designed to grow into mentor, bee-club, research, and commercial use
+without forcing users into a different product or hosted service.
 
-## Current Name
+## Problem
 
-ApiaryLens
+Field notebooks and disconnected photos make it difficult to remember hive history,
+coordinate with family or mentors, recognize patterns, and prepare for the next
+inspection. Existing digital tools can be expensive, online-only, difficult to
+self-host, or too complicated for a new beekeeper.
 
-## GitHub Organization
+ApiaryLens should make hive records dependable and understandable while preserving
+the beekeeper's control of their data.
 
-ApiaryLens
+## Primary User and Outcome
 
-## Domains Owned
+The first target is a family or hobbyist beekeeper. A parent and child should be able
+to start simply, record inspections and photos in the field without connectivity,
+and see one synchronized family record from iPhones, iPads, and computers at zero or
+predictably near-zero recurring cost.
 
-- apiarylens.org
-- apiarylens.com
-- apiarylens.app
-- apiarylens.dev
+Device-only operation, portable self-hosting, and a future optional managed service
+remain first-class paths. A user should not need to understand containers,
+databases, DNS, TLS, identity providers, or cloud billing to get started safely.
 
-## Project Direction
+## Product Principles
 
-- Open source first
-- Self-hosted first
-- Offline-first PWA
-- Privacy-first
-- AI-assisted, but not AI-required
-- SaaS-capable later
-- Community-driven
-- Built to grow from 1 hive to 100+ hives
+- Open source and self-hosted first
+- Offline-capable field workflows and explicit synchronization
+- Privacy and data ownership by default
+- Secure defaults based on deployment exposure
+- AI-assisted, never AI-required
+- Portable data, media, backups, and deployment artifacts
+- Accessible and usable outdoors on phones and tablets
+- One core product from one hive through commercial scale
+- Easy installation, update, backup, restore, and diagnostics
 
-## First Repository
+## Initial Capability Direction
 
-The first repository is the main monorepo:
+Discovery and ADRs will set the final MVP boundary. The current outcome-oriented
+scope includes:
 
-```text
-D:\git\apiarylens\apiarylens
-```
+- Apiaries, hives, queens, equipment, inspections, health observations, treatments,
+  feeding, harvests, and media
+- A PWA that supports offline work and visible synchronization state
+- Device-only personal use plus authenticated family synchronization
+- Organization membership and server-enforced authorization
+- Backup, restore, export, upgrades, and recovery
+- Docker Compose and guided Scout Bee deployment
+- A safe public demo and a measured near-free family-cloud reference
+- Weather and bloom foundations that can grow into historical intelligence
+- Optional AI and native clients only after the non-AI PWA and public contracts are mature
 
-This ZIP is intended to be extracted under:
+## Public Properties
 
-```text
-D:\git\apiarylens
-```
+| Property | Purpose |
+|---|---|
+| `apiarylens.org` | Project, marketing, documentation, tutorials, releases, roadmap, and community |
+| `apiarylens.app` | Hosted PWA, interactive demo, and possible future managed application |
+| `apiarylens.dev` | API, SDK, integration, plugin, architecture, and contributor portal |
+| `apiarylens.com` | Reserved commercial flexibility; redirects to `.org` for now |
 
-Then run the included PowerShell script to copy the repo overlay into the existing repo.
+All official public frontends deploy on Cloudflare. The portable core backend and
+self-hosted product do not require Cloudflare.
 
-# ApiaryLens Product Overview and Capability Whitepaper
+## Portfolio
 
-## What is ApiaryLens?
+The public core monorepo owns product behavior, architecture, contracts, Compose,
+and releases. Separate repositories own the three independently deployed public
+frontends, private operations, and organization-wide GitHub defaults. Future SaaS
+infrastructure, hardware, Helm, or gallery repositories require their own justified
+boundaries and ADRs.
 
-ApiaryLens is an open-source apiary intelligence platform for beekeepers. It helps track hives, queens, inspections, hive health, photos, weather, blooms, honey production, and long-term colony history.
+## Delivery
 
-ApiaryLens is designed to be simple enough for a family getting its first hive and powerful enough to grow into bee club, research, and commercial use.
-
-## Why It Exists
-
-New beekeepers need more than a notebook. They need a way to remember what happened in each hive, understand seasonal tasks, track queen performance, watch for health issues, and learn from mentors.
-
-ApiaryLens turns hive records into a living history.
-
-## Who It Is For
-
-- New beekeepers
-- Families
-- Bee clubs
-- Mentors
-- Commercial apiaries
-- Extension offices
-- Educators
-- Researchers
-
-## MVP Capabilities
-
-The first major version should focus on practical hive management.
-
-MVP features:
-
-- Multi-apiary tracking
-- Multi-hive tracking
-- Hive equipment tracking
-- Box and frame records
-- Queen tracking
-- Inspection logging
-- Photos and videos
-- Hive health observations
-- Varroa mite tracking
-- Feeding records
-- Treatment records
-- Honey harvest records
-- Weather history
-- Bloom calendar foundation
-- QR codes
-- Sharing with family or mentors
-- PWA support
-- Offline-first design
-- Docker self-hosted deployment
-- REST API
-
-## Future Capabilities
-
-ApiaryLens should grow into a full apiary intelligence platform.
-
-Future features:
-
-- AI photo review
-- AI inspection summaries
-- Brood pattern analysis
-- Queen detection
-- Swarm risk flags
-- Honey flow forecasting
-- Native iOS and Android apps
-- Bee club mode
-- Research mode
-- Plugin marketplace
-- Home Assistant integration
-- Hive scales and sensors
-- Route planning
-- Commercial reporting
-- Optional hosted SaaS
-
-## Photos and Video Almanac
-
-ApiaryLens should preserve the visual story of each hive.
-
-A beekeeper should be able to look back over time and see:
-
-- What the brood looked like
-- How the queen performed
-- When pests appeared
-- How honey stores changed
-- What the entrance looked like
-- How the hive responded through seasons
-
-This creates a practical photo and video almanac for each hive.
-
-## Weather and Bloom Intelligence
-
-ApiaryLens should connect hive performance to the local environment.
-
-The system should track:
-
-- Historical weather
-- Rainfall
-- Heat and cold events
-- Frost dates
-- Bloom timing
-- Nectar and pollen sources
-- Weather impact on inspections
-- Weather impact on honey production
-
-## Open Source and Self-Hosted
-
-ApiaryLens should be free or as close to free as possible for families and bee clubs.
-
-Core principles:
-
-- No required paid cloud account
-- No required AI subscription
-- Runs locally or on a small server
-- Docker Compose deployment
-- User owns the data
-- Exportable data
-
-## Future SaaS Possibility
-
-ApiaryLens is not SaaS at launch.
-
-But the architecture should allow a future hosted version for users who want easy onboarding and do not want to self-host.
-
-The open-source project remains first-class even if a hosted version exists later.
-
-## Brand Positioning
-
-ApiaryLens means seeing the hive clearly.
-
-Possible tagline:
-
-> ApiaryLens: Open-source insight for every hive.
-
-Alternative tagline:
-
-> ApiaryLens: See every hive. Understand every colony.
+ApiaryLens moves through foundation, discovery and research, accepted decisions,
+detailed design, implementation, verification, and release. See the
+[Master Architecture and Design Plan](../architecture/architecture-design-plan.md),
+[Execution Plan](../roadmap/execution-plan.md), and [Roadmap](../roadmap/roadmap.md).

@@ -40,7 +40,8 @@ This file captures the product requirements discussed in the chat.
 - Public API
 - Plugin system
 - Home Assistant integration
-- Native mobile apps
+- Downloadable iPhone App Store client that connects to the user's chosen deployment
+- Future iPad and Android clients
 - Research mode
 - Future SaaS option
 
@@ -320,12 +321,14 @@ Shareable items:
 
 ## Authentication
 
-Start simple but extensible:
+Use the exposure-based security model defined in
+[`../security/authentication-and-sharing.md`](../security/authentication-and-sharing.md):
 
-- Local username/password
-- Optional magic link email
-- Optional OAuth later
-- Optional OIDC later
+- Password-optional device-only profile that cannot be reached from another device
+- Mandatory built-in accounts for family, LAN, tunnel, VPN, and cloud deployments
+- Secure sessions, bootstrap, recovery, invitations, and audit events
+- Optional OIDC federation for organization deployments
+- Native-client Authorization Code with PKCE contract later
 
 Roles:
 
@@ -361,4 +364,14 @@ Roles:
 - CO2 sensors
 - Acoustic monitoring
 - API clients
-- Plugin marketplace
+- Optional community gallery or registry if later justified; a commercial
+  marketplace requires a separate decision
+
+## Community Galleries and Registries
+
+Some future features may produce reusable community assets, including templates,
+regional datasets, equipment profiles, adapters, integrations, and plugins. These
+possibilities must be evaluated using
+[`community-galleries-and-registries.md`](community-galleries-and-registries.md).
+They are not automatically committed features, repositories, or centralized
+services.

@@ -26,4 +26,6 @@ Create a first-pass data model for:
 - ShareLink
 - AuditLog
 
-Output should include markdown documentation and a Mermaid ERD.
+Output must include Markdown documentation and a Lucid ERD with an accessible public
+export cataloged under `docs/diagrams/`. Existing Mermaid sources are migration
+inputs only.

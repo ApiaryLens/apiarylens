@@ -1,22 +1,25 @@
-# Task 001: Bootstrap Repository Structure
+# Task 001: Bootstrap the Core Repository Structure
+
+## Status
+
+Foundation structure established. Application and package subdirectories remain
+deferred until their prerequisite research and ADRs are accepted.
+
+Repository-portfolio creation is tracked separately by
+[Task 008](008-bootstrap-repository-portfolio.md).
 
 ## Goal
 
-Ensure the main monorepo has the baseline structure needed for future development.
+Maintain the framework-neutral core monorepo foundation required for architecture,
+research, implementation, self-hosted deployment, and reusable automation.
 
-## Structure
+## Current Foundation
 
 ```text
 .github/
-apps/web/
-apps/api/
-apps/worker/
-apps/mobile/
-packages/ui/
-packages/shared/
-packages/database/
-packages/api-client/
-packages/config/
+apps/
+packages/
+assets/
 docs/
 tasks/
 prompts/
@@ -24,12 +27,14 @@ docker/
 scripts/
 ```
 
-Use `.gitkeep` files for empty folders.
+Use explanatory README files for intentionally empty areas. Create `apps/web`,
+`apps/api`, `apps/worker`, `apps/mobile`, and shared package directories only after
+the responsible ADR defines their runtime, ownership, and dependency boundaries.
 
 ## Do Not
 
-- Do not build the app yet.
-- Do not select final frameworks yet.
-- Do not introduce paid services.
-- Do not make SaaS required.
-- Do not make AI required.
+- Do not build an application merely to complete the folder tree.
+- Do not select frameworks through scaffold generators before an ADR.
+- Do not introduce required paid or proprietary services.
+- Do not make SaaS, Cloudflare backend services, or AI required.
+- Do not duplicate content owned by the public-property repositories.
