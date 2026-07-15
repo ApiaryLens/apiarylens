@@ -16,7 +16,9 @@
       `2026-07-15T19:54:48.2706596Z`.
 - [x] CycloneDX SBOM, license report, and unsigned provenance are published and
       remotely digest verified with the deployment bundles and Scout Bee executable.
-- [ ] Release artifacts and provenance are signed with the approved release identity.
+- [x] All deployment artifacts, Scout Bee, SBOM, license report, and provenance are
+      keylessly signed by the approved repository workflow identity, transparency
+      logged, independently verified, and byte-equal to the public CDN copies.
 - [x] Compose and Cloudflare report the same immutable migration head (`0004`), the
       ordered Compose migration test passes, a production pre-migration snapshot was
       captured, and Cloudflare applied `0004` successfully.
@@ -87,8 +89,11 @@ bootstrap claim; private R2 held the recovered original and thumbnail. This evid
 advances the Cloudflare data-path gate but does not satisfy the remaining combined
 Cloudflare-plus-Compose or physical-device gates.
 
-The released Scout Bee Cloudflare preflight is recorded in
-[`scout-bee-cloudflare-preflight-2026-07-15.json`](scout-bee-cloudflare-preflight-2026-07-15.json).
+The current released Scout Bee Cloudflare preflight is recorded in
+[`scout-bee-cloudflare-preflight-2026-07-15-v2.json`](scout-bee-cloudflare-preflight-2026-07-15-v2.json),
+with the pre-refresh run retained as historical evidence. Release-signing evidence is
+recorded in
+[`release-signing-evidence-2026-07-15.json`](release-signing-evidence-2026-07-15.json).
 The production observation and provider-allowance baseline is recorded in
 [`cloudflare-family-cost-and-observation-2026-07-15.md`](cloudflare-family-cost-and-observation-2026-07-15.md).
 

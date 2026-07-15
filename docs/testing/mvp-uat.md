@@ -21,7 +21,7 @@ not satisfy it.
 
 ## Critical Journey
 
-- [ ] Verify manifest, signatures, SBOM, provenance, and content-addressed artifacts.
+- [x] Verify manifest, signatures, SBOM, provenance, and content-addressed artifacts.
 - [ ] Deploy Cloudflare family profile with Scout Bee into an isolated UAT target.
 - [ ] Deploy the same Compose release to the approved Hyper-V Linux VM with Scout Bee.
 - [x] Confirm public HTTPS, secure headers, private storage, health, and build identity.
@@ -60,6 +60,8 @@ not satisfy it.
 | 2026-07-15 | Isolated Cloudflare family UAT | Migration 0004 identity hardening through destructive restore | Pass | [`cloudflare-uat-evidence-2026-07-15-v2.json`](cloudflare-uat-evidence-2026-07-15-v2.json) | Runtime `037d548`; 11 automated checks passed, including opaque session rotation; temporary bootstrap and operator secrets removed while the durable authentication root was retained |
 | 2026-07-15 | Released Scout Bee / isolated Cloudflare UAT | Dry-run preflight and redacted diagnostics | Pass | [`scout-bee-cloudflare-preflight-2026-07-15.json`](scout-bee-cloudflare-preflight-2026-07-15.json) | Five phases passed in 2.61 seconds; runtime and loopback credentials were absent from diagnostics; no deployment applied |
 | 2026-07-15 | Cloudflare production family profile | Observation and current cost baseline | Pass | [`cloudflare-family-cost-and-observation-2026-07-15.md`](cloudflare-family-cost-and-observation-2026-07-15.md) | More than 41 minutes observed; quiet release-candidate traffic only, with dated allowances and explicit exclusions |
+| 2026-07-15 | GitHub/Sigstore release identity | Six release subjects signed and independently verified | Pass | [`release-signing-evidence-2026-07-15.json`](release-signing-evidence-2026-07-15.json) | Exact repository workflow identity, GitHub-hosted runner, OIDC certificate and Rekor transparency timestamp; CDN bytes match |
+| 2026-07-15 | Current released Scout Bee / isolated Cloudflare UAT | Refreshed cost-aware executable dry-run preflight | Pass | [`scout-bee-cloudflare-preflight-2026-07-15-v2.json`](scout-bee-cloudflare-preflight-2026-07-15-v2.json) | Current executable and manifest digests; five phases passed in 4.57 seconds; sanitized diagnostics; no deployment applied |
 
 The current isolated Cloudflare run additionally exercised invitations with three
 independent sessions, all 13 P0 resource types, original and thumbnail media, sync

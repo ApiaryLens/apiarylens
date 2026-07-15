@@ -1,0 +1,38 @@
+{
+  "capturedAt": "2026-07-15T21:01:06.0989823Z",
+  "executable": {
+    "name": "apiarylens-scout-bee-0.1.0-rc.1-windows-amd64.exe",
+    "sha256": "7f5d54fe8cad55674a869ca8def75c7f54d6ba16b0fd8cc0998235fdce5ba203"
+  },
+  "release": {
+    "version": "0.1.0-rc.1",
+    "channel": "release-candidate",
+    "manifestUrl": "https://apiarylens.org/releases/0.1.0-rc.1/manifest.json",
+    "manifestSha256": "6996db98109ec9b1c17c2e99ff012a6a74d3ac36bb4e51e21cd0a3470b42809f"
+  },
+  "planId": "189e0e86-2603-4448-85ce-ce32f98de57e",
+  "target": "cloudflare",
+  "operation": "update",
+  "mode": "dry-run",
+  "resources": {
+    "worker": "apiarylens-family-uat",
+    "database": "apiarylens-family-uat",
+    "media": "apiarylens-family-media-uat"
+  },
+  "startedAt": "2026-07-15T21:01:01.5261473Z",
+  "finishedAt": "2026-07-15T21:01:06.0989823Z",
+  "phases": [
+    { "name": "Validate deployment plan", "state": "passed", "detail": "The versioned plan contains no secret values." },
+    { "name": "Check release identity", "state": "passed", "detail": "Verified ApiaryLens 0.1.0-rc.1 and its pinned manifest SHA-256." },
+    { "name": "Find Cloudflare deployment tool", "state": "passed", "detail": "Found the Cloudflare deployment tool." },
+    { "name": "Verify Cloudflare account access", "state": "passed", "detail": "The runtime token is valid and was not written to disk." },
+    { "name": "Review guarded cost profile", "state": "passed", "detail": "The deployment uses named family resources and does not enable paid platform features." }
+  ],
+  "diagnostics": {
+    "status": "passed",
+    "runtimeCredentialPresent": false,
+    "launchTokenPresent": false,
+    "privacyStatement": "Diagnostics contain phase results and plan identity but no runtime credentials."
+  },
+  "scope": "Current CDN-published Windows executable and secured loopback executor; isolated Cloudflare dry-run preflight only. No deployment was applied."
+}

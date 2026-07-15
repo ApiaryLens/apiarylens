@@ -1,0 +1,37 @@
+{
+  "capturedAt": "2026-07-15T20:55:44Z",
+  "workflowRun": {
+    "id": 29450069433,
+    "url": "https://github.com/ApiaryLens/apiarylens/actions/runs/29450069433",
+    "conclusion": "success",
+    "sourceCommit": "c1b097e32fabbc38ae418094625fac932cd33a27",
+    "sourceRef": "refs/heads/main",
+    "trigger": "workflow_dispatch"
+  },
+  "identity": {
+    "repository": "https://github.com/ApiaryLens/apiarylens",
+    "signer": "https://github.com/ApiaryLens/apiarylens/.github/workflows/release-signing.yml@refs/heads/main",
+    "oidcIssuer": "https://token.actions.githubusercontent.com",
+    "certificateIssuer": "CN=sigstore-intermediate,O=sigstore.dev",
+    "runnerEnvironment": "github-hosted"
+  },
+  "subjects": [
+    { "name": "apiarylens-0.1.0-rc.1-cloudflare-c8c97fe1dd10.tar.gz", "sha256": "c8c97fe1dd10eb0929e77f3682ea44583337de34e98c6db6e55d7e6709f8a7a6" },
+    { "name": "apiarylens-0.1.0-rc.1-compose-1da97168ae4e.tar.gz", "sha256": "1da97168ae4edd008ed3c8c0860da625c785623beac702a21f61edbad5bbd8c8" },
+    { "name": "apiarylens-scout-bee-0.1.0-rc.1-windows-amd64.exe", "sha256": "7f5d54fe8cad55674a869ca8def75c7f54d6ba16b0fd8cc0998235fdce5ba203" },
+    { "name": "apiarylens-sbom.cdx.json", "sha256": "0818ac80ba96613d9cff0a91eb72a33846a2b9025cdffd2435911a7e206e518e" },
+    { "name": "apiarylens-license-report.md", "sha256": "58f81ee49d04c97511b9a5e6bbaa6b33c41227f74b7f10264dd0d68b485667bf" },
+    { "name": "apiarylens-provenance.intoto.jsonl", "sha256": "7249eeabb77b1acfff05cab26d13ebf9ca95fec001a8b8c321a7fdae4a36ab6f" }
+  ],
+  "transparencyLog": {
+    "type": "Tlog",
+    "uri": "https://rekor.sigstore.dev",
+    "timestamp": "2026-07-15T20:55:17Z"
+  },
+  "verification": {
+    "onlineCommand": "gh attestation verify <artifact> --repo ApiaryLens/apiarylens --signer-workflow ApiaryLens/apiarylens/.github/workflows/release-signing.yml --source-ref refs/heads/main",
+    "allSubjectsVerifiedInWorkflow": true,
+    "independentLocalVerification": true,
+    "publicCdnDigestsMatch": true
+  }
+}
