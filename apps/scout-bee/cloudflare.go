@@ -180,7 +180,10 @@ func (a *cloudflareAdapter) maintain(ctx context.Context, input request, manifes
 }
 
 func (a *cloudflareAdapter) operatorRequest(ctx context.Context, method, endpoint, token string, body []byte) (*http.Response, error) {
-	const attempts = 20
+	// Cloudflare secret versions can take longer than a fixed deployment delay to
+	// reach every edge. Keep the request bounded by the caller's context while
+	// allowing up to one minute for the concealed operator route to become visible.
+	const attempts = 120
 	for attempt := 0; attempt < attempts; attempt++ {
 		var reader io.Reader
 		if body != nil {

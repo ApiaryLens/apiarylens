@@ -95,9 +95,9 @@ async function push(client, csrfToken, operations, label) {
 }
 
 async function operatorFetch(path, init) {
-  for (let attempt = 0; attempt < 20; attempt += 1) {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
     const response = await anonymous.fetch(path, init);
-    if (response.status !== 404 || attempt === 19) return response;
+    if (response.status !== 404 || attempt === 119) return response;
     await response.arrayBuffer();
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
   }
@@ -131,7 +131,13 @@ record(
   `HTTPS health identifies ${health.build.artifactIdentity} at migration 0003`,
 );
 
-const bootstrapStatus = await json(owner, '/api/v1/bootstrap/status', {}, 200, 'bootstrap status');
+let bootstrapStatus;
+for (let attempt = 0; attempt < 120; attempt += 1) {
+  bootstrapStatus = await json(owner, '/api/v1/bootstrap/status', {}, 200, 'bootstrap status');
+  if (bootstrapStatus.requiresToken) break;
+  assert(bootstrapStatus.available === true, 'isolated UAT target has already been bootstrapped');
+  if (attempt < 119) await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
+}
 assert(bootstrapStatus.available === true, 'isolated UAT target has already been bootstrapped');
 assert(bootstrapStatus.requiresToken === true, 'isolated UAT bootstrap is not token-protected');
 await expect(
