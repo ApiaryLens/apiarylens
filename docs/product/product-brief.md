@@ -56,6 +56,9 @@ scope includes:
 - Weather and bloom foundations that can grow into historical intelligence
 - Optional AI and native clients only after the non-AI PWA and public contracts are mature
 
+See the [Product Capability Overview](product-capability-overview.md) for the
+capability narrative and the [Roadmap](../roadmap/roadmap.md) for delivery sequence.
+
 ## Public Properties
 
 | Property | Purpose |
@@ -71,8 +74,10 @@ self-hosted product do not require Cloudflare.
 ## Portfolio
 
 The public core monorepo owns product behavior, architecture, contracts, Compose,
-and releases. Separate repositories own the three independently deployed public
-frontends, private operations, and organization-wide GitHub defaults. Future SaaS
+and releases. Private repositories own the three independently deployed public
+frontends, internal operations, and private organization configuration. The public
+core repository carries its own community-health files because private `.github`
+repositories do not provide organization-wide public defaults. Future SaaS
 infrastructure, hardware, Helm, or gallery repositories require their own justified
 boundaries and ADRs.
 
