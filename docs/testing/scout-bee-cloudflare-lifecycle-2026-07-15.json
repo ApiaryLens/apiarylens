@@ -225,6 +225,21 @@
       "remainingSecretNames": ["AUTH_ROOT_SECRET"]
     }
   },
+  "cleanup": {
+    "completedAt": "2026-07-15T22:49:52Z",
+    "workerDeleted": true,
+    "workerAddressReturnedHttp404": true,
+    "databaseDeleted": true,
+    "databaseAbsentFromProviderList": true,
+    "privateMediaObjectsDeleted": 2,
+    "privateMediaBucketDeleted": true,
+    "privateMediaBucketAbsentFromProviderList": true,
+    "scoutAndTailProcessesStopped": true,
+    "loopbackLaunchTokenFilesDeleted": true,
+    "runtimeOperationRecordsDeleted": true,
+    "localBackupsAndHarnessFilesDeleted": true,
+    "temporaryPredecessorWorktreeRemoved": true
+  },
   "privacyAndDiagnostics": {
     "runtimeCredentialsStoredInPlans": false,
     "runtimeCredentialsPresentInEvidence": false,
