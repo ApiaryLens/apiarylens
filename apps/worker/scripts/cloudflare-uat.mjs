@@ -5,9 +5,11 @@ import { unzipSync } from 'fflate';
 
 const baseUrl = process.env.APIARYLENS_UAT_URL?.replace(/\/$/, '');
 const operatorToken = process.env.APIARYLENS_UAT_OPERATOR_TOKEN;
+const bootstrapToken = process.env.APIARYLENS_UAT_BOOTSTRAP_TOKEN;
 const evidencePath = process.env.APIARYLENS_UAT_EVIDENCE;
 if (!baseUrl) throw new Error('APIARYLENS_UAT_URL is required');
 if (!operatorToken) throw new Error('APIARYLENS_UAT_OPERATOR_TOKEN is required');
+if (!bootstrapToken) throw new Error('APIARYLENS_UAT_BOOTSTRAP_TOKEN is required');
 
 class Client {
   cookie = '';
@@ -131,6 +133,23 @@ record(
 
 const bootstrapStatus = await json(owner, '/api/v1/bootstrap/status', {}, 200, 'bootstrap status');
 assert(bootstrapStatus.available === true, 'isolated UAT target has already been bootstrapped');
+assert(bootstrapStatus.requiresToken === true, 'isolated UAT bootstrap is not token-protected');
+await expect(
+  await owner.fetch('/api/v1/bootstrap', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      bootstrapToken: `invalid-${randomBytes(16).toString('hex')}`,
+      identifier: ownerIdentifier,
+      displayName: 'UAT Owner',
+      password: ownerPassword,
+      organizationName: 'ApiaryLens UAT Family',
+      timezone: 'America/New_York',
+    }),
+  }),
+  403,
+  'reject invalid bootstrap token',
+);
 const ownerSession = await json(
   owner,
   '/api/v1/bootstrap',
@@ -138,6 +157,7 @@ const ownerSession = await json(
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
+      bootstrapToken,
       identifier: ownerIdentifier,
       displayName: 'UAT Owner',
       password: ownerPassword,
@@ -149,7 +169,10 @@ const ownerSession = await json(
   'bootstrap owner',
 );
 assert(ownerSession.recoveryCodes.length === 8, 'owner recovery codes were not issued');
-record('protected-bootstrap', 'Created the first owner and family; eight recovery codes issued');
+record(
+  'protected-bootstrap',
+  'Rejected an invalid deployment code, then created the first owner and family; eight recovery codes issued',
+);
 
 async function inviteAndAccept(client, identifier, displayName, role, password) {
   const invitation = await json(
