@@ -6,6 +6,8 @@ platform for beekeepers — from a single backyard hive to a commercial apiary o
 This repository is the base monorepo. It is currently a **foundation-only scaffold** —
 no application code has been written yet. See [`AGENTS.md`](AGENTS.md) for the
 project's direction and ground rules if you're an AI coding agent working in this repo.
+The authoritative assembled technical direction is the
+[Master Architecture and Design Plan](docs/architecture/architecture-design-plan.md).
 
 ---
 
@@ -44,16 +46,17 @@ ADR is written and merged under `docs/`.
 | Layer | Likely direction |
 |---|---|
 | Frontend | React + TypeScript + Vite |
-| Mobile | Progressive Web App first; native wrapper via Capacitor later if needed |
+| Mobile | Progressive Web App first; committed iPhone App Store client later, with implementation approach decided by ADR |
 | Backend | Undecided |
 | Database | PostgreSQL (likely) |
 | Deployment | Docker Compose first; other orchestration options considered later |
+| Official public frontend hosting | Cloudflare Workers Static Assets (accepted) |
 
 ## Repository layout
 
 ```text
 apiarylens/
-├── .github/      # Issue templates, PR template, CI workflows (later)
+├── .github/      # Repository-specific issue, PR, and CI configuration
 ├── apps/         # Deployable applications (web client, API, etc. — none yet)
 ├── packages/     # Shared libraries consumed by apps/ (none yet)
 ├── docs/         # Architecture notes, ADRs, design docs

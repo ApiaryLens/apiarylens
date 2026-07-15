@@ -13,7 +13,9 @@
 - Subagents, skills, and hooks for this repo live in `.claude/`. The repo-level MCP config is `.mcp.json`.
 - Use **plan mode** before broad, repo-wide changes.
 - Follow the `.ai/` session protocol: read `.ai/state/*` at session start, and update `.ai/state/HANDOFF.md` before ending a session.
-- See the [agents standard](https://platform.hybridsolutions.cloud/standards/agents/) for the full multi-model model.
+- `AGENTS.md` is the public, repository-local source of truth. Do not require access
+  to a maintainer's private platform, identity, vault, or documentation to work on
+  the open-source product.
 
 
 ## Claude Code actions in this repo
