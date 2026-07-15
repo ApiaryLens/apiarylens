@@ -187,6 +187,18 @@ record(
   'Rejected an invalid deployment code, then created the first owner and family; eight recovery codes issued',
 );
 
+const initialOwnerCookie = owner.cookie;
+const refreshedOwnerSession = await json(owner, '/api/v1/session', {}, 200, 'rotate owner session');
+assert(owner.cookie && owner.cookie !== initialOwnerCookie, 'owner session cookie did not rotate');
+const staleOwner = new Client();
+staleOwner.cookie = initialOwnerCookie;
+await expect(await staleOwner.fetch('/api/v1/session'), 401, 'reject rotated owner session');
+ownerSession.csrfToken = refreshedOwnerSession.csrfToken;
+record(
+  'session-rotation',
+  'Session refresh issued a new opaque cookie and immediately rejected the prior identifier',
+);
+
 async function inviteAndAccept(client, identifier, displayName, role, password) {
   const invitation = await json(
     owner,
