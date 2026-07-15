@@ -8,6 +8,10 @@ Accepted
 
 2026-07-15
 
+## Approval
+
+Approved by Kristopher Turner, project owner, on 2026-07-15.
+
 ## Context
 
 ApiaryLens must give a family or hobbyist beekeeper an always-available,
