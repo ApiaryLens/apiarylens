@@ -25,6 +25,11 @@
 - [x] Automated axe checks report no violations on `.org`, documentation, `.app`, the
       isolated demo, and both `.dev` entry points; dependency audit reports no known
       high-severity vulnerabilities.
+- [x] The release-scope threat model and OWASP ASVS 5.0.0 chapter map document
+      implemented, partial, and non-applicable controls without claiming certification.
+- [ ] The public MVP verification workflow passes for the exact release revision,
+      including the secret scan and Compose image builds; container vulnerability
+      scanning remains to be configured with a reviewed, immutable scanner supply chain.
 - [ ] Manual keyboard, screen-reader, 200% zoom, and security review evidence has no
       open critical/high findings.
 - [x] Seven required Lucidchart pages have accessible PNG exports and are cataloged.

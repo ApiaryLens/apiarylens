@@ -69,7 +69,7 @@ versions.
 | v5.0.0-V12 Secure Communication | Partial | Public properties use HTTPS and networked Compose terminates TLS with Caddy; LAN/public certificate and downgrade tests remain environment-dependent. |
 | v5.0.0-V13 Configuration | Partial | No defaults or telemetry, read-only containers, dropped capabilities, private backend network, secret-free templates; deployed host review remains open. |
 | v5.0.0-V14 Data Protection | Partial | Private storage, scoped exports/backups, no default egress, deletion paths; retention and device-loss UAT remains open. |
-| v5.0.0-V15 Secure Coding and Architecture | Partial | Accepted ADRs, strict TypeScript, dependency audit, immutable migrations, recovery verification; CI static/secret/container scanning gate remains open. |
+| v5.0.0-V15 Secure Coding and Architecture | Partial | Accepted ADRs, strict TypeScript, dependency audit, immutable migrations, recovery verification, and a SHA-pinned CI verification workflow with a local secret scan; the first public workflow run and container vulnerability scan remain open. |
 | v5.0.0-V16 Security Logging and Error Handling | Partial | Request IDs, generic client errors, audit-event foundation, sanitized Scout diagnostics; operator audit review and retention evidence remain open. |
 | v5.0.0-V17 WebRTC | Not applicable | ApiaryLens MVP does not use WebRTC. |
 
