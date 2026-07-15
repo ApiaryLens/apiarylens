@@ -23,8 +23,9 @@ ENV NODE_ENV=production \
     APIARYLENS_DATABASE=/data/apiarylens.sqlite
 WORKDIR /workspace
 RUN addgroup -S apiarylens && adduser -S -G apiarylens -u 10001 apiarylens && \
-    rm -rf /usr/local/lib/node_modules/corepack \
-      /usr/local/bin/corepack /usr/local/bin/pnpm /usr/local/bin/pnpx \
+    rm -rf /usr/local/lib/node_modules/corepack /usr/local/lib/node_modules/npm \
+      /usr/local/bin/corepack /usr/local/bin/npm /usr/local/bin/npx \
+      /usr/local/bin/pnpm /usr/local/bin/pnpx \
       /usr/local/bin/yarn /usr/local/bin/yarnpkg
 COPY --from=build --chown=apiarylens:apiarylens /runtime /workspace
 RUN mkdir -p /data && chown apiarylens:apiarylens /data
