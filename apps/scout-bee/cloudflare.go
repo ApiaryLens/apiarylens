@@ -250,6 +250,7 @@ func (a *cloudflareAdapter) deploy(ctx context.Context, input request, manifest 
 	phases = append(phases, pass("Stage deployment bundle", "The checked bundle was extracted without links or unsafe paths."))
 
 	cf := input.Plan.Cloudflare
+	workersDev := cf.CustomDomain == "" || isWorkersDevAddress(cf.CustomDomain)
 	token := input.Secrets["cloudflareApiToken"]
 	environment := map[string]string{"CLOUDFLARE_API_TOKEN": token}
 	if input.Plan.Operation == "update" {
@@ -276,13 +277,13 @@ func (a *cloudflareAdapter) deploy(ctx context.Context, input request, manifest 
 	config := map[string]any{
 		"name": cf.WorkerName, "main": "worker/index.js", "compatibility_date": "2026-07-15",
 		"compatibility_flags": []string{"nodejs_compat"}, "send_metrics": false,
-		"account_id": cf.AccountReference, "workers_dev": cf.CustomDomain == "",
+		"account_id": cf.AccountReference, "workers_dev": workersDev,
 		"observability": map[string]any{"enabled": false},
 		"d1_databases":  []map[string]string{{"binding": "DB", "database_name": cf.D1DatabaseName, "database_id": databaseID, "migrations_dir": "worker/migrations"}},
 		"r2_buckets":    []map[string]string{{"binding": "MEDIA", "bucket_name": cf.R2BucketName}},
 		"assets":        map[string]any{"directory": "web", "binding": "ASSETS", "not_found_handling": "single-page-application", "run_worker_first": []string{"/api/*", "/health"}},
 	}
-	if cf.CustomDomain != "" {
+	if cf.CustomDomain != "" && !workersDev {
 		parsed, _ := url.Parse(cf.CustomDomain)
 		config["routes"] = []map[string]any{{"pattern": parsed.Hostname(), "custom_domain": true}}
 	}
@@ -338,6 +339,11 @@ func (a *cloudflareAdapter) deploy(ctx context.Context, input request, manifest 
 	}
 	phases = append(phases, pass("Verify deployment health", "The deployed service reports the expected product and release version."))
 	return phases, nil
+}
+
+func isWorkersDevAddress(value string) bool {
+	parsed, err := url.Parse(value)
+	return err == nil && strings.HasSuffix(strings.ToLower(parsed.Hostname()), ".workers.dev")
 }
 
 func (a *cloudflareAdapter) uninstall(ctx context.Context, input request) ([]phase, error) {

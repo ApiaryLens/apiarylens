@@ -77,6 +77,14 @@ func TestRejectsHTTPCompose(t *testing.T) {
 		t.Fatal("expected HTTP to be rejected")
 	}
 }
+func TestRecognizesNativeWorkersDevAddress(t *testing.T) {
+	if !isWorkersDevAddress("https://apiarylens-family-uat.example.workers.dev") {
+		t.Fatal("expected native workers.dev address")
+	}
+	if isWorkersDevAddress("https://hives.example.com") {
+		t.Fatal("custom domain was mistaken for workers.dev")
+	}
+}
 func TestComposeInstallRequiresProtectedBootstrap(t *testing.T) {
 	p := validPlan()
 	p.Target = "compose-ssh"
