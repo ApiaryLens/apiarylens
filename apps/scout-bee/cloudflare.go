@@ -417,18 +417,13 @@ func (a *cloudflareAdapter) ensureD1(ctx context.Context, name string, environme
 }
 
 func (a *cloudflareAdapter) ensureR2(ctx context.Context, name string, environment, secrets map[string]string) error {
-	out, err := a.executor.runner.Run(ctx, command{Executable: "wrangler", Args: []string{"r2", "bucket", "list", "--json"}, Environment: environment}, secrets)
+	out, err := a.executor.runner.Run(ctx, command{Executable: "wrangler", Args: []string{"r2", "bucket", "list"}, Environment: environment}, secrets)
 	if err != nil {
 		return err
 	}
-	var rows []struct {
-		Name string `json:"name"`
-	}
-	if err := json.Unmarshal([]byte(out), &rows); err != nil {
-		return errors.New("Wrangler returned an unreadable R2 bucket list")
-	}
-	for _, row := range rows {
-		if row.Name == name {
+	for _, line := range strings.Split(out, "\n") {
+		label, value, found := strings.Cut(strings.TrimSpace(line), ":")
+		if found && label == "name" && strings.TrimSpace(value) == name {
 			return nil
 		}
 	}

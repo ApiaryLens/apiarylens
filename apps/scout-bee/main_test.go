@@ -37,7 +37,7 @@ func (f *fakeRunner) Run(_ context.Context, spec command, _ map[string]string) (
 	case strings.Contains(joined, "d1 list"):
 		return `[{"name":"apiarylens-family","uuid":"11111111-2222-3333-4444-555555555555"}]`, nil
 	case strings.Contains(joined, "r2 bucket list"):
-		return `[{"name":"apiarylens-family-media"}]`, nil
+		return "Listing buckets...\nname: apiarylens-family-media\ncreation_date: 2026-07-15T00:00:00Z\n", nil
 	case strings.Contains(joined, "deploy"):
 		return spec.Environment["TEST_HEALTH_URL"], nil
 	default:
