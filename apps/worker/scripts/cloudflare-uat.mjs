@@ -156,10 +156,9 @@ await expect(
   403,
   'reject invalid bootstrap token',
 );
-const ownerSession = await json(
-  owner,
-  '/api/v1/bootstrap',
-  {
+let ownerSession;
+for (let attempt = 0; attempt < 120; attempt += 1) {
+  const response = await owner.fetch('/api/v1/bootstrap', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -170,10 +169,18 @@ const ownerSession = await json(
       organizationName: 'ApiaryLens UAT Family',
       timezone: 'America/New_York',
     }),
-  },
-  201,
-  'bootstrap owner',
-);
+  });
+  if (response.status === 201) {
+    ownerSession = await response.json();
+    break;
+  }
+  if (response.status !== 403 || attempt === 119) {
+    await expect(response, 201, 'bootstrap owner');
+  }
+  await response.arrayBuffer();
+  await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
+}
+assert(ownerSession, 'bootstrap owner did not become available after secret propagation');
 assert(ownerSession.recoveryCodes.length === 8, 'owner recovery codes were not issued');
 record(
   'protected-bootstrap',
