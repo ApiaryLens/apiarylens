@@ -3,8 +3,8 @@
   "product": "ApiaryLens",
   "productVersion": "0.1.0-rc.1",
   "channel": "release-candidate",
-  "sourceCommit": "458897a28bc4af72930ffe4a462c6a9b53400bfb",
-  "buildTime": "2026-07-15T18:07:49.5736168Z",
+  "sourceCommit": "28dcfaac2261d6395d5b55eac5a5b81f134387fc",
+  "buildTime": "2026-07-15T18:57:00.6351700Z",
   "contracts": {
     "api": "1.0",
     "sync": 1,
@@ -16,28 +16,28 @@
   "profiles": ["cloudflare", "compose"],
   "artifacts": [
     {
-      "name": "apiarylens-0.1.0-rc.1-cloudflare-19777865d804.tar.gz",
+      "name": "apiarylens-0.1.0-rc.1-cloudflare-6c52330f42d3.tar.gz",
       "kind": "deployment-bundle",
       "target": "cloudflare",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-0.1.0-rc.1-cloudflare-19777865d804.tar.gz",
-      "sha256": "19777865d804ee46c78024b464dc92b237cdaeb135563aec493feee6967b28af",
-      "bytes": 605981
+      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-0.1.0-rc.1-cloudflare-6c52330f42d3.tar.gz",
+      "sha256": "6c52330f42d3d3054303e074963d13d32da15e7eaafb9c4b9a8b318339bc327b",
+      "bytes": 606244
     },
     {
-      "name": "apiarylens-0.1.0-rc.1-compose-6c5b64ecce37.tar.gz",
+      "name": "apiarylens-0.1.0-rc.1-compose-7780e18b9254.tar.gz",
       "kind": "deployment-bundle",
       "target": "compose",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-0.1.0-rc.1-compose-6c5b64ecce37.tar.gz",
-      "sha256": "6c5b64ecce37c25e20795b0a273ad248f1843d0e12cc9c1cafc2edd17d7c6993",
-      "bytes": 104272
+      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-0.1.0-rc.1-compose-7780e18b9254.tar.gz",
+      "sha256": "7780e18b9254297f34351f9cfa4c47edfe5fe9c050850a5e7716497bcb8b3cb2",
+      "bytes": 104351
     },
     {
       "name": "apiarylens-scout-bee-0.1.0-rc.1-windows-amd64.exe",
       "kind": "deployment-tool",
       "target": "windows-amd64",
       "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-scout-bee-0.1.0-rc.1-windows-amd64.exe",
-      "sha256": "3647f38ed8a274dd7866ffe6bfba6b93c7754dff8e93b6014657f4c02f4a7392",
-      "bytes": 7779840
+      "sha256": "7fb001a705ff911f7335a0b6cfceb9d7a3fdc472d9750d0430b761cfec93546e",
+      "bytes": 7778816
     },
     {
       "name": "apiarylens-sbom.cdx.json",
