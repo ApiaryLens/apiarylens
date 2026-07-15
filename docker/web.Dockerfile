@@ -10,7 +10,8 @@ COPY packages/contracts/package.json packages/contracts/package.json
 RUN pnpm install --frozen-lockfile
 COPY apps/web apps/web
 COPY packages/contracts packages/contracts
-RUN VITE_DEPLOYMENT_PROFILE=compose \
+RUN pnpm --filter @apiarylens/contracts build && \
+    VITE_DEPLOYMENT_PROFILE=compose \
     VITE_SOURCE_COMMIT="$APIARYLENS_SOURCE_COMMIT" \
     VITE_BUILD_TIME="$APIARYLENS_BUILD_TIME" \
     VITE_ARTIFACT_IDENTITY="$APIARYLENS_ARTIFACT_IDENTITY" \
