@@ -85,6 +85,19 @@ func TestRecognizesNativeWorkersDevAddress(t *testing.T) {
 		t.Fatal("custom domain was mistaken for workers.dev")
 	}
 }
+func TestSelectsWorkersDevDeploymentAddressAfterTelemetryLink(t *testing.T) {
+	output := `Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+Deployed at https://apiarylens-family-uat.example.workers.dev`
+	got := firstWorkersDevURL(output)
+	if got != "https://apiarylens-family-uat.example.workers.dev" {
+		t.Fatalf("expected the native deployment address, got %q", got)
+	}
+}
+func TestRejectsNonWorkerDeploymentLinks(t *testing.T) {
+	if got := firstWorkersDevURL("See https://developers.cloudflare.com/workers/"); got != "" {
+		t.Fatalf("expected no deployment address, got %q", got)
+	}
+}
 func TestComposeInstallRequiresProtectedBootstrap(t *testing.T) {
 	p := validPlan()
 	p.Target = "compose-ssh"

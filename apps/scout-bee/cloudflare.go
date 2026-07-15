@@ -338,7 +338,7 @@ func (a *cloudflareAdapter) deploy(ctx context.Context, input request, manifest 
 	phases = append(phases, pass("Deploy Worker and PWA assets", "The exact release bundle was deployed."))
 	address := cf.CustomDomain
 	if address == "" {
-		address = firstHTTPSURL(output)
+		address = firstWorkersDevURL(output)
 	}
 	if address == "" {
 		return append(phases, failed("Verify deployment health", errors.New("Wrangler did not report a deployment address"))), errors.New("deployment address was not reported")
@@ -506,7 +506,12 @@ func shortCommit(value string) string {
 
 var httpsURLPattern = regexp.MustCompile(`https://[^\s]+`)
 
-func firstHTTPSURL(value string) string {
-	match := httpsURLPattern.FindString(value)
-	return strings.TrimRight(match, ".,;)")
+func firstWorkersDevURL(value string) string {
+	for _, match := range httpsURLPattern.FindAllString(value, -1) {
+		candidate := strings.TrimRight(match, ".,;)")
+		if isWorkersDevAddress(candidate) {
+			return candidate
+		}
+	}
+	return ""
 }
