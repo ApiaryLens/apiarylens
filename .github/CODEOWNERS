@@ -1,0 +1,5 @@
+# Default owner for every file in this repository.
+* @kristopherjturner
+
+# Protect the ownership policy itself.
+/.github/CODEOWNERS @kristopherjturner
