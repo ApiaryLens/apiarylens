@@ -12,8 +12,8 @@
 - [x] Public properties use no telemetry and block automatic response transformation.
 - [x] Release artifacts are content-addressed and remotely digest verified.
 - [x] The live PWA/backend identity and manifest identify implementation commit
-      `6834a6d81d4a3129fba4b6f827a7bf464d8af6b0` and UTC build time
-      `2026-07-15T17:46:06.1745511Z`.
+      `458897a28bc4af72930ffe4a462c6a9b53400bfb` and UTC build time
+      `2026-07-15T18:07:49.5736168Z`.
 - [x] CycloneDX SBOM, license report, and unsigned provenance are published and
       remotely digest verified with the deployment bundles and Scout Bee executable.
 - [ ] Release artifacts and provenance are signed with the approved release identity.
@@ -27,10 +27,11 @@
       high-severity vulnerabilities.
 - [x] The release-scope threat model and OWASP ASVS 5.0.0 chapter map document
       implemented, partial, and non-applicable controls without claiming certification.
-- [x] Public MVP verification run `29437744204` passes for the exact product-source
-      revision, including the secret scan and clean Compose image builds.
-- [ ] The SHA-256-pinned Grype 0.115.0 CI scan reports no unresolved high or critical
-      vulnerability in either released Compose image.
+- [x] Public MVP verification run `29439069246` passes for product-source revision
+      `458897a28bc4af72930ffe4a462c6a9b53400bfb`, including the secret scan, complete
+      workspace verification, clean Compose image builds, and release checks.
+- [x] The SHA-256-pinned Grype 0.115.0 CI scan reports no unresolved high or critical
+      vulnerability in either Compose runtime image at that revision.
 - [ ] Manual keyboard, screen-reader, 200% zoom, and security review evidence has no
       open critical/high findings.
 - [x] Seven required Lucidchart pages have accessible PNG exports and are cataloged.

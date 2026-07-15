@@ -69,7 +69,7 @@ versions.
 | v5.0.0-V12 Secure Communication | Partial | Public properties use HTTPS and networked Compose terminates TLS with Caddy; LAN/public certificate and downgrade tests remain environment-dependent. |
 | v5.0.0-V13 Configuration | Partial | No defaults or telemetry, read-only containers, dropped capabilities, private backend network, secret-free templates; deployed host review remains open. |
 | v5.0.0-V14 Data Protection | Partial | Private storage, scoped exports/backups, no default egress, deletion paths; retention and device-loss UAT remains open. |
-| v5.0.0-V15 Secure Coding and Architecture | Partial | Accepted ADRs, strict TypeScript, dependency audit, immutable migrations, recovery verification, a SHA-pinned CI verification workflow, local secret scan, clean Compose builds, and a checksum-pinned Grype container scan; the first container-scan result remains open. |
+| v5.0.0-V15 Secure Coding and Architecture | Partial | Accepted ADRs, strict TypeScript, dependency audit, immutable migrations, recovery verification, a SHA-pinned CI verification workflow, local secret scan, clean Compose builds, and checksum-pinned Grype scans with no high or critical findings in either Compose runtime image. |
 | v5.0.0-V16 Security Logging and Error Handling | Partial | Request IDs, generic client errors, audit-event foundation, sanitized Scout diagnostics; operator audit review and retention evidence remain open. |
 | v5.0.0-V17 WebRTC | Not applicable | ApiaryLens MVP does not use WebRTC. |
 
@@ -80,8 +80,8 @@ individual requirements.
 
 ## Release Decision
 
-No known automated dependency finding is currently high or critical, and the
-documented negative authorization suite passes. The release security gate remains
-open until the manual checks in the mapping, deployed cross-profile conformance,
-secret/static/container CI scans, and any resulting critical or high findings are
-resolved or explicitly dispositioned by the project owner.
+No known automated dependency or container-image finding is currently high or
+critical, and the documented negative authorization suite passes. The release
+security gate remains open until the manual checks in the mapping and deployed
+cross-profile conformance are completed, and any resulting critical or high findings
+are resolved or explicitly dispositioned by the project owner.
