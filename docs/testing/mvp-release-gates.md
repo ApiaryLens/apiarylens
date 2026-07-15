@@ -38,6 +38,10 @@
 - [ ] Confirm the editable Lucidchart source is filed in the dedicated ApiaryLens
       Lucid folder and complete its final visual-polish review.
 - [ ] Hyper-V and isolated Cloudflare UAT targets pass Scout Bee preflight.
+- [x] The isolated Cloudflare family service passes protected bootstrap, roles, all
+      P0 resource types, private media, sync, conflict/idempotency, negative viewer
+      authorization, portable export, destructive restore, session revocation, and
+      record/media recovery at runtime revision `d0f4320`.
 
 ## Deploy
 
@@ -56,6 +60,16 @@
 - [ ] Publish final release notes, changelog, support window, known limitations, and
       recovery guidance.
 - [ ] Obtain project-owner acceptance.
+
+## Isolated Cloudflare Evidence
+
+The automated Cloudflare journey is recorded in
+[`cloudflare-uat-evidence-2026-07-15.json`](cloudflare-uat-evidence-2026-07-15.json).
+After the passing restore, the target remained healthy at migration `0003`, bootstrap
+was closed, both temporary deployment secrets were removed, and the restored database
+contained three users, one organization, three memberships, and 13 P0 resources. This
+evidence advances the Cloudflare data-path gate but does not satisfy the remaining
+combined Cloudflare-plus-Compose or physical-device gates.
 
 ## Rollback Triggers
 
