@@ -59,8 +59,9 @@ hosted Linux VM differ only in provisioning and connection inputs.
   the provider secret API, and deploys the pinned Worker/static-assets build.
 - Validates custom domain/TLS when requested and verifies D1/R2 access through the
   health/readiness endpoint.
-- Shows current free-tier assumptions and requires acknowledgement that provider
-  allowances can change.
+- Shows the exact dated Workers, D1, and R2 free allowances, relevant exclusions and
+  exhaustion behavior, and requires acknowledgement that provider pricing or limits
+  can change before Cloudflare preflight or apply.
 - Supports D1 Time Travel guidance plus a product-level relational/media export.
 - Creates a one-time random maintenance authorization for backup, export, and
   restore, removes it when the operation ends, and leaves the maintenance routes

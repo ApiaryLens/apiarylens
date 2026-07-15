@@ -58,6 +58,8 @@ not satisfy it.
 | 2026-07-15 | Hyper-V host | VM discovery | Blocked | `Get-VM` authorization failure | Requires elevated Hyper-V access or approved SSH target |
 | 2026-07-15 | Isolated Cloudflare family UAT | Protected bootstrap through destructive restore | Pass | [`cloudflare-uat-evidence-2026-07-15.json`](cloudflare-uat-evidence-2026-07-15.json) | Runtime `d0f4320`; 10 automated checks passed; temporary bootstrap and operator secrets removed after the run |
 | 2026-07-15 | Isolated Cloudflare family UAT | Migration 0004 identity hardening through destructive restore | Pass | [`cloudflare-uat-evidence-2026-07-15-v2.json`](cloudflare-uat-evidence-2026-07-15-v2.json) | Runtime `037d548`; 11 automated checks passed, including opaque session rotation; temporary bootstrap and operator secrets removed while the durable authentication root was retained |
+| 2026-07-15 | Released Scout Bee / isolated Cloudflare UAT | Dry-run preflight and redacted diagnostics | Pass | [`scout-bee-cloudflare-preflight-2026-07-15.json`](scout-bee-cloudflare-preflight-2026-07-15.json) | Five phases passed in 2.61 seconds; runtime and loopback credentials were absent from diagnostics; no deployment applied |
+| 2026-07-15 | Cloudflare production family profile | Observation and current cost baseline | Pass | [`cloudflare-family-cost-and-observation-2026-07-15.md`](cloudflare-family-cost-and-observation-2026-07-15.md) | More than 41 minutes observed; quiet release-candidate traffic only, with dated allowances and explicit exclusions |
 
 The current isolated Cloudflare run additionally exercised invitations with three
 independent sessions, all 13 P0 resource types, original and thumbnail media, sync

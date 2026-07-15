@@ -45,7 +45,10 @@
 - [x] Final Lucidchart visual-polish review passes after the three pages with recorded
       label and connector collisions were rebuilt, filed, re-exported, and visually
       rechecked; rejected drafts are outside the authoritative folder.
-- [ ] Hyper-V and isolated Cloudflare UAT targets pass Scout Bee preflight.
+- [x] The released Scout Bee Windows executable passes a secret-redacted, pinned
+      release preflight against the isolated Cloudflare UAT resources.
+- [ ] The Hyper-V UAT target passes Scout Bee preflight; the combined target gate
+      remains open until that independent run succeeds.
 - [x] The isolated Cloudflare family service passes protected bootstrap, roles, all
       P0 resource types, private media, sync, conflict/idempotency, negative viewer
       authorization, portable export, destructive restore, session rotation and
@@ -64,8 +67,9 @@
 
 ## Post-Deploy
 
-- [ ] Verify health and release identity after a 15-minute observation window.
-- [ ] Record quota/cost, install time, device matrix, and all evidence links.
+- [x] Verify production release identity after a 15-minute observation window.
+- [x] Record the dated Cloudflare quota/cost baseline and planning assumptions.
+- [ ] Record install time, device matrix, and all remaining evidence links.
 - [ ] Publish final release notes, changelog, support window, known limitations, and
       recovery guidance.
 - [ ] Obtain project-owner acceptance.
@@ -82,6 +86,11 @@ organization, three memberships, 13 P0 resources, one session, and one atomic
 bootstrap claim; private R2 held the recovered original and thumbnail. This evidence
 advances the Cloudflare data-path gate but does not satisfy the remaining combined
 Cloudflare-plus-Compose or physical-device gates.
+
+The released Scout Bee Cloudflare preflight is recorded in
+[`scout-bee-cloudflare-preflight-2026-07-15.json`](scout-bee-cloudflare-preflight-2026-07-15.json).
+The production observation and provider-allowance baseline is recorded in
+[`cloudflare-family-cost-and-observation-2026-07-15.md`](cloudflare-family-cost-and-observation-2026-07-15.md).
 
 ## Rollback Triggers
 

@@ -98,6 +98,8 @@ Accepted decisions:
 - [ADR 0009: Data, Media, and Offline Synchronization](../adr/0009-data-storage-and-offline-sync.md)
 - [ADR 0010: Built-in Identity, Sessions, and Authorization](../adr/0010-built-in-identity-and-security.md)
 - [ADR 0011: Scout Bee and Deployment Execution](../adr/0011-scout-bee-and-deployment-execution.md)
+- [ADR 0012: Public Frontend Implementation Convention](../adr/0012-public-frontend-implementation.md)
+- [ADR 0013: Keyless Release Signing](../adr/0013-keyless-release-signing.md)
 
 Accepted product-scope decision:
 

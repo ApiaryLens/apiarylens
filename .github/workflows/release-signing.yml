@@ -1,0 +1,57 @@
+name: Release signing
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  attest:
+    if: github.repository == 'ApiaryLens/apiarylens'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Check out immutable revision
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Verify release identity and unsigned evidence
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm release:verify
+
+      - name: Sign release artifacts and provenance with the repository identity
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4
+        with:
+          subject-path: |
+            release/artifacts/*.tar.gz
+            release/artifacts/*.exe
+            release/apiarylens-sbom.cdx.json
+            release/apiarylens-license-report.md
+            release/apiarylens-provenance.intoto.jsonl
+
+      - name: Verify every signed subject against this workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for artifact in \
+            release/artifacts/*.tar.gz \
+            release/artifacts/*.exe \
+            release/apiarylens-sbom.cdx.json \
+            release/apiarylens-license-report.md \
+            release/apiarylens-provenance.intoto.jsonl
+          do
+            gh attestation verify "$artifact" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release-signing.yml" \
+              --source-ref "$GITHUB_REF"
+          done

@@ -13,6 +13,15 @@ type ReleaseIdentity = {
   manifestSha256: string;
 };
 
+const cloudflareAllowances = [
+  ['Workers', '100,000 dynamic requests each day'],
+  ['D1 records', '5 million rows read and 100,000 rows written each day; 5 GB stored'],
+  [
+    'R2 photos',
+    '10 GB-month stored; 1 million Class A and 10 million Class B operations each month',
+  ],
+] as const;
+
 const token = location.hash.slice(1);
 const call = async <T,>(path: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(path, {
@@ -35,6 +44,7 @@ function App() {
   const [cloudflareToken, setCloudflareToken] = useState('');
   const [bootstrapToken, setBootstrapToken] = useState('');
   const [keepData, setKeepData] = useState(true);
+  const [costAcknowledged, setCostAcknowledged] = useState(false);
   const [step, setStep] = useState(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -210,38 +220,41 @@ function App() {
           </div>
         )}
         {step === 1 && (
-          <section className="targets">
-            <button
-              className={target === 'cloudflare' ? 'selected' : ''}
-              onClick={() => setTarget('cloudflare')}
-            >
-              <b>Family Cloud</b>
-              <span>Available across your devices</span>
-              <p>
-                Runs in your own Cloudflare account. Predictably near-zero cost for a family apiary,
-                subject to provider allowances.
-              </p>
-            </button>
-            <button
-              className={target === 'compose-ssh' ? 'selected' : ''}
-              onClick={() => setTarget('compose-ssh')}
-            >
-              <b>My Own Hardware or VM</b>
-              <span>Maximum ownership and portability</span>
-              <p>
-                Installs the released Docker Compose package on an ordinary Linux server you
-                control.
-              </p>
-            </button>
-            <button
-              className={target === 'plan-only' ? 'selected' : ''}
-              onClick={() => setTarget('plan-only')}
-            >
-              <b>Advanced plan</b>
-              <span>Review or automate later</span>
-              <p>Creates a validated, secret-free plan without applying it.</p>
-            </button>
-          </section>
+          <>
+            <section className="targets">
+              <button
+                className={target === 'cloudflare' ? 'selected' : ''}
+                onClick={() => setTarget('cloudflare')}
+              >
+                <b>Family Cloud</b>
+                <span>Available across your devices</span>
+                <p>
+                  Runs in your own Cloudflare account. Predictably near-zero cost for a family
+                  apiary, subject to provider allowances.
+                </p>
+              </button>
+              <button
+                className={target === 'compose-ssh' ? 'selected' : ''}
+                onClick={() => setTarget('compose-ssh')}
+              >
+                <b>My Own Hardware or VM</b>
+                <span>Maximum ownership and portability</span>
+                <p>
+                  Installs the released Docker Compose package on an ordinary Linux server you
+                  control.
+                </p>
+              </button>
+              <button
+                className={target === 'plan-only' ? 'selected' : ''}
+                onClick={() => setTarget('plan-only')}
+              >
+                <b>Advanced plan</b>
+                <span>Review or automate later</span>
+                <p>Creates a validated, secret-free plan without applying it.</p>
+              </button>
+            </section>
+            {target === 'cloudflare' && <CloudflareCostGuide />}
+          </>
         )}
         {step === 2 && (
           <section className="form">
@@ -368,6 +381,16 @@ function App() {
             </div>
             {target === 'cloudflare' && (
               <>
+                <CloudflareCostGuide />
+                <label className="cost-acknowledgement">
+                  <input
+                    type="checkbox"
+                    checked={costAcknowledged}
+                    onChange={(event) => setCostAcknowledged(event.target.checked)}
+                  />
+                  I reviewed these dated allowances and understand that Cloudflare can change
+                  pricing or limits.
+                </label>
                 <label className="runtime-secret">
                   Cloudflare API token
                   <input
@@ -460,7 +483,10 @@ function App() {
               <button className="secondary" onClick={exportPlan}>
                 Export plan
               </button>
-              <button disabled={busy || !release} onClick={() => void run('dry-run')}>
+              <button
+                disabled={busy || !release || (target === 'cloudflare' && !costAcknowledged)}
+                onClick={() => void run('dry-run')}
+              >
                 {busy ? 'Checking…' : 'Run preflight'}
               </button>
               {target !== 'plan-only' && (
@@ -468,6 +494,7 @@ function App() {
                   disabled={
                     busy ||
                     !release ||
+                    (target === 'cloudflare' && !costAcknowledged) ||
                     (target === 'cloudflare' && cloudflareToken.length === 0) ||
                     (operation === 'install' && bootstrapToken.length < 16)
                   }
@@ -486,6 +513,33 @@ function App() {
         </footer>
       </main>
     </div>
+  );
+}
+function CloudflareCostGuide() {
+  return (
+    <aside className="cost-guide" aria-labelledby="cloudflare-cost-heading">
+      <div>
+        <p className="eyebrow">Guarded family cost profile</p>
+        <h2 id="cloudflare-cost-heading">Cloudflare Free allowances checked July 15, 2026</h2>
+        <p>
+          Scout Bee does not enable a paid plan. A modest family deployment is expected to fit
+          within these allowances, but actual use and provider terms determine the bill.
+        </p>
+      </div>
+      <dl>
+        {cloudflareAllowances.map(([service, allowance]) => (
+          <div key={service}>
+            <dt>{service}</dt>
+            <dd>{allowance}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="cost-note">
+        Static Worker assets and R2 internet egress are currently free. Domain registration, backups
+        outside this account, optional paid plans, and internet access are separate. Free-limit
+        exhaustion can stop requests instead of producing a permanent-free guarantee.
+      </p>
+    </aside>
   );
 }
 function Field({

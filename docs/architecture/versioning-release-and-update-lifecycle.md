@@ -334,6 +334,11 @@ may be enabled, but downloading, migrating, or activating a server release requi
 explicit operator action unless the operator deliberately configures a documented
 automatic-update policy after MVP.
 
+Official artifacts use the keyless repository workflow accepted in
+[ADR 0013](../adr/0013-keyless-release-signing.md). Verification pins the public
+repository, exact signer workflow, source ref, and artifact digest; a checksum or
+attestation from an arbitrary fork is not an official ApiaryLens release identity.
+
 ## MVP Acceptance Requirements
 
 Before the MVP is releasable:
