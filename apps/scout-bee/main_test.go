@@ -14,14 +14,16 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 )
 
 type fakeRunner struct {
-	commands       []command
-	secretsPayload []byte
+	commands            []command
+	secretsPayload      []byte
+	existingSecretNames []string
 }
 
 func (f *fakeRunner) Find(string) error { return nil }
@@ -34,6 +36,13 @@ func (f *fakeRunner) Run(_ context.Context, spec command, _ map[string]string) (
 	}
 	joined := strings.Join(spec.Args, " ")
 	switch {
+	case strings.Contains(joined, "secret list"):
+		rows := make([]map[string]string, 0, len(f.existingSecretNames))
+		for _, name := range f.existingSecretNames {
+			rows = append(rows, map[string]string{"name": name, "type": "secret_text"})
+		}
+		raw, _ := json.Marshal(rows)
+		return string(raw), nil
 	case strings.Contains(joined, "d1 list"):
 		return `[{"name":"apiarylens-family","uuid":"11111111-2222-3333-4444-555555555555"}]`, nil
 	case strings.Contains(joined, "r2 bucket list"):
@@ -185,10 +194,10 @@ func TestCloudflareApplyUsesVerifiedBundleAndRuntimeSecret(t *testing.T) {
 	p.Release.ManifestURL = server.URL + "/manifest.json"
 	p.Release.ManifestSha256 = hex.EncodeToString(manifestDigest[:])
 	runner := &fakeRunner{}
-	executor := &executor{runner: runner, client: server.Client()}
+	deploymentExecutor := &executor{runner: runner, client: server.Client()}
 	// Add the health URL as the requested custom domain so deploy output parsing is not needed.
 	p.Cloudflare.CustomDomain = server.URL
-	phases, err := executor.run(context.Background(), request{Plan: p, Mode: "apply", Secrets: map[string]string{"cloudflareApiToken": "runtime-only-token", "bootstrapToken": "runtime-owner-code-only"}})
+	phases, err := deploymentExecutor.run(context.Background(), request{Plan: p, Mode: "apply", Secrets: map[string]string{"cloudflareApiToken": "runtime-only-token", "bootstrapToken": "runtime-owner-code-only"}})
 	if err != nil {
 		t.Fatalf("apply failed: %v; phases=%+v", err, phases)
 	}
@@ -210,6 +219,27 @@ func TestCloudflareApplyUsesVerifiedBundleAndRuntimeSecret(t *testing.T) {
 	}
 	if deployedSecrets["BOOTSTRAP_TOKEN"] != "runtime-owner-code-only" || len(deployedSecrets["AUTH_ROOT_SECRET"]) < 32 {
 		t.Fatalf("deployment did not atomically install both required runtime secrets")
+	}
+
+	reinstallRunner := &fakeRunner{existingSecretNames: []string{"AUTH_ROOT_SECRET"}}
+	reinstallPhases, err := (&executor{runner: reinstallRunner, client: server.Client()}).run(
+		context.Background(),
+		request{Plan: p, Mode: "apply", Secrets: map[string]string{"cloudflareApiToken": "runtime-only-token"}},
+	)
+	if err != nil {
+		t.Fatalf("recoverable reinstall failed: %v; phases=%+v", err, reinstallPhases)
+	}
+	for _, command := range reinstallRunner.commands {
+		if slices.Contains(command.Args, "--secrets-file") {
+			t.Fatal("recoverable reinstall attempted to overwrite the retained authentication root")
+		}
+	}
+	preserved := false
+	for _, phase := range reinstallPhases {
+		preserved = preserved || phase.Name == "Preserve retained authentication root" && phase.State == "passed"
+	}
+	if !preserved {
+		t.Fatal("recoverable reinstall did not report preserved authentication protection")
 	}
 }
 

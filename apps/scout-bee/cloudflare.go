@@ -39,10 +39,6 @@ func (a *cloudflareAdapter) preflight(ctx context.Context, input request) ([]pha
 		err := errors.New("a Cloudflare API token is required only while applying the plan")
 		return append(phases, failed("Verify Cloudflare account access", err)), err
 	}
-	if input.Plan.Operation == "install" && len(input.Secrets["bootstrapToken"]) < 16 {
-		err := errors.New("an owner setup code of at least 16 characters is required only while installing")
-		return append(phases, failed("Verify one-time owner setup protection", err)), err
-	}
 	_, err := a.executor.runner.Run(ctx, command{
 		Executable: "wrangler", Args: []string{"whoami", "--json"},
 		Environment: map[string]string{"CLOUDFLARE_API_TOKEN": token},
@@ -54,6 +50,19 @@ func (a *cloudflareAdapter) preflight(ctx context.Context, input request) ([]pha
 		pass("Verify Cloudflare account access", "The runtime token is valid and was not written to disk."),
 		pass("Review guarded cost profile", "The deployment uses named family resources and does not enable paid platform features."),
 	)
+	if input.Plan.Operation == "install" {
+		existing, inspectErr := a.existingWorkerSecretNames(ctx, input.Plan.Cloudflare.WorkerName, map[string]string{"CLOUDFLARE_API_TOKEN": token}, input.Secrets)
+		if inspectErr != nil {
+			return append(phases, failed("Inspect retained installation protection", inspectErr)), inspectErr
+		}
+		if !existing["AUTH_ROOT_SECRET"] && len(input.Secrets["bootstrapToken"]) < 16 {
+			err := errors.New("an owner setup code of at least 16 characters is required only while installing")
+			return append(phases, failed("Verify one-time owner setup protection", err)), err
+		}
+		if existing["AUTH_ROOT_SECRET"] {
+			phases = append(phases, pass("Inspect retained installation protection", "The dormant installation retains its authentication root and does not require a new owner setup code."))
+		}
+	}
 	return phases, nil
 }
 
@@ -308,27 +317,39 @@ func (a *cloudflareAdapter) deploy(ctx context.Context, input request, manifest 
 	runtimeSecrets := map[string]string{"cloudflareApiToken": token}
 	deployArgs := []string{"deploy", "--config", configPath}
 	if input.Plan.Operation == "install" {
-		bootstrap := input.Secrets["bootstrapToken"]
-		authRootBytes := make([]byte, 48)
-		if _, err = rand.Read(authRootBytes); err != nil {
-			return append(phases, failed("Prepare authentication root secret", err)), err
+		existing, inspectErr := a.existingWorkerSecretNames(ctx, cf.WorkerName, environment, input.Secrets)
+		if inspectErr != nil {
+			return append(phases, failed("Inspect retained installation protection", inspectErr)), inspectErr
 		}
-		authRoot := base64.RawURLEncoding.EncodeToString(authRootBytes)
-		runtimeSecrets["bootstrapToken"] = bootstrap
-		runtimeSecrets["authRootSecret"] = authRoot
-		bootstrapPayload, _ := json.Marshal(map[string]string{
-			"BOOTSTRAP_TOKEN":  bootstrap,
-			"AUTH_ROOT_SECRET": authRoot,
-		})
-		secretsPath := filepath.Join(temp, "runtime-secrets.json")
-		if err = os.WriteFile(secretsPath, bootstrapPayload, 0o600); err != nil {
-			return append(phases, failed("Prepare one-time owner setup protection", err)), err
+		if existing["AUTH_ROOT_SECRET"] {
+			phases = append(phases, pass("Preserve retained authentication root", "The reinstall preserves the existing authentication root so retained accounts and sessions remain usable."))
+		} else {
+			bootstrap := input.Secrets["bootstrapToken"]
+			if len(bootstrap) < 16 {
+				err = errors.New("an owner setup code of at least 16 characters is required for a fresh installation")
+				return append(phases, failed("Prepare one-time owner setup protection", err)), err
+			}
+			authRootBytes := make([]byte, 48)
+			if _, err = rand.Read(authRootBytes); err != nil {
+				return append(phases, failed("Prepare authentication root secret", err)), err
+			}
+			authRoot := base64.RawURLEncoding.EncodeToString(authRootBytes)
+			runtimeSecrets["bootstrapToken"] = bootstrap
+			runtimeSecrets["authRootSecret"] = authRoot
+			bootstrapPayload, _ := json.Marshal(map[string]string{
+				"BOOTSTRAP_TOKEN":  bootstrap,
+				"AUTH_ROOT_SECRET": authRoot,
+			})
+			secretsPath := filepath.Join(temp, "runtime-secrets.json")
+			if err = os.WriteFile(secretsPath, bootstrapPayload, 0o600); err != nil {
+				return append(phases, failed("Prepare one-time owner setup protection", err)), err
+			}
+			deployArgs = append(deployArgs, "--secrets-file", secretsPath)
+			phases = append(phases,
+				pass("Prepare one-time owner setup protection", "Your runtime-only owner setup code will be installed atomically with the application and was not logged."),
+				pass("Prepare authentication root secret", "A random durable root secret will domain-separate password and session hashing without entering the plan or logs."),
+			)
 		}
-		deployArgs = append(deployArgs, "--secrets-file", secretsPath)
-		phases = append(phases,
-			pass("Prepare one-time owner setup protection", "Your runtime-only owner setup code will be installed atomically with the application and was not logged."),
-			pass("Prepare authentication root secret", "A random durable root secret will domain-separate password and session hashing without entering the plan or logs."),
-		)
 	}
 
 	output, err := a.executor.runner.Run(ctx, command{Executable: "wrangler", Args: deployArgs, Directory: root, Environment: environment}, runtimeSecrets)
@@ -438,6 +459,30 @@ func (a *cloudflareAdapter) ensureR2(ctx context.Context, name string, environme
 	}
 	_, err = a.executor.runner.Run(ctx, command{Executable: "wrangler", Args: []string{"r2", "bucket", "create", name}, Environment: environment}, secrets)
 	return err
+}
+
+func (a *cloudflareAdapter) existingWorkerSecretNames(ctx context.Context, name string, environment, secrets map[string]string) (map[string]bool, error) {
+	out, err := a.executor.runner.Run(ctx, command{
+		Executable: "wrangler", Args: []string{"secret", "list", "--name", name, "--format", "json"}, Environment: environment,
+	}, secrets)
+	if err != nil {
+		lower := strings.ToLower(out)
+		if strings.Contains(lower, strings.ToLower(name)) && strings.Contains(lower, "not found") {
+			return map[string]bool{}, nil
+		}
+		return nil, err
+	}
+	var rows []struct {
+		Name string `json:"name"`
+	}
+	if err = json.Unmarshal([]byte(out), &rows); err != nil {
+		return nil, errors.New("Wrangler returned an unreadable Worker secret list")
+	}
+	result := make(map[string]bool, len(rows))
+	for _, row := range rows {
+		result[row.Name] = true
+	}
+	return result, nil
 }
 
 func (a *cloudflareAdapter) verifyHealth(ctx context.Context, address string, manifest releaseManifest) error {
