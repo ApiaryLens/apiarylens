@@ -25,12 +25,12 @@ identifier are never stored in the public repository.
 | Safe update lifecycle | `684a4da4-37d9-4dd7-ae89-11bd97557b82` | `../../assets/graphics/architecture/safe-update-lifecycle.png` | Current |
 | Repository and domain boundaries | `5abe71fa-b4ac-498f-84da-bf129ed08a20`, page 1 | `../../assets/graphics/architecture/repository-domain-boundaries.png` | Current |
 | Research, ADR, and implementation flow | `5abe71fa-b4ac-498f-84da-bf129ed08a20`, page 2 | `../../assets/graphics/architecture/research-adr-implementation-flow.png` | Current |
-| Components and network trust boundaries | `72787958-9344-4a71-af56-98a216b35aa1`, page 1 | `../../assets/graphics/architecture/components-network-trust.png` | Current; source filed; connector-label collision requires polish |
-| Authorization boundaries | `72787958-9344-4a71-af56-98a216b35aa1`, page 2 | `../../assets/graphics/architecture/authorization-boundaries.png` | Current; source filed; decision labels require polish |
+| Components and network trust boundaries | `f22ae65e-c353-488e-ba54-51f7de4c189c`, page 1 | `../../assets/graphics/architecture/components-network-trust.png` | Current; source filed; visual review passed |
+| Authorization boundaries | `97b127d3-5a52-4232-bf90-99e59966d987`, page 1 | `../../assets/graphics/architecture/authorization-boundaries.png` | Current; source filed; visual review passed |
 | Media lifecycle, backup, and restore | `72787958-9344-4a71-af56-98a216b35aa1`, page 3 | `../../assets/graphics/architecture/media-backup-restore.png` | Current; source filed; visual review passed |
 | Scout Bee executor | `72787958-9344-4a71-af56-98a216b35aa1`, page 4 | `../../assets/graphics/architecture/scout-bee-executor.png` | Current; source filed; visual review passed |
 | CI/CD and release promotion | `72787958-9344-4a71-af56-98a216b35aa1`, page 5 | `../../assets/graphics/architecture/cicd-release-promotion.png` | Current; source filed; visual review passed |
-| Update, rollback, and recovery | `72787958-9344-4a71-af56-98a216b35aa1`, page 6 | `../../assets/graphics/architecture/update-rollback-recovery.png` | Current; source filed; pending-work labels require polish |
+| Update, rollback, and recovery | `f22ae65e-c353-488e-ba54-51f7de4c189c`, page 2 | `../../assets/graphics/architecture/update-rollback-recovery.png` | Current; source filed; visual review passed |
 | Primary MVP user journeys | `72787958-9344-4a71-af56-98a216b35aa1`, page 7 | `../../assets/graphics/architecture/primary-user-journeys.png` | Current; source filed; visual review passed |
 
 Legacy Mermaid sources remain only as migration history and are not authoritative.
@@ -41,18 +41,12 @@ accessible descriptions of the seven-page operational diagram set.
 
 The 2026-07-15 final-polish review confirmed a clear left-to-right reading order,
 consistent role colors, readable terminal states, and adequate export resolution on
-all seven operational pages. Three pages still require source edits before release:
-
-- Components and network trust: separate the API-to-data connector labels from the
-  API shape and from each other.
-- Authorization boundaries: move the three `yes` and `no` labels onto their own
-  decision branches so they do not overlap the decision shapes or adjacent paths.
-- Update, rollback, and recovery: separate the pending-work branch label from the
-  opening state and decision text.
-
-The other four pages passed this visual review. Source placement is no longer open:
-the operational document was verified in and, where necessary, moved into the
-dedicated `ApiaryLens` folder without changing its cataloged document ID.
+all seven operational pages. It initially found connector-label collisions on the
+components, authorization, and update/recovery pages. Those pages were rebuilt as
+editable Lucid sources, filed in the dedicated `ApiaryLens` folder, exported through
+the official Lucid API, and visually rechecked before their PNGs were promoted. The
+four unchanged pages also passed. Rejected draft documents were labeled and moved out
+of the authoritative folder so the catalog has no ambiguous final source.
 
 ## Publishing Rules
 

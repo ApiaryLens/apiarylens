@@ -1,7 +1,10 @@
 # Operational Architecture and Journeys
 
-The editable source for this seven-page set is Lucidchart document
-`72787958-9344-4a71-af56-98a216b35aa1`. The descriptions below are the accessible
+The editable sources for this seven-page set are the cataloged Lucidchart documents
+in the dedicated `ApiaryLens` folder. Four pages remain in document
+`72787958-9344-4a71-af56-98a216b35aa1`; the final-polish component and update pages
+are in `f22ae65e-c353-488e-ba54-51f7de4c189c`, and authorization is in
+`97b127d3-5a52-4232-bf90-99e59966d987`. The descriptions below are the accessible
 text alternative and define the intended reading order.
 
 ## Components and Network Trust

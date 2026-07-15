@@ -42,9 +42,9 @@
 - [x] All cataloged editable Lucidchart sources are filed in the dedicated ApiaryLens
       Lucid folder; the seven-page operational source was verified and moved there on
       2026-07-15 without changing its document ID.
-- [ ] Complete the final Lucidchart visual-polish review by removing the recorded
-      label and connector collisions from three operational pages and refreshing
-      their repository exports.
+- [x] Final Lucidchart visual-polish review passes after the three pages with recorded
+      label and connector collisions were rebuilt, filed, re-exported, and visually
+      rechecked; rejected drafts are outside the authoritative folder.
 - [ ] Hyper-V and isolated Cloudflare UAT targets pass Scout Bee preflight.
 - [x] The isolated Cloudflare family service passes protected bootstrap, roles, all
       P0 resource types, private media, sync, conflict/idempotency, negative viewer
