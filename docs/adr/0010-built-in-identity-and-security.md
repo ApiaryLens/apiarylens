@@ -27,7 +27,10 @@ The MVP provides local ApiaryLens accounts as the default identity system.
   owner exists. It has no default credentials, is rate limited, and closes
   atomically after success.
 - Passwords are hashed with PBKDF2-HMAC-SHA-256 through Web Crypto, using a unique
-  random salt, a server-side pepper, and a stored work-factor/version record. The
+  random salt, a server-side pepper derived with domain-separated HMAC from an
+  operator-generated authentication root secret, and a stored work-factor/version
+  record. Session identifiers use a separate HMAC domain derived from the same root;
+  the root itself is never stored in the database. The
   preferred target is 600,000 iterations, but Cloudflare's deployed Web Crypto
   runtime rejects a single PBKDF2 request above 100,000 iterations. The portable MVP
   parameter is therefore 100,000 iterations, recorded in every hash, with long
@@ -78,9 +81,12 @@ are never required by a user deployment.
 ## Consequences
 
 - A secure family deployment has no identity-service dependency or identity bill.
-- The pepper and session-signing secrets become critical backup/rotation inputs;
-  their loss has documented recovery behavior and their values never enter export,
-  logs, diagnostics, or deployment-plan JSON.
+- The authentication root secret becomes a critical backup/rotation input. Scout Bee
+  creates it with operating-system randomness on first install, Cloudflare stores it
+  as a Worker secret, and Compose mounts it as a mode-600 Docker secret. Its loss has
+  documented recovery behavior and its value never enters export, logs, diagnostics,
+  or deployment-plan JSON. Existing release-candidate password and session hashes
+  remain readable during upgrade, while all newly written values use the keyed format.
 - Password work factor is a measured release parameter. If Cloudflare cannot meet
   the security and latency gates, the family profile fails its acceptance gate
   rather than silently weakening password storage.

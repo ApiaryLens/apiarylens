@@ -19,11 +19,19 @@ import (
 	"time"
 )
 
-type fakeRunner struct{ commands []command }
+type fakeRunner struct {
+	commands       []command
+	secretsPayload []byte
+}
 
 func (f *fakeRunner) Find(string) error { return nil }
 func (f *fakeRunner) Run(_ context.Context, spec command, _ map[string]string) (string, error) {
 	f.commands = append(f.commands, spec)
+	for index, arg := range spec.Args {
+		if arg == "--secrets-file" && index+1 < len(spec.Args) {
+			f.secretsPayload, _ = os.ReadFile(spec.Args[index+1])
+		}
+	}
 	joined := strings.Join(spec.Args, " ")
 	switch {
 	case strings.Contains(joined, "d1 list"):
@@ -175,6 +183,13 @@ func TestCloudflareApplyUsesVerifiedBundleAndRuntimeSecret(t *testing.T) {
 			t.Fatal("runtime secret entered progress output")
 		}
 	}
+	var deployedSecrets map[string]string
+	if err = json.Unmarshal(runner.secretsPayload, &deployedSecrets); err != nil {
+		t.Fatalf("runtime secrets file was not readable JSON: %v", err)
+	}
+	if deployedSecrets["BOOTSTRAP_TOKEN"] != "runtime-owner-code-only" || len(deployedSecrets["AUTH_ROOT_SECRET"]) < 32 {
+		t.Fatalf("deployment did not atomically install both required runtime secrets")
+	}
 }
 
 func TestCloudflareBackupUsesTemporaryAuthorizationAndWritesVerifiedArchive(t *testing.T) {
@@ -260,6 +275,25 @@ func TestCloudflareOperatorRequestWaitsForSecretPropagation(t *testing.T) {
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK || attempts != 2 {
 		t.Fatalf("expected a successful retry after propagation, status=%d attempts=%d", response.StatusCode, attempts)
+	}
+}
+
+func TestCloudflareKeepDataUninstallRetainsRecoverableServiceSecrets(t *testing.T) {
+	p := validPlan()
+	p.Operation = "uninstall"
+	p.KeepDataOnUninstall = true
+	runner := &fakeRunner{}
+	adapter := &cloudflareAdapter{executor: &executor{runner: runner}}
+	phases, err := adapter.uninstall(context.Background(), request{
+		Plan:    p,
+		Secrets: map[string]string{"cloudflareApiToken": "runtime-only-token"},
+	})
+	if err != nil || len(phases) != 1 || phases[0].State != "passed" {
+		t.Fatalf("keep-data uninstall failed: err=%v phases=%+v", err, phases)
+	}
+	commands := strings.Join(commandArgs(runner.commands), "\n")
+	if !strings.Contains(commands, "deploy --config") || strings.Contains(commands, "delete --name") {
+		t.Fatalf("uninstall did not preserve the Worker secret container: %s", commands)
 	}
 }
 

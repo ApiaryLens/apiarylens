@@ -137,3 +137,15 @@ export const migration0003 = `
 CREATE INDEX IF NOT EXISTS audit_events_by_organization_created_at
   ON audit_events (organization_id, created_at);
 `;
+
+export const migration0004 = `
+CREATE TABLE IF NOT EXISTS bootstrap_claims (
+  singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+  claimed_at TEXT NOT NULL
+);
+
+INSERT OR IGNORE INTO bootstrap_claims(singleton, claimed_at)
+  SELECT 1, MIN(created_at) FROM memberships
+  WHERE role = 'owner' AND status = 'active'
+  HAVING COUNT(*) > 0;
+`;

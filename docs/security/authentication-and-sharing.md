@@ -54,8 +54,10 @@ must not make the installation or its data unrecoverable.
 
 The accepted session and credential design includes:
 
-- PBKDF2-HMAC-SHA-256 through Web Crypto with a unique salt, server pepper,
-  versioned parameters, and a portable MVP work factor of 100,000 iterations. The
+- PBKDF2-HMAC-SHA-256 through Web Crypto with a unique salt, an HMAC-domain-separated
+  server pepper derived from the deployment authentication root, versioned
+  parameters, and a portable MVP work factor of 100,000 iterations. Opaque session
+  identifiers use a separate keyed HMAC domain rather than a plain database digest. The
   value is the deployed Cloudflare Web Crypto maximum observed in UAT; it is lower
   than the preferred target and is paired with throttling, long-password support,
   generic errors, and a planned memory-hard upgrade.

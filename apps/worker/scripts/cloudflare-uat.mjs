@@ -119,7 +119,7 @@ const viewerPassword = `Viewer-${randomBytes(18).toString('base64url')}!`;
 const healthResponse = await expect(await anonymous.fetch('/health'), 200, 'health');
 const health = await healthResponse.json();
 assert(health.status === 'ok' && health.profile === 'cloudflare', 'health identity is invalid');
-assert(health.build.databaseMigration === '0003', 'migration head is not 0003');
+assert(health.build.databaseMigration === '0004', 'migration head is not 0004');
 assert(
   healthResponse.headers.get('x-content-type-options') === 'nosniff',
   'secure headers missing',
@@ -128,7 +128,7 @@ report.sourceCommit = health.build.sourceCommit;
 report.databaseMigration = health.build.databaseMigration;
 record(
   'health-and-headers',
-  `HTTPS health identifies ${health.build.artifactIdentity} at migration 0003`,
+  `HTTPS health identifies ${health.build.artifactIdentity} at migration 0004`,
 );
 
 let bootstrapStatus;
@@ -610,6 +610,7 @@ const exported = Buffer.from(
 const exportFiles = unzipSync(exported);
 for (const name of [
   'manifest.json',
+  'database/bootstrap_claims.json',
   'data.json',
   'csv/apiary.csv',
   'csv/hive.csv',

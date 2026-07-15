@@ -11,10 +11,28 @@ function unbase64(value: string): Uint8Array<ArrayBuffer> {
   return new Uint8Array(Buffer.from(value, 'base64url'));
 }
 
-async function derive(password: string, salt: Uint8Array<ArrayBuffer>, rounds: number) {
-  const key = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, [
-    'deriveBits',
-  ]);
+async function passwordMaterial(password: string, authRootSecret?: string) {
+  if (!authRootSecret) return encoder.encode(password);
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(authRootSecret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  return new Uint8Array(
+    await crypto.subtle.sign('HMAC', key, encoder.encode(`password\0${password}`)),
+  );
+}
+
+async function derive(material: Uint8Array, salt: Uint8Array<ArrayBuffer>, rounds: number) {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    material.slice().buffer as ArrayBuffer,
+    'PBKDF2',
+    false,
+    ['deriveBits'],
+  );
   const bits = await crypto.subtle.deriveBits(
     { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: rounds },
     key,
@@ -23,16 +41,21 @@ async function derive(password: string, salt: Uint8Array<ArrayBuffer>, rounds: n
   return new Uint8Array(bits);
 }
 
-export async function hashPassword(password: string): Promise<string> {
+export async function hashPassword(password: string, authRootSecret: string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  const derived = await derive(password, salt, iterations);
-  return `pbkdf2-sha256$${iterations}$${base64(salt)}$${base64(derived)}`;
+  const derived = await derive(await passwordMaterial(password, authRootSecret), salt, iterations);
+  return `pbkdf2-sha256-v2$${iterations}$${base64(salt)}$${base64(derived)}`;
 }
 
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+export async function verifyPassword(
+  password: string,
+  stored: string,
+  authRootSecret: string,
+): Promise<boolean> {
   const [algorithm, roundsValue, saltValue, expectedValue] = stored.split('$');
   if (
-    algorithm !== 'pbkdf2-sha256' ||
+    algorithm === undefined ||
+    !['pbkdf2-sha256', 'pbkdf2-sha256-v2'].includes(algorithm) ||
     roundsValue === undefined ||
     saltValue === undefined ||
     expectedValue === undefined
@@ -41,7 +64,11 @@ export async function verifyPassword(password: string, stored: string): Promise<
   }
   const rounds = Number(roundsValue);
   if (!Number.isInteger(rounds) || rounds < 100_000 || rounds > 1_000_000) return false;
-  const actual = await derive(password, unbase64(saltValue), rounds);
+  const actual = await derive(
+    await passwordMaterial(password, algorithm === 'pbkdf2-sha256-v2' ? authRootSecret : undefined),
+    unbase64(saltValue),
+    rounds,
+  );
   const expected = unbase64(expectedValue);
   if (actual.length !== expected.length) return false;
   let difference = 0;

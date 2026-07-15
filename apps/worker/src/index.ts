@@ -21,12 +21,13 @@ import { strToU8, unzipSync, zipSync } from 'fflate';
 import { Hono, type Context, type MiddlewareHandler, type Next } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { secureHeaders } from 'hono/secure-headers';
-import { hashPassword, opaqueToken, sha256, verifyPassword } from './crypto.js';
+import { hashPassword, keyedHash, opaqueToken, sha256, verifyPassword } from './crypto.js';
 
 interface Bindings {
   DB: D1Database;
   MEDIA: R2Bucket;
   BOOTSTRAP_TOKEN?: string;
+  AUTH_ROOT_SECRET?: string;
   SCOUT_OPERATOR_TOKEN?: string;
   APIARYLENS_SOURCE_COMMIT?: string;
   APIARYLENS_BUILD_TIME?: string;
@@ -73,6 +74,15 @@ const mediaKey = (
   mediaId: string,
   variant: 'original' | 'thumbnail' = 'original',
 ) => `${organizationId}/${mediaId}${variant === 'thumbnail' ? '.thumbnail' : ''}`;
+const authRoot = (c: AppContext) => {
+  if (!c.env.AUTH_ROOT_SECRET || c.env.AUTH_ROOT_SECRET.length < 32)
+    throw new Error('The authentication root secret is not configured');
+  return c.env.AUTH_ROOT_SECRET;
+};
+const rateKey = (c: AppContext, scope: string, identity = '') => {
+  const address = c.req.header('cf-connecting-ip') ?? 'unknown';
+  return `rate:${scope}:${identity.toLowerCase()}:${address}`;
+};
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 app.use('*', secureHeaders());
@@ -92,7 +102,7 @@ const requireSession: MiddlewareHandler<{ Bindings: Bindings; Variables: Variabl
 ) => {
   const token = getCookie(c, cookieName);
   if (!token) return apiError(c, 401, 'authentication_required', 'Sign in is required');
-  const session = await findSession(c.env.DB, token);
+  const session = await findSession(c.env.DB, token, authRoot(c));
   if (!session) return apiError(c, 401, 'session_expired', 'The session is no longer valid');
   c.set('session', session);
   await next();
@@ -129,10 +139,10 @@ app.get('/health', (c) => {
 app.get('/api/v1/openapi.json', (c) => c.json(buildOpenApiDocument()));
 app.get('/api/v1/bootstrap/status', async (c) => {
   const row = await c.env.DB.prepare(
-    "SELECT count(*) AS count FROM memberships WHERE role = 'owner'",
-  ).first<{ count: number }>();
+    'SELECT 1 AS present FROM bootstrap_claims WHERE singleton = 1',
+  ).first<{ present: number }>();
   return c.json({
-    available: !row || row.count === 0,
+    available: !row,
     requiresToken: Boolean(c.env.BOOTSTRAP_TOKEN),
   });
 });
@@ -140,7 +150,11 @@ app.get('/api/v1/bootstrap/status', async (c) => {
 app.post('/api/v1/bootstrap', async (c) => {
   const parsed = bootstrapRequestSchema.safeParse(await c.req.json().catch(() => undefined));
   if (!parsed.success) return apiError(c, 400, 'validation_failed', 'Check the submitted fields');
+  const throttle = rateKey(c, 'bootstrap');
+  if (!(await signInAllowed(c.env.DB, throttle)))
+    return apiError(c, 429, 'request_limited', 'Try again later');
   if (c.env.BOOTSTRAP_TOKEN && parsed.data.bootstrapToken !== c.env.BOOTSTRAP_TOKEN) {
+    await recordSignInFailure(c.env.DB, throttle);
     return apiError(
       c,
       403,
@@ -148,10 +162,10 @@ app.post('/api/v1/bootstrap', async (c) => {
       'The deployment bootstrap code is incorrect',
     );
   }
-  const owner = await c.env.DB.prepare(
-    "SELECT 1 AS present FROM memberships WHERE role = 'owner' LIMIT 1",
+  const claim = await c.env.DB.prepare(
+    'SELECT 1 AS present FROM bootstrap_claims WHERE singleton = 1',
   ).first();
-  if (owner) return apiError(c, 409, 'bootstrap_closed', 'The first owner already exists');
+  if (claim) return apiError(c, 409, 'bootstrap_closed', 'The first owner already exists');
   const timestamp = now();
   const userId = crypto.randomUUID();
   const organizationId = crypto.randomUUID();
@@ -164,32 +178,44 @@ app.post('/api/v1/bootstrap', async (c) => {
       ).bind(crypto.randomUUID(), userId, await sha256(code), timestamp),
     ),
   );
-  await c.env.DB.batch([
-    c.env.DB.prepare(
-      `INSERT INTO users(id, identifier, display_name, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
-    ).bind(
-      userId,
-      parsed.data.identifier.toLowerCase(),
-      parsed.data.displayName,
-      await hashPassword(parsed.data.password),
-      timestamp,
-      timestamp,
-    ),
-    c.env.DB.prepare(
-      `INSERT INTO organizations(id, name, timezone, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`,
-    ).bind(
-      organizationId,
-      parsed.data.organizationName,
-      parsed.data.timezone,
-      timestamp,
-      timestamp,
-    ),
-    c.env.DB.prepare(
-      `INSERT INTO memberships(id, organization_id, user_id, role, status, created_at, updated_at) VALUES (?, ?, ?, 'owner', 'active', ?, ?)`,
-    ).bind(membershipId, organizationId, userId, timestamp, timestamp),
-    ...recoveryStatements,
-  ]);
-  const created = await createSession(c.env.DB, userId, organizationId);
+  try {
+    await c.env.DB.batch([
+      c.env.DB.prepare('INSERT INTO bootstrap_claims(singleton, claimed_at) VALUES (1, ?)').bind(
+        timestamp,
+      ),
+      c.env.DB.prepare(
+        `INSERT INTO users(id, identifier, display_name, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+      ).bind(
+        userId,
+        parsed.data.identifier.toLowerCase(),
+        parsed.data.displayName,
+        await hashPassword(parsed.data.password, authRoot(c)),
+        timestamp,
+        timestamp,
+      ),
+      c.env.DB.prepare(
+        `INSERT INTO organizations(id, name, timezone, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`,
+      ).bind(
+        organizationId,
+        parsed.data.organizationName,
+        parsed.data.timezone,
+        timestamp,
+        timestamp,
+      ),
+      c.env.DB.prepare(
+        `INSERT INTO memberships(id, organization_id, user_id, role, status, created_at, updated_at) VALUES (?, ?, ?, 'owner', 'active', ?, ?)`,
+      ).bind(membershipId, organizationId, userId, timestamp, timestamp),
+      ...recoveryStatements,
+    ]);
+  } catch (caught) {
+    const claimed = await c.env.DB.prepare(
+      'SELECT 1 AS present FROM bootstrap_claims WHERE singleton = 1',
+    ).first();
+    if (claimed) return apiError(c, 409, 'bootstrap_closed', 'The first owner already exists');
+    throw caught;
+  }
+  await clearFailures(c.env.DB, throttle);
+  const created = await createSession(c.env.DB, userId, organizationId, authRoot(c));
   setSessionCookie(c, created.token);
   return c.json({ ...sessionView(created.session, created.csrfToken), recoveryCodes }, 201);
 });
@@ -197,21 +223,40 @@ app.post('/api/v1/bootstrap', async (c) => {
 app.post('/api/v1/auth/sign-in', async (c) => {
   const parsed = signInRequestSchema.safeParse(await c.req.json().catch(() => undefined));
   if (!parsed.success) return apiError(c, 400, 'validation_failed', 'Check the submitted fields');
-  if (!(await signInAllowed(c.env.DB, parsed.data.identifier)))
+  const addressThrottle = rateKey(c, 'sign-in');
+  if (
+    !(await signInAllowed(c.env.DB, parsed.data.identifier)) ||
+    !(await signInAllowed(c.env.DB, addressThrottle))
+  )
     return apiError(c, 401, 'invalid_credentials', 'The identifier or password is incorrect');
   const credential = await c.env.DB.prepare(
     `SELECT u.id, u.password_hash, m.organization_id FROM users u JOIN memberships m ON m.user_id = u.id WHERE u.identifier = ? COLLATE NOCASE AND u.disabled_at IS NULL AND m.status = 'active' LIMIT 1`,
   )
     .bind(parsed.data.identifier)
     .first<{ id: string; password_hash: string; organization_id: string }>();
-  if (!credential || !(await verifyPassword(parsed.data.password, credential.password_hash))) {
+  if (
+    !credential ||
+    !(await verifyPassword(parsed.data.password, credential.password_hash, authRoot(c)))
+  ) {
     await recordSignInFailure(c.env.DB, parsed.data.identifier);
+    await recordSignInFailure(c.env.DB, addressThrottle);
     return apiError(c, 401, 'invalid_credentials', 'The identifier or password is incorrect');
   }
-  await c.env.DB.prepare('DELETE FROM sign_in_attempts WHERE identifier = ? COLLATE NOCASE')
-    .bind(parsed.data.identifier)
-    .run();
-  const created = await createSession(c.env.DB, credential.id, credential.organization_id);
+  if (!credential.password_hash.startsWith('pbkdf2-sha256-v2$')) {
+    await c.env.DB.prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?')
+      .bind(await hashPassword(parsed.data.password, authRoot(c)), now(), credential.id)
+      .run();
+  }
+  await Promise.all([
+    clearFailures(c.env.DB, parsed.data.identifier),
+    clearFailures(c.env.DB, addressThrottle),
+  ]);
+  const created = await createSession(
+    c.env.DB,
+    credential.id,
+    credential.organization_id,
+    authRoot(c),
+  );
   setSessionCookie(c, created.token);
   return c.json(sessionView(created.session, created.csrfToken));
 });
@@ -219,6 +264,9 @@ app.post('/api/v1/auth/sign-in', async (c) => {
 app.post('/api/v1/invitations/accept', async (c) => {
   const parsed = invitationAcceptSchema.safeParse(await c.req.json().catch(() => undefined));
   if (!parsed.success) return apiError(c, 400, 'validation_failed', 'Check the submitted fields');
+  const throttle = rateKey(c, 'invitation');
+  if (!(await signInAllowed(c.env.DB, throttle)))
+    return apiError(c, 429, 'request_limited', 'Try again later');
   const invitation = await c.env.DB.prepare(
     `SELECT id, organization_id, identifier, display_name, role
      FROM invitations WHERE token_hash = ? AND accepted_at IS NULL AND expires_at > ?`,
@@ -231,8 +279,10 @@ app.post('/api/v1/invitations/accept', async (c) => {
       display_name: string;
       role: 'beekeeper' | 'viewer';
     }>();
-  if (!invitation)
+  if (!invitation) {
+    await recordSignInFailure(c.env.DB, throttle);
     return apiError(c, 400, 'invitation_invalid', 'The invitation is invalid or expired');
+  }
   const timestamp = now();
   const userId = crypto.randomUUID();
   const membershipId = crypto.randomUUID();
@@ -244,7 +294,7 @@ app.post('/api/v1/invitations/accept', async (c) => {
       userId,
       invitation.identifier,
       invitation.display_name,
-      await hashPassword(parsed.data.password),
+      await hashPassword(parsed.data.password, authRoot(c)),
       timestamp,
       timestamp,
     ),
@@ -257,7 +307,8 @@ app.post('/api/v1/invitations/accept', async (c) => {
       invitation.id,
     ),
   ]);
-  const created = await createSession(c.env.DB, userId, invitation.organization_id);
+  await clearFailures(c.env.DB, throttle);
+  const created = await createSession(c.env.DB, userId, invitation.organization_id, authRoot(c));
   setSessionCookie(c, created.token);
   return c.json(sessionView(created.session, created.csrfToken), 201);
 });
@@ -265,6 +316,9 @@ app.post('/api/v1/invitations/accept', async (c) => {
 app.post('/api/v1/auth/recover', async (c) => {
   const parsed = recoveryRequestSchema.safeParse(await c.req.json().catch(() => undefined));
   if (!parsed.success) return apiError(c, 400, 'validation_failed', 'Check the submitted fields');
+  const throttle = rateKey(c, 'recovery', parsed.data.identifier);
+  if (!(await signInAllowed(c.env.DB, throttle)))
+    return apiError(c, 429, 'request_limited', 'Try again later');
   const recovery = await c.env.DB.prepare(
     `SELECT r.id, r.user_id FROM recovery_codes r JOIN users u ON u.id = r.user_id
      WHERE u.identifier = ? COLLATE NOCASE AND r.code_hash = ?
@@ -272,11 +326,14 @@ app.post('/api/v1/auth/recover', async (c) => {
   )
     .bind(parsed.data.identifier, await sha256(parsed.data.recoveryCode))
     .first<{ id: string; user_id: string }>();
-  if (!recovery) return apiError(c, 400, 'recovery_invalid', 'The recovery information is invalid');
+  if (!recovery) {
+    await recordSignInFailure(c.env.DB, throttle);
+    return apiError(c, 400, 'recovery_invalid', 'The recovery information is invalid');
+  }
   const timestamp = now();
   await c.env.DB.batch([
     c.env.DB.prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?').bind(
-      await hashPassword(parsed.data.newPassword),
+      await hashPassword(parsed.data.newPassword, authRoot(c)),
       timestamp,
       recovery.user_id,
     ),
@@ -288,20 +345,32 @@ app.post('/api/v1/auth/recover', async (c) => {
       'UPDATE sessions SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL',
     ).bind(timestamp, recovery.user_id),
   ]);
+  await clearFailures(c.env.DB, throttle);
   return c.body(null, 204);
 });
 
 app.get('/api/v1/session', requireSession, async (c) => {
+  const sessionToken = opaqueToken();
   const csrfToken = opaqueToken();
-  await c.env.DB.prepare('UPDATE sessions SET csrf_hash = ? WHERE id_hash = ?')
-    .bind(await sha256(csrfToken), await sha256(c.get('session').token))
+  await c.env.DB.prepare('UPDATE sessions SET id_hash = ?, csrf_hash = ? WHERE id_hash IN (?, ?)')
+    .bind(
+      await keyedHash(sessionToken, authRoot(c)),
+      await sha256(csrfToken),
+      await keyedHash(c.get('session').token, authRoot(c)),
+      await sha256(c.get('session').token),
+    )
     .run();
+  setSessionCookie(c, sessionToken);
   return c.json(sessionView(c.get('session'), csrfToken));
 });
 
 app.post('/api/v1/auth/sign-out', requireSession, requireCsrf, async (c) => {
-  await c.env.DB.prepare('UPDATE sessions SET revoked_at = ? WHERE id_hash = ?')
-    .bind(now(), await sha256(c.get('session').token))
+  await c.env.DB.prepare('UPDATE sessions SET revoked_at = ? WHERE id_hash IN (?, ?)')
+    .bind(
+      now(),
+      await keyedHash(c.get('session').token, authRoot(c)),
+      await sha256(c.get('session').token),
+    )
     .run();
   deleteCookie(c, cookieName, { path: '/', secure: true });
   return c.body(null, 204);
@@ -719,6 +788,7 @@ app.notFound((c) => apiError(c, 404, 'not_found', 'The requested endpoint does n
 export default app;
 
 const backupColumns: Record<string, string[]> = {
+  bootstrap_claims: ['singleton', 'claimed_at'],
   organizations: ['id', 'name', 'timezone', 'version', 'created_at', 'updated_at', 'deleted_at'],
   users: [
     'id',
@@ -965,7 +1035,12 @@ async function recordServerUpdate(
   ]);
 }
 
-async function createSession(db: D1Database, userId: string, organizationId: string) {
+async function createSession(
+  db: D1Database,
+  userId: string,
+  organizationId: string,
+  authRootSecret: string,
+) {
   const token = opaqueToken();
   const csrfToken = opaqueToken();
   const timestamp = Date.now();
@@ -974,7 +1049,7 @@ async function createSession(db: D1Database, userId: string, organizationId: str
       `INSERT INTO sessions(id_hash, user_id, organization_id, csrf_hash, created_at, idle_expires_at, absolute_expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
-      await sha256(token),
+      await keyedHash(token, authRootSecret),
       userId,
       organizationId,
       await sha256(csrfToken),
@@ -983,17 +1058,21 @@ async function createSession(db: D1Database, userId: string, organizationId: str
       new Date(timestamp + 30 * 24 * 60 * 60 * 1000).toISOString(),
     )
     .run();
-  const session = await findSession(db, token);
+  const session = await findSession(db, token, authRootSecret);
   if (!session) throw new Error('New session could not be read');
   return { token, csrfToken, session };
 }
 
-async function findSession(db: D1Database, token: string): Promise<Session | undefined> {
+async function findSession(
+  db: D1Database,
+  token: string,
+  authRootSecret: string,
+): Promise<Session | undefined> {
   const row = await db
     .prepare(
-      `SELECT u.id AS user_id, u.identifier, u.display_name, o.id AS organization_id, o.name AS organization_name, o.timezone, m.id AS membership_id, m.role, s.csrf_hash, s.absolute_expires_at FROM sessions s JOIN users u ON u.id=s.user_id JOIN organizations o ON o.id=s.organization_id JOIN memberships m ON m.user_id=u.id AND m.organization_id=o.id WHERE s.id_hash=? AND s.revoked_at IS NULL AND s.idle_expires_at>? AND s.absolute_expires_at>? AND m.status='active'`,
+      `SELECT u.id AS user_id, u.identifier, u.display_name, o.id AS organization_id, o.name AS organization_name, o.timezone, m.id AS membership_id, m.role, s.csrf_hash, s.absolute_expires_at FROM sessions s JOIN users u ON u.id=s.user_id JOIN organizations o ON o.id=s.organization_id JOIN memberships m ON m.user_id=u.id AND m.organization_id=o.id WHERE s.id_hash IN (?, ?) AND s.revoked_at IS NULL AND s.idle_expires_at>? AND s.absolute_expires_at>? AND m.status='active'`,
     )
-    .bind(await sha256(token), now(), now())
+    .bind(await keyedHash(token, authRootSecret), await sha256(token), now(), now())
     .first<SessionRow>();
   return row
     ? {
@@ -1061,7 +1140,7 @@ function setSessionCookie(c: AppContext, token: string) {
 
 function apiError(
   c: AppContext,
-  status: 400 | 401 | 403 | 404 | 409 | 500,
+  status: 400 | 401 | 403 | 404 | 409 | 429 | 500,
   code: string,
   message: string,
 ) {
@@ -1106,6 +1185,13 @@ async function recordSignInFailure(db: D1Database, identifier: string) {
       failureCount,
       blockedUntil,
     )
+    .run();
+}
+
+async function clearFailures(db: D1Database, identifier: string) {
+  await db
+    .prepare('DELETE FROM sign_in_attempts WHERE identifier = ? COLLATE NOCASE')
+    .bind(identifier)
     .run();
 }
 

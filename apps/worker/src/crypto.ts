@@ -18,10 +18,25 @@ const decode = (value: string) => {
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 };
 
-async function derive(password: string, salt: Uint8Array, rounds: number) {
-  const key = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, [
-    'deriveBits',
-  ]);
+async function hmac(value: string, authRootSecret: string) {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(authRootSecret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  return new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(value)));
+}
+
+async function derive(material: Uint8Array, salt: Uint8Array, rounds: number) {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    material.slice().buffer as ArrayBuffer,
+    'PBKDF2',
+    false,
+    ['deriveBits'],
+  );
   return new Uint8Array(
     await crypto.subtle.deriveBits(
       {
@@ -36,23 +51,41 @@ async function derive(password: string, salt: Uint8Array, rounds: number) {
   );
 }
 
-export async function hashPassword(password: string) {
+export async function hashPassword(password: string, authRootSecret: string) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  return `pbkdf2-sha256$${iterations}$${encode(salt)}$${encode(await derive(password, salt, iterations))}`;
+  const material = await hmac(`password\0${password}`, authRootSecret);
+  return `pbkdf2-sha256-v2$${iterations}$${encode(salt)}$${encode(await derive(material, salt, iterations))}`;
 }
 
-export async function verifyPassword(password: string, stored: string) {
+export async function verifyPassword(password: string, stored: string, authRootSecret: string) {
   const [algorithm, roundsValue, saltValue, expectedValue] = stored.split('$');
-  if (algorithm !== 'pbkdf2-sha256' || !roundsValue || !saltValue || !expectedValue) return false;
+  if (
+    algorithm === undefined ||
+    !['pbkdf2-sha256', 'pbkdf2-sha256-v2'].includes(algorithm) ||
+    !roundsValue ||
+    !saltValue ||
+    !expectedValue
+  )
+    return false;
   const rounds = Number(roundsValue);
   if (!Number.isInteger(rounds) || rounds < 100_000 || rounds > 1_000_000) return false;
-  const actual = await derive(password, decode(saltValue), rounds);
+  const material =
+    algorithm === 'pbkdf2-sha256-v2'
+      ? await hmac(`password\0${password}`, authRootSecret)
+      : encoder.encode(password);
+  const actual = await derive(material, decode(saltValue), rounds);
   const expected = decode(expectedValue);
   if (actual.length !== expected.length) return false;
   let difference = 0;
   for (let index = 0; index < actual.length; index += 1)
     difference |= (actual[index] ?? 0) ^ (expected[index] ?? 0);
   return difference === 0;
+}
+
+export async function keyedHash(value: string, authRootSecret: string) {
+  return Array.from(await hmac(`session\0${value}`, authRootSecret))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 export async function sha256(value: string | ArrayBuffer | Uint8Array) {

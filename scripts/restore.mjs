@@ -10,7 +10,7 @@ export async function restoreBackup(backupDirectory, targetDirectory) {
   if (manifest.product !== 'ApiaryLens' || manifest.backupFormat !== 1) {
     throw new Error('Unsupported or invalid ApiaryLens backup');
   }
-  if (manifest.databaseMigration !== '0003') throw new Error('Backup migration is not compatible');
+  if (manifest.databaseMigration !== '0004') throw new Error('Backup migration is not compatible');
   const actual = await checksums(source, new Set(['backup-manifest.json']));
   const expected = manifest.files;
   if (JSON.stringify(actual) !== JSON.stringify(expected))

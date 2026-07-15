@@ -15,8 +15,10 @@ services:
       APIARYLENS_BUILD_TIME: ${APIARYLENS_BUILD_TIME:-development}
       APIARYLENS_ARTIFACT_IDENTITY: ${APIARYLENS_ARTIFACT_IDENTITY:-ApiaryLens@0.1.0-rc.1+development}
       BOOTSTRAP_TOKEN_FILE: /run/secrets/bootstrap_token
+      AUTH_ROOT_SECRET_FILE: /run/secrets/auth_root
     secrets:
       - bootstrap_token
+      - auth_root
     volumes:
       - apiarylens_data:/data
     networks:
@@ -84,6 +86,8 @@ volumes:
 secrets:
   bootstrap_token:
     file: ${APIARYLENS_BOOTSTRAP_SECRET_FILE:-./secrets/bootstrap-token}
+  auth_root:
+    file: ${APIARYLENS_AUTH_ROOT_SECRET_FILE:-./secrets/auth-root}
 
 networks:
   frontend:

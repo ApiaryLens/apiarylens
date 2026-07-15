@@ -376,8 +376,8 @@ bootstrap, generated secrets, throttling, session protection, and safe recovery.
 The PWA uses secure same-origin opaque cookie sessions; future native clients require
 an OAuth Authorization Code with PKCE design using an external user-agent.
 
-PBKDF2-HMAC-SHA-256 with per-password salts, a server pepper, hashed rotating
-sessions, one-time recovery codes, atomic first-owner bootstrap, throttling,
+PBKDF2-HMAC-SHA-256 with per-password salts, a domain-separated server pepper,
+keyed and rotating sessions, one-time recovery codes, atomic first-owner bootstrap, throttling,
 origin/CSRF defenses, and organization-scoped authorization are release controls.
 Optional OIDC, passkeys, public links, and native-client authorization are later
 extensions.

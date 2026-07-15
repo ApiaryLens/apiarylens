@@ -26,7 +26,7 @@ export async function createBackup(dataDirectory, outputDirectory) {
   const manifest = {
     product: 'ApiaryLens',
     productVersion,
-    databaseMigration: '0003',
+    databaseMigration: '0004',
     backupFormat: 1,
     createdAt: new Date().toISOString(),
     sourceDirectoryName: basename(data),

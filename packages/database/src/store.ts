@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import type {
   Membership,
@@ -10,7 +10,7 @@ import type {
   User,
 } from '@apiarylens/contracts';
 import { resourceFieldSchemas } from '@apiarylens/contracts';
-import { migration0001, migration0002, migration0003 } from './schema.js';
+import { migration0001, migration0002, migration0003, migration0004 } from './schema.js';
 
 type SqlValue = string | number | null;
 type Row = Record<string, SqlValue>;
@@ -82,13 +82,16 @@ function entityMeta(
 
 export class SqliteStore {
   readonly database: DatabaseSync;
+  private readonly authRootSecret: string;
 
-  constructor(path = ':memory:') {
+  constructor(path = ':memory:', options: { authRootSecret?: string } = {}) {
+    this.authRootSecret = options.authRootSecret ?? 'apiarylens-development-auth-root-secret';
     this.database = new DatabaseSync(path);
     for (const [version, sql] of [
       ['0001', migration0001],
       ['0002', migration0002],
       ['0003', migration0003],
+      ['0004', migration0004],
     ] as const) {
       this.database.exec(sql);
       this.database
@@ -97,21 +100,26 @@ export class SqliteStore {
     }
   }
 
+  private sessionHash(value: string): string {
+    return createHmac('sha256', this.authRootSecret).update(`session\0${value}`).digest('hex');
+  }
+
+  private sessionHashes(value: string): [string, string] {
+    return [this.sessionHash(value), hash(value)];
+  }
+
   close(): void {
     this.database.close();
   }
 
   hasOwner(): boolean {
     const row = this.database
-      .prepare(
-        "SELECT 1 AS present FROM memberships WHERE role = 'owner' AND status = 'active' LIMIT 1",
-      )
+      .prepare('SELECT 1 AS present FROM bootstrap_claims WHERE singleton = 1')
       .get() as Row | undefined;
     return row !== undefined;
   }
 
   bootstrap(input: BootstrapInput): BootstrapResult {
-    if (this.hasOwner()) throw new StoreError('bootstrap_closed', 'The first owner already exists');
     const timestamp = now();
     const userId = randomUUID();
     const organizationId = randomUUID();
@@ -119,6 +127,11 @@ export class SqliteStore {
 
     const recoveryCodes = Array.from({ length: 8 }, () => token().slice(0, 20));
     this.transaction(() => {
+      const claim = this.database
+        .prepare('INSERT OR IGNORE INTO bootstrap_claims(singleton, claimed_at) VALUES (1, ?)')
+        .run(timestamp);
+      if (claim.changes !== 1)
+        throw new StoreError('bootstrap_closed', 'The first owner already exists');
       this.database
         .prepare(
           `INSERT INTO users(id, identifier, display_name, password_hash, created_at, updated_at)
@@ -299,6 +312,12 @@ export class SqliteStore {
     return { userId: row.id, passwordHash: row.password_hash };
   }
 
+  updatePasswordHash(userId: string, passwordHash: string): void {
+    this.database
+      .prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?')
+      .run(passwordHash, now(), userId);
+  }
+
   signInAllowed(identifier: string): boolean {
     const row = this.database
       .prepare('SELECT blocked_until FROM sign_in_attempts WHERE identifier = ? COLLATE NOCASE')
@@ -366,7 +385,7 @@ export class SqliteStore {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
-        hash(sessionToken),
+        this.sessionHash(sessionToken),
         userId,
         organizationId,
         hash(csrfToken),
@@ -397,11 +416,11 @@ export class SqliteStore {
         JOIN users u ON u.id = s.user_id
         JOIN organizations o ON o.id = s.organization_id
         JOIN memberships m ON m.user_id = u.id AND m.organization_id = o.id
-        WHERE s.id_hash = ? AND s.revoked_at IS NULL AND m.status = 'active'
+        WHERE s.id_hash IN (?, ?) AND s.revoked_at IS NULL AND m.status = 'active'
           AND u.disabled_at IS NULL AND o.deleted_at IS NULL
           AND s.idle_expires_at > ? AND s.absolute_expires_at > ?`,
       )
-      .get(hash(sessionToken), now(), now()) as Row | undefined;
+      .get(...this.sessionHashes(sessionToken), now(), now()) as Row | undefined;
     if (!row) return undefined;
     const organizationId = String(row.organization_id);
     const userId = String(row.user_id);
@@ -448,23 +467,31 @@ export class SqliteStore {
     return hash(csrfToken) === session.csrfHash;
   }
 
-  rotateCsrf(sessionToken: string): string {
+  rotateSession(sessionToken: string): SessionTokens {
+    const nextSessionToken = token();
     const csrfToken = token();
     const result = this.database
       .prepare(
-        `UPDATE sessions SET csrf_hash = ?, last_seen_at = ?
-         WHERE id_hash = ? AND revoked_at IS NULL`,
+        `UPDATE sessions SET id_hash = ?, csrf_hash = ?, last_seen_at = ?
+         WHERE id_hash IN (?, ?) AND revoked_at IS NULL`,
       )
-      .run(hash(csrfToken), now(), hash(sessionToken));
+      .run(
+        this.sessionHash(nextSessionToken),
+        hash(csrfToken),
+        now(),
+        ...this.sessionHashes(sessionToken),
+      );
     if (result.changes !== 1)
       throw new StoreError('session_expired', 'The session is no longer valid');
-    return csrfToken;
+    const view = this.getSession(nextSessionToken);
+    if (!view) throw new StoreError('session_expired', 'The session is no longer valid');
+    return { sessionToken: nextSessionToken, csrfToken, view };
   }
 
   revokeSession(sessionToken: string): void {
     this.database
-      .prepare('UPDATE sessions SET revoked_at = ? WHERE id_hash = ?')
-      .run(now(), hash(sessionToken));
+      .prepare('UPDATE sessions SET revoked_at = ? WHERE id_hash IN (?, ?)')
+      .run(now(), ...this.sessionHashes(sessionToken));
   }
 
   listResources(organizationId: string, entityType: ResourceType): ResourceRecord[] {

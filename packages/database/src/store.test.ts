@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DATABASE_MIGRATION_HEAD, type SyncOperation } from '@apiarylens/contracts';
 import { SqliteStore } from './store.js';
@@ -41,12 +41,19 @@ describe('SqliteStore', () => {
     const migrations = store.database
       .prepare('SELECT version FROM migrations ORDER BY version')
       .all() as Array<{ version: string }>;
-    expect(migrations.map(({ version }) => version)).toEqual(['0001', '0002', '0003']);
+    expect(migrations.map(({ version }) => version)).toEqual(['0001', '0002', '0003', '0004']);
     expect(migrations.at(-1)?.version).toBe(DATABASE_MIGRATION_HEAD);
     expect(
       store.database
         .prepare(
           "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'audit_events_by_organization_created_at'",
+        )
+        .get(),
+    ).toBeDefined();
+    expect(
+      store.database
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'bootstrap_claims'",
         )
         .get(),
     ).toBeDefined();
@@ -56,6 +63,18 @@ describe('SqliteStore', () => {
     const session = bootstrap();
     expect(session.view.membership.role).toBe('owner');
     expect(() => bootstrap('second@example.test')).toThrow(/already exists/i);
+  });
+
+  it('stores keyed session identifiers while accepting a legacy hash during upgrade', () => {
+    const session = bootstrap();
+    const legacy = createHash('sha256').update(session.sessionToken).digest('hex');
+    const stored = store.database.prepare('SELECT id_hash FROM sessions').get() as {
+      id_hash: string;
+    };
+    expect(stored.id_hash).not.toBe(legacy);
+    expect(store.getSession(session.sessionToken)?.user.identifier).toBe('owner@example.test');
+    store.database.prepare('UPDATE sessions SET id_hash = ?').run(legacy);
+    expect(store.getSession(session.sessionToken)?.user.identifier).toBe('owner@example.test');
   });
 
   it('applies and deduplicates a client operation', () => {

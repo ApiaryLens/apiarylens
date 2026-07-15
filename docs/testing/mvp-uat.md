@@ -13,7 +13,7 @@ not satisfy it.
 - Release channel: release-candidate
 - API: 1.0
 - Sync: 1
-- Database migration: 0003
+- Database migration: 0004
 - Deployment plan: 1
 - Export/local store: 1
 - Required profiles: Cloudflare family; Hyper-V Linux Docker Compose

@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, pbkdf2Sync, randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SqliteStore } from '@apiarylens/database';
 import { MemoryMediaStore } from '@apiarylens/media';
@@ -94,6 +94,41 @@ describe('ApiaryLens API', () => {
     });
     expect(accepted.status).toBe(201);
     protectedStore.close();
+  });
+
+  it('throttles repeated bootstrap-code guesses by deployment address', async () => {
+    const throttledStore = new SqliteStore();
+    const throttledApi = createApi({
+      store: throttledStore,
+      secureCookies: false,
+      bootstrapToken: 'deployment-code-with-enough-entropy',
+    });
+    const payload = {
+      identifier: 'throttled-owner@example.test',
+      displayName: 'Throttled Owner',
+      password: 'correct horse battery staple',
+      organizationName: 'Protected Apiary',
+      timezone: 'UTC',
+      bootstrapToken: 'incorrect-deployment-code',
+    };
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const rejected = await throttledApi.request('/api/v1/bootstrap', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-forwarded-for': '192.0.2.10' },
+        body: JSON.stringify(payload),
+      });
+      expect(rejected.status).toBe(403);
+    }
+    const limited = await throttledApi.request('/api/v1/bootstrap', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': '192.0.2.10' },
+      body: JSON.stringify({
+        ...payload,
+        bootstrapToken: 'deployment-code-with-enough-entropy',
+      }),
+    });
+    expect(limited.status).toBe(429);
+    throttledStore.close();
   });
 
   it('publishes OpenAPI without requiring authentication', async () => {
@@ -222,6 +257,15 @@ describe('ApiaryLens API', () => {
 
   it('signs in with a password without exposing credentials to browser storage', async () => {
     await bootstrap();
+    const salt = Buffer.alloc(16, 11);
+    const legacy = `pbkdf2-sha256$100000$${salt.toString('base64url')}$${pbkdf2Sync(
+      'correct horse battery staple',
+      salt,
+      100_000,
+      32,
+      'sha256',
+    ).toString('base64url')}`;
+    store.database.prepare('UPDATE users SET password_hash = ?').run(legacy);
     const response = await app.request('/api/v1/auth/sign-in', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -232,6 +276,27 @@ describe('ApiaryLens API', () => {
     });
     expect(response.status).toBe(200);
     expect(response.headers.get('set-cookie')).toContain('HttpOnly');
+    const upgraded = store.database.prepare('SELECT password_hash FROM users').get() as {
+      password_hash: string;
+    };
+    expect(upgraded.password_hash).toMatch(/^pbkdf2-sha256-v2\$/);
+  });
+
+  it('rotates the opaque session identifier when refreshing a session', async () => {
+    const owner = await bootstrap();
+    const refreshed = await app.request('/api/v1/session', {
+      headers: { cookie: owner.cookie },
+    });
+    expect(refreshed.status).toBe(200);
+    const nextCookie = refreshed.headers.get('set-cookie')?.split(';')[0];
+    expect(nextCookie).toBeTruthy();
+    expect(nextCookie).not.toBe(owner.cookie);
+    expect(
+      (await app.request('/api/v1/session', { headers: { cookie: owner.cookie } })).status,
+    ).toBe(401);
+    expect(
+      (await app.request('/api/v1/session', { headers: { cookie: nextCookie! } })).status,
+    ).toBe(200);
   });
 
   it('enrolls a viewer who cannot write protected records', async () => {

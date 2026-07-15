@@ -12,17 +12,26 @@ const mediaPath = process.env.APIARYLENS_MEDIA ?? './data/media';
 const bootstrapToken = process.env.BOOTSTRAP_TOKEN_FILE
   ? readFileSync(process.env.BOOTSTRAP_TOKEN_FILE, 'utf8').trim()
   : process.env.BOOTSTRAP_TOKEN;
+const authRootSecret = process.env.AUTH_ROOT_SECRET_FILE
+  ? readFileSync(process.env.AUTH_ROOT_SECRET_FILE, 'utf8').trim()
+  : process.env.AUTH_ROOT_SECRET;
 if (process.env.NODE_ENV === 'production' && !bootstrapToken) {
   throw new Error('A protected first-owner bootstrap code is required in production');
 }
+if (process.env.NODE_ENV === 'production' && (!authRootSecret || authRootSecret.length < 32)) {
+  throw new Error('A durable authentication root secret of at least 32 characters is required');
+}
 if (databasePath !== ':memory:') mkdirSync(dirname(databasePath), { recursive: true });
-const store = new SqliteStore(databasePath);
+const store = new SqliteStore(databasePath, {
+  ...(authRootSecret ? { authRootSecret } : {}),
+});
 const mediaStore = new FilesystemMediaStore(mediaPath);
 const app = createApi({
   store,
   mediaStore,
   secureCookies: process.env.NODE_ENV === 'production',
   ...(bootstrapToken ? { bootstrapToken } : {}),
+  ...(authRootSecret ? { authRootSecret } : {}),
   buildIdentity: createBuildIdentity({
     deploymentProfile: 'compose',
     ...(process.env.APIARYLENS_SOURCE_COMMIT

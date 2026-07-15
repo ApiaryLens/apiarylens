@@ -20,8 +20,11 @@ contracts.
    custom domain. Keep Web Analytics and Worker observability disabled.
 2. Create or reuse the exact named D1 database and private R2 bucket.
 3. Apply ordered D1 migrations from the verified bundle.
-4. Provide the first-install `BOOTSTRAP_TOKEN` through Wrangler's secrets-file
-   mechanism so it is installed atomically with the Worker.
+4. Provide the first-install `BOOTSTRAP_TOKEN` and a separate random
+   `AUTH_ROOT_SECRET` through Wrangler's secrets-file mechanism so both are installed
+   atomically with the Worker. Retain the authentication root through every update;
+   rotating or losing it invalidates keyed sessions and prevents verification of
+   peppered passwords.
 5. Deploy the Worker/static bundle with D1 and R2 bindings and a custom-domain route.
 6. Verify public HTTPS, `/health`, bootstrap protection, authenticated data access,
    private media, export, and quota assumptions.
@@ -36,8 +39,9 @@ after the operation.
    HTTPS prerequisites.
 2. Transfer the content-addressed Compose bundle over SSH with strict host-key
    checking and verify its SHA-256 digest on the server.
-3. Extract it under `/opt/apiarylens/releases/<version>` and write a mode-600 `.env`
-   containing site configuration and generated production secrets.
+3. Extract it under `/opt/apiarylens/releases/<version>`, place the one-time bootstrap
+   code and durable authentication root in separate mode-600 files outside the release
+   tree, and reference those Docker secrets from the mode-600 `.env`.
 4. Run `docker compose --project-name <name> --env-file <file> -f docker/compose.yaml
    up -d --build --wait`.
 5. Verify container health, public HTTPS, `/health`, sign-in, database writes, private
@@ -49,7 +53,8 @@ unauthenticated service to LAN or public interfaces.
 ## Backup
 
 - Compose backups stop API writes, archive the named data volume, validate gzip and
-  tar structure, copy release identity, then restart the API.
+  tar structure, copy release identity and the mode-600 authentication root, then
+  restart the API.
 - Cloudflare backups stream allow-listed identity and application tables plus all
   private R2 objects through the temporary protected maintenance endpoint.
 - Copy backups away from the deployment. Record product version, migration head,
@@ -80,9 +85,12 @@ failure of the critical UAT journey.
 
 ## Uninstall
 
-Scout Bee and the direct Compose procedure default to keeping data. Removing D1, R2,
-or Docker volumes requires a separate explicit destructive confirmation. Verify a
-portable backup before deleting retained data.
+Scout Bee and the direct Compose procedure default to keeping data. A Cloudflare
+keep-data uninstall removes public triggers but retains a dormant service so its
+write-only authentication root secret survives for a later reinstall; deleting the
+Worker would make retained peppered credentials unrecoverable. Removing D1, R2, the
+dormant service, authentication roots, or Docker volumes requires a separate explicit
+destructive confirmation. Verify a portable backup before deleting retained data.
 
 ## Diagnostics and Privacy
 

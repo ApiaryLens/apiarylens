@@ -289,14 +289,26 @@ func (a *cloudflareAdapter) deploy(ctx context.Context, input request, manifest 
 	deployArgs := []string{"deploy", "--config", configPath}
 	if input.Plan.Operation == "install" {
 		bootstrap := input.Secrets["bootstrapToken"]
+		authRootBytes := make([]byte, 48)
+		if _, err = rand.Read(authRootBytes); err != nil {
+			return append(phases, failed("Prepare authentication root secret", err)), err
+		}
+		authRoot := base64.RawURLEncoding.EncodeToString(authRootBytes)
 		runtimeSecrets["bootstrapToken"] = bootstrap
-		bootstrapPayload, _ := json.Marshal(map[string]string{"BOOTSTRAP_TOKEN": bootstrap})
+		runtimeSecrets["authRootSecret"] = authRoot
+		bootstrapPayload, _ := json.Marshal(map[string]string{
+			"BOOTSTRAP_TOKEN":  bootstrap,
+			"AUTH_ROOT_SECRET": authRoot,
+		})
 		secretsPath := filepath.Join(temp, "runtime-secrets.json")
 		if err = os.WriteFile(secretsPath, bootstrapPayload, 0o600); err != nil {
 			return append(phases, failed("Prepare one-time owner setup protection", err)), err
 		}
 		deployArgs = append(deployArgs, "--secrets-file", secretsPath)
-		phases = append(phases, pass("Prepare one-time owner setup protection", "Your runtime-only owner setup code will be installed atomically with the application and was not logged."))
+		phases = append(phases,
+			pass("Prepare one-time owner setup protection", "Your runtime-only owner setup code will be installed atomically with the application and was not logged."),
+			pass("Prepare authentication root secret", "A random durable root secret will domain-separate password and session hashing without entering the plan or logs."),
+		)
 	}
 
 	output, err := a.executor.runner.Run(ctx, command{Executable: "wrangler", Args: deployArgs, Directory: root, Environment: environment}, runtimeSecrets)
@@ -320,16 +332,35 @@ func (a *cloudflareAdapter) deploy(ctx context.Context, input request, manifest 
 
 func (a *cloudflareAdapter) uninstall(ctx context.Context, input request) ([]phase, error) {
 	cf := input.Plan.Cloudflare
-	token := input.Secrets["cloudflareApiToken"]
-	_, err := a.executor.runner.Run(ctx, command{Executable: "wrangler", Args: []string{"delete", "--name", cf.WorkerName, "--force"}, Environment: map[string]string{"CLOUDFLARE_API_TOKEN": token}}, input.Secrets)
-	if err != nil {
-		return []phase{failed("Remove Cloudflare application revision", err)}, err
-	}
-	detail := "The Worker was removed; D1 records and R2 media were retained."
 	if !input.Plan.KeepDataOnUninstall {
-		detail = "The Worker was removed. Data-resource deletion requires a separate typed confirmation and was not performed by this request."
+		err := errors.New("Cloudflare data deletion requires a separate typed confirmation; no service or data was changed")
+		return []phase{failed("Preserve recoverable Cloudflare data", err)}, err
 	}
-	return []phase{pass("Remove Cloudflare application revision", detail)}, nil
+	token := input.Secrets["cloudflareApiToken"]
+	temp, err := os.MkdirTemp("", "apiarylens-scout-disabled-")
+	if err != nil {
+		return []phase{failed("Prepare disabled Cloudflare service", err)}, err
+	}
+	defer os.RemoveAll(temp)
+	workerPath := filepath.Join(temp, "disabled.js")
+	configPath := filepath.Join(temp, "wrangler.disabled.json")
+	if err = os.WriteFile(workerPath, []byte("export default {fetch(){return new Response('ApiaryLens is uninstalled',{status:410})}};\n"), 0o600); err != nil {
+		return []phase{failed("Prepare disabled Cloudflare service", err)}, err
+	}
+	config := map[string]any{
+		"name": cf.WorkerName, "main": "disabled.js", "compatibility_date": "2026-07-15",
+		"account_id": cf.AccountReference, "workers_dev": false, "preview_urls": false,
+		"routes": []any{}, "send_metrics": false, "observability": map[string]any{"enabled": false},
+	}
+	raw, _ := json.MarshalIndent(config, "", "  ")
+	if err = os.WriteFile(configPath, append(raw, '\n'), 0o600); err != nil {
+		return []phase{failed("Prepare disabled Cloudflare service", err)}, err
+	}
+	_, err = a.executor.runner.Run(ctx, command{Executable: "wrangler", Args: []string{"deploy", "--config", configPath}, Environment: map[string]string{"CLOUDFLARE_API_TOKEN": token}}, input.Secrets)
+	if err != nil {
+		return []phase{failed("Disable Cloudflare application exposure", err)}, err
+	}
+	return []phase{pass("Disable Cloudflare application exposure", "Public triggers were removed while the dormant service retained its authentication secret, D1 records, and R2 media for a recoverable reinstall.")}, nil
 }
 
 func (a *cloudflareAdapter) ensureD1(ctx context.Context, name string, environment, secrets map[string]string) (string, error) {

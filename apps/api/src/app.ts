@@ -36,11 +36,12 @@ interface ApiOptions {
   secureCookies?: boolean;
   buildIdentity?: BuildIdentity;
   bootstrapToken?: string;
+  authRootSecret?: string;
 }
 
 function error(
   c: Context<{ Variables: Variables }>,
-  status: 400 | 401 | 403 | 404 | 409,
+  status: 400 | 401 | 403 | 404 | 409 | 429,
   code: string,
   message: string,
 ) {
@@ -64,7 +65,15 @@ export function createApi(options: ApiOptions) {
   const secure = options.secureCookies ?? true;
   const buildIdentity =
     options.buildIdentity ?? createBuildIdentity({ deploymentProfile: 'development' });
+  const authRootSecret = options.authRootSecret ?? 'apiarylens-development-auth-root-secret';
   const sessionCookie = secure ? '__Host-apiarylens-session' : 'apiarylens-session';
+  const rateKey = (c: Context, scope: string, identity = '') => {
+    const address =
+      c.req.header('cf-connecting-ip') ??
+      c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ??
+      'unknown';
+    return `rate:${scope}:${identity.toLowerCase()}:${address}`;
+  };
 
   app.use('*', secureHeaders());
   app.use('*', async (c, next) => {
@@ -121,14 +130,18 @@ export function createApi(options: ApiOptions) {
   app.post('/api/v1/bootstrap', async (c) => {
     const parsed = bootstrapRequestSchema.safeParse(await c.req.json().catch(() => undefined));
     if (!parsed.success) return error(c, 400, 'validation_failed', 'Check the submitted fields');
+    const throttle = rateKey(c, 'bootstrap');
+    if (!store.signInAllowed(throttle)) return error(c, 429, 'request_limited', 'Try again later');
     if (options.bootstrapToken && parsed.data.bootstrapToken !== options.bootstrapToken) {
+      store.recordSignInFailure(throttle);
       return error(c, 403, 'bootstrap_token_invalid', 'The deployment bootstrap code is incorrect');
     }
     try {
       const tokens = store.bootstrap({
         ...parsed.data,
-        passwordHash: await hashPassword(parsed.data.password),
+        passwordHash: await hashPassword(parsed.data.password, authRootSecret),
       });
+      store.clearSignInFailures(throttle);
       setCookie(c, sessionCookie, tokens.sessionToken, {
         httpOnly: true,
         secure,
@@ -152,15 +165,27 @@ export function createApi(options: ApiOptions) {
   app.post('/api/v1/auth/sign-in', async (c) => {
     const parsed = signInRequestSchema.safeParse(await c.req.json().catch(() => undefined));
     if (!parsed.success) return error(c, 400, 'validation_failed', 'Check the submitted fields');
-    if (!store.signInAllowed(parsed.data.identifier)) {
+    const addressThrottle = rateKey(c, 'sign-in');
+    if (!store.signInAllowed(parsed.data.identifier) || !store.signInAllowed(addressThrottle)) {
       return error(c, 401, 'invalid_credentials', 'The identifier or password is incorrect');
     }
     const credential = store.verifyCredentials(parsed.data.identifier);
-    if (!credential || !(await verifyPassword(parsed.data.password, credential.passwordHash))) {
+    if (
+      !credential ||
+      !(await verifyPassword(parsed.data.password, credential.passwordHash, authRootSecret))
+    ) {
       store.recordSignInFailure(parsed.data.identifier);
+      store.recordSignInFailure(addressThrottle);
       return error(c, 401, 'invalid_credentials', 'The identifier or password is incorrect');
     }
+    if (!credential.passwordHash.startsWith('pbkdf2-sha256-v2$')) {
+      store.updatePasswordHash(
+        credential.userId,
+        await hashPassword(parsed.data.password, authRootSecret),
+      );
+    }
     store.clearSignInFailures(parsed.data.identifier);
+    store.clearSignInFailures(addressThrottle);
     const organizationId = store.activeOrganizationForUser(credential.userId);
     if (!organizationId)
       return error(c, 403, 'membership_required', 'No active family is available');
@@ -178,11 +203,14 @@ export function createApi(options: ApiOptions) {
   app.post('/api/v1/invitations/accept', async (c) => {
     const parsed = invitationAcceptSchema.safeParse(await c.req.json().catch(() => undefined));
     if (!parsed.success) return error(c, 400, 'validation_failed', 'Check the submitted fields');
+    const throttle = rateKey(c, 'invitation');
+    if (!store.signInAllowed(throttle)) return error(c, 429, 'request_limited', 'Try again later');
     try {
       const tokens = store.acceptInvitation(
         parsed.data.token,
-        await hashPassword(parsed.data.password),
+        await hashPassword(parsed.data.password, authRootSecret),
       );
+      store.clearSignInFailures(throttle);
       setCookie(c, sessionCookie, tokens.sessionToken, {
         httpOnly: true,
         secure,
@@ -192,7 +220,10 @@ export function createApi(options: ApiOptions) {
       });
       return c.json(sessionView(tokens.view, tokens.csrfToken), 201);
     } catch (caught) {
-      if (caught instanceof StoreError) return error(c, 400, caught.code, caught.message);
+      if (caught instanceof StoreError) {
+        store.recordSignInFailure(throttle);
+        return error(c, 400, caught.code, caught.message);
+      }
       throw caught;
     }
   });
@@ -200,22 +231,35 @@ export function createApi(options: ApiOptions) {
   app.post('/api/v1/auth/recover', async (c) => {
     const parsed = recoveryRequestSchema.safeParse(await c.req.json().catch(() => undefined));
     if (!parsed.success) return error(c, 400, 'validation_failed', 'Check the submitted fields');
+    const throttle = rateKey(c, 'recovery', parsed.data.identifier);
+    if (!store.signInAllowed(throttle)) return error(c, 429, 'request_limited', 'Try again later');
     try {
       store.recover(
         parsed.data.identifier,
         parsed.data.recoveryCode,
-        await hashPassword(parsed.data.newPassword),
+        await hashPassword(parsed.data.newPassword, authRootSecret),
       );
+      store.clearSignInFailures(throttle);
       return c.body(null, 204);
     } catch (caught) {
-      if (caught instanceof StoreError) return error(c, 400, caught.code, caught.message);
+      if (caught instanceof StoreError) {
+        store.recordSignInFailure(throttle);
+        return error(c, 400, caught.code, caught.message);
+      }
       throw caught;
     }
   });
 
   app.get('/api/v1/session', requireSession, (c) => {
-    const csrfToken = store.rotateCsrf(c.get('sessionToken'));
-    return c.json(sessionView(c.get('session'), csrfToken));
+    const tokens = store.rotateSession(c.get('sessionToken'));
+    setCookie(c, sessionCookie, tokens.sessionToken, {
+      httpOnly: true,
+      secure,
+      sameSite: 'Strict',
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60,
+    });
+    return c.json(sessionView(tokens.view, tokens.csrfToken));
   });
 
   app.post('/api/v1/auth/sign-out', requireSession, requireCsrf, (c) => {
