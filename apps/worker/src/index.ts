@@ -769,6 +769,29 @@ const backupColumns: Record<string, string[]> = {
     'result_json',
     'created_at',
   ],
+  invitations: [
+    'id',
+    'organization_id',
+    'token_hash',
+    'identifier',
+    'display_name',
+    'role',
+    'expires_at',
+    'created_at',
+    'created_by',
+    'accepted_at',
+  ],
+  sign_in_attempts: ['identifier', 'window_started_at', 'failure_count', 'blocked_until'],
+  audit_events: [
+    'id',
+    'organization_id',
+    'actor_user_id',
+    'action',
+    'target_type',
+    'target_id',
+    'result',
+    'created_at',
+  ],
 };
 const backupTables = Object.keys(backupColumns);
 

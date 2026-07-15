@@ -611,6 +611,9 @@ for (const name of [
   'database/resources.json',
   'database/changes.json',
   'database/idempotency.json',
+  'database/invitations.json',
+  'database/sign_in_attempts.json',
+  'database/audit_events.json',
 ])
   assert(backupFiles[name], `backup is missing ${name}`);
 assert(
