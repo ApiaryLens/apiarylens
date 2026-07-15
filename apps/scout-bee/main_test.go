@@ -405,6 +405,38 @@ func TestCloudflareHealthWaitsForExactBuildIdentityPropagation(t *testing.T) {
 	}
 }
 
+func TestCloudflareHealthAllowsFreshWorkerRoutePropagation(t *testing.T) {
+	attempts := 0
+	expectedCommit := strings.Repeat("a", 40)
+	expectedBuildTime := "2026-07-15T00:00:00Z"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		attempts++
+		if attempts <= 120 {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"status": "ok", "product": "ApiaryLens", "version": "0.1.0-rc.1",
+			"build": map[string]string{
+				"sourceCommit": expectedCommit, "buildTime": expectedBuildTime,
+				"artifactIdentity": "ApiaryLens@0.1.0-rc.1+aaaaaaa",
+			},
+		})
+	}))
+	defer server.Close()
+	adapter := &cloudflareAdapter{
+		executor: &executor{client: server.Client()}, healthRetryDelay: time.Nanosecond,
+	}
+	if err := adapter.verifyHealth(context.Background(), server.URL, releaseManifest{
+		ProductVersion: "0.1.0-rc.1", SourceCommit: expectedCommit, BuildTime: expectedBuildTime,
+	}); err != nil {
+		t.Fatalf("expected a fresh Worker route to converge after the former limit: %v", err)
+	}
+	if attempts != 121 {
+		t.Fatalf("expected 121 health attempts, got %d", attempts)
+	}
+}
+
 func TestCloudflareKeepDataUninstallRetainsRecoverableServiceSecrets(t *testing.T) {
 	p := validPlan()
 	p.Operation = "uninstall"

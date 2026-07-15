@@ -443,7 +443,7 @@ func (a *cloudflareAdapter) ensureR2(ctx context.Context, name string, environme
 func (a *cloudflareAdapter) verifyHealth(ctx context.Context, address string, manifest releaseManifest) error {
 	attempts := a.healthAttempts
 	if attempts <= 0 {
-		attempts = 120
+		attempts = 600
 	}
 	delay := a.healthRetryDelay
 	if delay <= 0 {
