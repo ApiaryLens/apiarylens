@@ -29,8 +29,8 @@
       high-severity vulnerabilities.
 - [x] The release-scope threat model and OWASP ASVS 5.0.0 chapter map document
       implemented, partial, and non-applicable controls without claiming certification.
-- [x] Public MVP verification run `29446576722` passes for release-evidence revision
-      `f1cac5548f9376f4ab706fc343b185d037d34545`, whose manifest pins product-source
+- [x] Public MVP verification run `29451937016` passes for release-evidence revision
+      `992d4d74a6e53b05269c131399c9aab5af4727fa`, whose manifest pins product-source
       revision `037d54881f79a9381212b94d4d382dc716bbdffc`, including the secret scan,
       complete workspace verification, clean Compose image builds, and release checks.
 - [x] The SHA-256-pinned Grype 0.115.0 CI scan reports no unresolved high or critical
@@ -48,7 +48,10 @@
       label and connector collisions were rebuilt, filed, re-exported, and visually
       rechecked; rejected drafts are outside the authoritative folder.
 - [x] The released Scout Bee Windows executable passes a secret-redacted, pinned
-      release preflight against the isolated Cloudflare UAT resources.
+      release preflight and a 17-phase guarded update against the isolated Cloudflare
+      UAT resources, including backup-before-migration, resource reuse, migration,
+      deployment, exact build identity, retained data/media, cleanup, and redacted
+      diagnostics.
 - [ ] The Hyper-V UAT target passes Scout Bee preflight; the combined target gate
       remains open until that independent run succeeds.
 - [x] The isolated Cloudflare family service passes protected bootstrap, roles, all
@@ -89,10 +92,10 @@ bootstrap claim; private R2 held the recovered original and thumbnail. This evid
 advances the Cloudflare data-path gate but does not satisfy the remaining combined
 Cloudflare-plus-Compose or physical-device gates.
 
-The current released Scout Bee Cloudflare preflight is recorded in
-[`scout-bee-cloudflare-preflight-2026-07-15-v2.json`](scout-bee-cloudflare-preflight-2026-07-15-v2.json),
-with the pre-refresh run retained as historical evidence. Release-signing evidence is
-recorded in
+The current released Scout Bee guarded Cloudflare update is recorded in
+[`scout-bee-cloudflare-update-2026-07-15.json`](scout-bee-cloudflare-update-2026-07-15.json).
+The two earlier dry-run preflights are retained as historical evidence. Release-signing
+evidence is recorded in
 [`release-signing-evidence-2026-07-15.json`](release-signing-evidence-2026-07-15.json).
 The production observation and provider-allowance baseline is recorded in
 [`cloudflare-family-cost-and-observation-2026-07-15.md`](cloudflare-family-cost-and-observation-2026-07-15.md).

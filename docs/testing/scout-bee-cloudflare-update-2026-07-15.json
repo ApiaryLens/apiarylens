@@ -1,0 +1,57 @@
+{
+  "capturedAt": "2026-07-15T21:31:07Z",
+  "executable": { "name": "apiarylens-scout-bee-0.1.0-rc.1-windows-amd64.exe", "sha256": "c4101e4a91e70322336b3d64a561107cee00bd24514dfc989e3faed194e49cbe" },
+  "release": {
+    "version": "0.1.0-rc.1",
+    "channel": "release-candidate",
+    "manifestUrl": "https://apiarylens.org/releases/0.1.0-rc.1/manifest.json",
+    "manifestSha256": "c038e167326f4d8d757821b279f27b52144e43f6722c75694304bd7384e18ec9",
+    "sourceCommit": "037d54881f79a9381212b94d4d382dc716bbdffc",
+    "buildTime": "2026-07-15T19:54:48.2706596Z",
+    "artifactIdentity": "ApiaryLens@0.1.0-rc.1+037d548"
+  },
+  "planId": "ee42b8d3-3a4a-41cd-8403-1cd9f789078a",
+  "target": "cloudflare",
+  "operation": "update",
+  "mode": "apply",
+  "resources": {
+    "worker": "apiarylens-family-uat",
+    "database": "apiarylens-family-uat",
+    "media": "apiarylens-family-media-uat",
+    "address": "https://apiarylens-family-uat.hybridsolutionscloud.workers.dev"
+  },
+  "startedAt": "2026-07-15T21:28:41.7621993Z",
+  "finishedAt": "2026-07-15T21:29:11.9551972Z",
+  "phases": [
+    "Validate deployment plan", "Check release identity", "Find Cloudflare deployment tool",
+    "Verify Cloudflare account access", "Review guarded cost profile",
+    "Download and verify deployment bundle", "Stage deployment bundle",
+    "Create one-time maintenance authorization", "Create portable backup archive",
+    "Verify portable backup archive", "Save portable backup archive",
+    "Require verified backup before update", "Create or reuse records database",
+    "Create or reuse private media storage", "Apply compatible database migrations",
+    "Deploy Worker and PWA assets", "Verify deployment health"
+  ],
+  "allPhasesPassed": true,
+  "backup": {
+    "name": "apiarylens-backup-20260715T212851Z.zip",
+    "bytes": 11376,
+    "sha256": "2197e19b93ba9a6c374858c847164062e651952913eba21d0b7fad0ef15cd5a4",
+    "verifiedBeforeMigration": true
+  },
+  "postUpdate": {
+    "healthStatus": "ok", "databaseMigration": "0004", "users": 3,
+    "organizations": 1, "memberships": 3, "resources": 13, "sessions": 1,
+    "privateMediaObjects": 2, "privateMediaBytes": 72,
+    "remainingSecretNames": ["AUTH_ROOT_SECRET"]
+  },
+  "diagnostics": {
+    "status": "passed", "runtimeCredentialPresent": false, "launchTokenPresent": false,
+    "privacyStatement": "The secret-free plan and sanitized phase output contain no runtime credentials."
+  },
+  "remediatedFailures": [
+    "Update originally lacked backup-before-update and was stopped before apply.",
+    "Wrangler 4.107 does not support r2 bucket list --json; Scout now uses the supported output and a regression test.",
+    "Scout now injects and verifies the exact manifest build identity for Cloudflare and Compose deployments."
+  ]
+}

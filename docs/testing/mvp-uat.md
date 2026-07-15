@@ -41,7 +41,7 @@ not satisfy it.
 - [ ] Update both profiles from a seeded predecessor with backup-before-update,
       migration, health verification, PWA pending-work preservation, and resume or
       rollback proof.
-- [ ] Export redacted Scout diagnostics and confirm secrets and user data are absent.
+- [x] Export redacted Scout diagnostics and confirm secrets and user data are absent.
 - [ ] Uninstall with keep-data, reinstall, and prove retained data recovery.
 - [ ] Run keyboard, screen-reader landmark, contrast, zoom, and target-size checks on
       onboarding, dashboard, inspect, conflict, family, export, and update views.
@@ -62,6 +62,7 @@ not satisfy it.
 | 2026-07-15 | Cloudflare production family profile | Observation and current cost baseline | Pass | [`cloudflare-family-cost-and-observation-2026-07-15.md`](cloudflare-family-cost-and-observation-2026-07-15.md) | More than 41 minutes observed; quiet release-candidate traffic only, with dated allowances and explicit exclusions |
 | 2026-07-15 | GitHub/Sigstore release identity | Six release subjects signed and independently verified | Pass | [`release-signing-evidence-2026-07-15.json`](release-signing-evidence-2026-07-15.json) | Exact repository workflow identity, GitHub-hosted runner, OIDC certificate and Rekor transparency timestamp; CDN bytes match |
 | 2026-07-15 | Current released Scout Bee / isolated Cloudflare UAT | Refreshed cost-aware executable dry-run preflight | Pass | [`scout-bee-cloudflare-preflight-2026-07-15-v2.json`](scout-bee-cloudflare-preflight-2026-07-15-v2.json) | Current executable and manifest digests; five phases passed in 4.57 seconds; sanitized diagnostics; no deployment applied |
+| 2026-07-15 | Current released Scout Bee / isolated Cloudflare UAT | Guarded update apply and redacted diagnostics | Pass | [`scout-bee-cloudflare-update-2026-07-15.json`](scout-bee-cloudflare-update-2026-07-15.json) | All 17 phases passed, including verified backup before migration, resource reuse, migration, deployment, exact release identity, retained records/media, secret cleanup, and sanitized diagnostics |
 
 The current isolated Cloudflare run additionally exercised invitations with three
 independent sessions, all 13 P0 resource types, original and thumbnail media, sync
@@ -69,7 +70,7 @@ pull/push, follow-up completion, idempotent replay, a stale-version conflict, im
 rejection of a rotated session identifier, and session revocation after restore. The
 post-run target remained closed to bootstrap with one atomic bootstrap claim, and only
 the durable `AUTH_ROOT_SECRET` remained configured. Those results do not check the
-physical-device, offline PWA, Scout Bee deployment, Compose, update/rollback,
+physical-device, offline PWA, Compose, seeded-predecessor update/rollback,
 accessibility, or uninstall steps whose wording requires separate evidence.
 
 ## Acceptance
