@@ -1,7 +1,7 @@
 # ApiaryLens Product Capability Overview
 
-**Status:** Living product overview  
-**Last reviewed:** 2026-07-15
+- **Status:** Living product overview
+- **Last reviewed:** 2026-07-15
 
 ApiaryLens is an open-source, self-hosted, offline-first apiary intelligence and
 hive-management platform. It is intended to help beekeepers understand and act on
