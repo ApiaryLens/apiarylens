@@ -69,6 +69,17 @@ func TestRejectsHTTPCompose(t *testing.T) {
 		t.Fatal("expected HTTP to be rejected")
 	}
 }
+func TestComposeInstallRequiresProtectedBootstrap(t *testing.T) {
+	p := validPlan()
+	p.Target = "compose-ssh"
+	p.Cloudflare = nil
+	p.Compose = &compose{PublicURL: "https://hives.example", TargetDirectory: "/opt/apiarylens", SSHHostKeySha256: "SHA256:abc"}
+	adapter := &composeAdapter{executor: &executor{runner: &fakeRunner{}}}
+	phases, err := adapter.preflight(context.Background(), request{Plan: p, Secrets: map[string]string{}})
+	if err == nil || len(phases) != 1 || phases[0].State != "failed" {
+		t.Fatalf("expected protected bootstrap preflight failure, err=%v phases=%+v", err, phases)
+	}
+}
 func TestRejectsSecretLookingPlan(t *testing.T) {
 	p := validPlan()
 	p.Cloudflare.AccountReference = "my-secret-token"

@@ -62,6 +62,40 @@ describe('ApiaryLens API', () => {
     expect(second.status).toBe(409);
   });
 
+  it('protects first-owner bootstrap when a deployment code is configured', async () => {
+    const protectedStore = new SqliteStore();
+    const protectedApi = createApi({
+      store: protectedStore,
+      secureCookies: false,
+      bootstrapToken: 'deployment-code-with-enough-entropy',
+    });
+    const payload = {
+      identifier: 'protected-owner@example.test',
+      displayName: 'Protected Owner',
+      password: 'correct horse battery staple',
+      organizationName: 'Protected Apiary',
+      timezone: 'UTC',
+    };
+    const status = await protectedApi.request('/api/v1/bootstrap/status');
+    expect(await status.json()).toMatchObject({ available: true, requiresToken: true });
+    const rejected = await protectedApi.request('/api/v1/bootstrap', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ...payload, bootstrapToken: 'incorrect-deployment-code' }),
+    });
+    expect(rejected.status).toBe(403);
+    const accepted = await protectedApi.request('/api/v1/bootstrap', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        ...payload,
+        bootstrapToken: 'deployment-code-with-enough-entropy',
+      }),
+    });
+    expect(accepted.status).toBe(201);
+    protectedStore.close();
+  });
+
   it('publishes OpenAPI without requiring authentication', async () => {
     const response = await app.request('/api/v1/openapi.json');
     expect(response.status).toBe(200);

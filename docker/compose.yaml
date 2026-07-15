@@ -14,6 +14,9 @@ services:
       APIARYLENS_SOURCE_COMMIT: ${APIARYLENS_SOURCE_COMMIT:-development}
       APIARYLENS_BUILD_TIME: ${APIARYLENS_BUILD_TIME:-development}
       APIARYLENS_ARTIFACT_IDENTITY: ${APIARYLENS_ARTIFACT_IDENTITY:-ApiaryLens@0.1.0-rc.1+development}
+      BOOTSTRAP_TOKEN_FILE: /run/secrets/bootstrap_token
+    secrets:
+      - bootstrap_token
     volumes:
       - apiarylens_data:/data
     networks:
@@ -77,6 +80,10 @@ volumes:
   apiarylens_data:
   caddy_data:
   caddy_config:
+
+secrets:
+  bootstrap_token:
+    file: ${APIARYLENS_BOOTSTRAP_SECRET_FILE:-./secrets/bootstrap-token}
 
 networks:
   frontend:

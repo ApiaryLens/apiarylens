@@ -2,13 +2,19 @@ import { serve } from '@hono/node-server';
 import { SqliteStore } from '@apiarylens/database';
 import { FilesystemMediaStore } from '@apiarylens/media';
 import { createBuildIdentity } from '@apiarylens/contracts';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createApi } from './app.js';
 
 const port = Number(process.env.PORT ?? 3000);
 const databasePath = process.env.APIARYLENS_DATABASE ?? './data/apiarylens.sqlite';
 const mediaPath = process.env.APIARYLENS_MEDIA ?? './data/media';
+const bootstrapToken = process.env.BOOTSTRAP_TOKEN_FILE
+  ? readFileSync(process.env.BOOTSTRAP_TOKEN_FILE, 'utf8').trim()
+  : process.env.BOOTSTRAP_TOKEN;
+if (process.env.NODE_ENV === 'production' && !bootstrapToken) {
+  throw new Error('A protected first-owner bootstrap code is required in production');
+}
 if (databasePath !== ':memory:') mkdirSync(dirname(databasePath), { recursive: true });
 const store = new SqliteStore(databasePath);
 const mediaStore = new FilesystemMediaStore(mediaPath);
@@ -16,6 +22,7 @@ const app = createApi({
   store,
   mediaStore,
   secureCookies: process.env.NODE_ENV === 'production',
+  ...(bootstrapToken ? { bootstrapToken } : {}),
   buildIdentity: createBuildIdentity({
     deploymentProfile: 'compose',
     ...(process.env.APIARYLENS_SOURCE_COMMIT

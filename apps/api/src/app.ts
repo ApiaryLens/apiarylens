@@ -35,6 +35,7 @@ interface ApiOptions {
   mediaStore?: MediaStore;
   secureCookies?: boolean;
   buildIdentity?: BuildIdentity;
+  bootstrapToken?: string;
 }
 
 function error(
@@ -114,12 +115,15 @@ export function createApi(options: ApiOptions) {
   app.get('/api/v1/openapi.json', (c) => c.json(buildOpenApiDocument()));
 
   app.get('/api/v1/bootstrap/status', (c) =>
-    c.json({ available: !store.hasOwner(), requiresToken: false }),
+    c.json({ available: !store.hasOwner(), requiresToken: Boolean(options.bootstrapToken) }),
   );
 
   app.post('/api/v1/bootstrap', async (c) => {
     const parsed = bootstrapRequestSchema.safeParse(await c.req.json().catch(() => undefined));
     if (!parsed.success) return error(c, 400, 'validation_failed', 'Check the submitted fields');
+    if (options.bootstrapToken && parsed.data.bootstrapToken !== options.bootstrapToken) {
+      return error(c, 403, 'bootstrap_token_invalid', 'The deployment bootstrap code is incorrect');
+    }
     try {
       const tokens = store.bootstrap({
         ...parsed.data,

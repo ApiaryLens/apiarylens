@@ -14,6 +14,10 @@ import (
 type composeAdapter struct{ executor *executor }
 
 func (a *composeAdapter) preflight(ctx context.Context, input request) ([]phase, error) {
+	if input.Plan.Operation == "install" && len(input.Secrets["bootstrapToken"]) < 16 {
+		err := errors.New("an owner setup code of at least 16 characters is required only while installing")
+		return []phase{failed("Verify one-time owner setup protection", err)}, err
+	}
 	for _, tool := range []string{"ssh", "scp", "ssh-keyscan"} {
 		if err := a.executor.runner.Find(tool); err != nil {
 			err = fmt.Errorf("OpenSSH tool %s is required; install the operating system OpenSSH client, then retry", tool)
@@ -55,6 +59,7 @@ func (a *composeAdapter) apply(ctx context.Context, input request, manifest rele
 	compose := input.Plan.Compose
 	phases := []phase{}
 	remoteBundle := "/tmp/apiarylens-" + input.Plan.PlanID + ".tar.gz"
+	remoteBootstrap := "/tmp/apiarylens-bootstrap-" + input.Plan.PlanID
 	if input.Plan.Operation == "install" || input.Plan.Operation == "update" {
 		artifact, artifactErr := artifactFor(manifest, "compose")
 		if artifactErr != nil {
@@ -76,6 +81,27 @@ func (a *composeAdapter) apply(ctx context.Context, input request, manifest rele
 			return append(phases, failed("Transfer verified deployment bundle", err)), err
 		}
 		phases = append(phases, pass("Transfer verified deployment bundle", "The checked bundle was transferred over the pinned SSH connection."))
+		if input.Plan.Operation == "install" {
+			secret, secretErr := os.CreateTemp("", "apiarylens-bootstrap-")
+			if secretErr != nil {
+				return append(phases, failed("Prepare one-time owner setup protection", secretErr)), secretErr
+			}
+			secretPath := secret.Name()
+			defer os.Remove(secretPath)
+			if secretErr = secret.Chmod(0o600); secretErr == nil {
+				_, secretErr = secret.WriteString(input.Secrets["bootstrapToken"])
+			}
+			secretErr = errors.Join(secretErr, secret.Close())
+			if secretErr != nil {
+				return append(phases, failed("Prepare one-time owner setup protection", secretErr)), secretErr
+			}
+			secretDestination := fmt.Sprintf("%s@%s:%s", compose.User, compose.Host, remoteBootstrap)
+			secretArgs := []string{"-P", strconv.Itoa(compose.Port), "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "UserKnownHostsFile=" + knownHosts, "--", secretPath, secretDestination}
+			if _, secretErr = a.executor.runner.Run(ctx, command{Executable: "scp", Args: secretArgs}, input.Secrets); secretErr != nil {
+				return append(phases, failed("Transfer one-time owner setup protection", secretErr)), secretErr
+			}
+			phases = append(phases, pass("Transfer one-time owner setup protection", "The runtime-only setup code was transferred separately from the release and was not logged."))
+		}
 	}
 
 	args := sshArgs(compose, knownHosts, "sh", "-s", "--",
@@ -86,6 +112,7 @@ func (a *composeAdapter) apply(ctx context.Context, input request, manifest rele
 		base64.RawURLEncoding.EncodeToString([]byte(manifest.ProductVersion)),
 		base64.RawURLEncoding.EncodeToString([]byte(remoteBundle)),
 		strconv.FormatBool(input.Plan.KeepDataOnUninstall),
+		base64.RawURLEncoding.EncodeToString([]byte(remoteBootstrap)),
 	)
 	output, err := a.executor.runner.Run(ctx, command{Executable: "ssh", Args: args, Stdin: []byte(composeRemoteScript)}, input.Secrets)
 	if err != nil {
@@ -160,9 +187,11 @@ public_url=$(decode "$4")
 version=$(decode "$5")
 bundle=$(decode "$6")
 keep_data=$7
+bootstrap_file=$(decode "$8")
 release_dir="$target/releases/$version"
 current="$target/current"
 backups="$target/backups"
+secrets_dir="$target/secrets"
 
 safe_backup() {
   mkdir -p "$backups"
@@ -192,7 +221,13 @@ case "$operation" in
     mkdir -p "$release_dir"
     tar xzf "$bundle" -C "$release_dir"
     rm -f "$bundle"
-    printf 'APIARYLENS_VERSION=%s\nAPIARYLENS_SITE_ADDRESS=%s\n' "$version" "${public_url#https://}" > "$release_dir/docker/.env"
+    mkdir -p "$secrets_dir"
+    if [ "$operation" = install ]; then
+      test -s "$bootstrap_file"
+      mv "$bootstrap_file" "$secrets_dir/bootstrap-token"
+      chmod 600 "$secrets_dir/bootstrap-token"
+    fi
+    printf 'APIARYLENS_VERSION=%s\nAPIARYLENS_SITE_ADDRESS=%s\nAPIARYLENS_BOOTSTRAP_SECRET_FILE=%s\n' "$version" "${public_url#https://}" "$secrets_dir/bootstrap-token" > "$release_dir/docker/.env"
     chmod 600 "$release_dir/docker/.env"
     ln -sfn "$release_dir" "$current.next"
     if ! docker compose -p "$project" --env-file "$release_dir/docker/.env" -f "$release_dir/docker/compose.yaml" up -d --build --wait; then

@@ -116,16 +116,18 @@ function App() {
         body: JSON.stringify({
           plan,
           mode,
-          ...(target === 'cloudflare'
-            ? {
-                secrets: {
-                  ...(cloudflareToken ? { cloudflareApiToken: cloudflareToken } : {}),
-                  ...(bootstrapToken ? { bootstrapToken } : {}),
-                  ...(form.backupDestination ? { backupDestination: form.backupDestination } : {}),
-                  ...(form.backupFilePath ? { backupFilePath: form.backupFilePath } : {}),
-                },
-              }
-            : {}),
+          secrets: {
+            ...(target === 'cloudflare' && cloudflareToken
+              ? { cloudflareApiToken: cloudflareToken }
+              : {}),
+            ...(operation === 'install' && bootstrapToken ? { bootstrapToken } : {}),
+            ...(target === 'cloudflare' && form.backupDestination
+              ? { backupDestination: form.backupDestination }
+              : {}),
+            ...(target === 'cloudflare' && form.backupFilePath
+              ? { backupFilePath: form.backupFilePath }
+              : {}),
+          },
         }),
       });
       setPhases(result.phases);
@@ -379,24 +381,24 @@ function App() {
                     This value stays in memory and is never added to the plan or diagnostics.
                   </small>
                 </label>
-                {operation === 'install' && (
-                  <label className="runtime-secret">
-                    One-time owner setup code
-                    <input
-                      type="password"
-                      autoComplete="new-password"
-                      minLength={16}
-                      value={bootstrapToken}
-                      onChange={(event) => setBootstrapToken(event.target.value)}
-                      placeholder="At least 16 characters; save it until setup is complete"
-                    />
-                    <small>
-                      You will enter this code once when creating the first family owner. It is
-                      never added to the plan or diagnostics.
-                    </small>
-                  </label>
-                )}
               </>
+            )}
+            {operation === 'install' && target !== 'plan-only' && (
+              <label className="runtime-secret">
+                One-time owner setup code
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={16}
+                  value={bootstrapToken}
+                  onChange={(event) => setBootstrapToken(event.target.value)}
+                  placeholder="At least 16 characters; save it until setup is complete"
+                />
+                <small>
+                  You will enter this code once when creating the first family owner. It stays in
+                  memory here and is never added to the plan or diagnostics.
+                </small>
+              </label>
             )}
             {operation === 'uninstall' && (
               <label className="keep-data">
@@ -466,9 +468,8 @@ function App() {
                   disabled={
                     busy ||
                     !release ||
-                    (target === 'cloudflare' &&
-                      (cloudflareToken.length === 0 ||
-                        (operation === 'install' && bootstrapToken.length < 16)))
+                    (target === 'cloudflare' && cloudflareToken.length === 0) ||
+                    (operation === 'install' && bootstrapToken.length < 16)
                   }
                   onClick={() => void run('apply')}
                 >
