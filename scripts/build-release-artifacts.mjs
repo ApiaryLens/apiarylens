@@ -90,9 +90,22 @@ for (const definition of definitions) {
   });
 }
 
+const deploymentTools = [];
+for (const artifact of manifest.artifacts.filter((item) => item.kind === 'deployment-tool')) {
+  const content = await readFile(join(artifactDirectory, artifact.name));
+  deploymentTools.push({
+    ...artifact,
+    sha256: createHash('sha256').update(content).digest('hex'),
+    bytes: content.length,
+  });
+}
+
 manifest.artifacts = [
   ...artifacts,
-  ...manifest.artifacts.filter((artifact) => artifact.kind !== 'deployment-bundle'),
+  ...deploymentTools,
+  ...manifest.artifacts.filter(
+    (artifact) => !['deployment-bundle', 'deployment-tool'].includes(artifact.kind),
+  ),
 ];
 await writeFile(manifestPath, await prettier.format(JSON.stringify(manifest), { parser: 'json' }));
 console.log(`Built ${artifacts.length} verified deployment bundles for ApiaryLens ${version}.`);
