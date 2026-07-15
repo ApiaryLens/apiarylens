@@ -115,3 +115,11 @@ The structured [capability map](../../assets/graphics/ApiaryLens_Capability_Map_
 and [current roadmap](../../assets/graphics/ApiaryLens_Roadmap_2026-07.png) are
 maintained as Lucidchart diagrams and may be reused when detailed visual context is
 needed.
+
+## Shareable Handout
+
+The following 4:5 pre-release handout is designed for social posts, messaging, and
+email. It uses exact project language and links people to the public GitHub source
+while `apiarylens.org` is being prepared.
+
+![ApiaryLens pre-release marketing handout with family apiary photography and six planned capability areas](../../assets/graphics/ApiaryLens_Marketing_Handout_Social_2026-07.png)

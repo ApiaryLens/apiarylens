@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1600, initial-scale=1">
+  <title>ApiaryLens Marketing Handout</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 1600px; height: 2000px; margin: 0; overflow: hidden; }
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: #17212b;
+      background: #fbfaf6;
+    }
+    .handout {
+      position: relative;
+      width: 1600px;
+      height: 2000px;
+      background:
+        radial-gradient(circle at 90% 12%, rgba(232, 169, 25, .12), transparent 25%),
+        #fbfaf6;
+    }
+    .topbar {
+      height: 160px;
+      padding: 38px 64px 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #17212b;
+      color: white;
+    }
+    .brand {
+      font-size: 72px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      line-height: 1;
+    }
+    .brand span { color: #e8a919; }
+    .badge {
+      padding: 15px 25px;
+      border: 2px solid rgba(255,255,255,.6);
+      border-radius: 999px;
+      font-size: 23px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .hero {
+      position: relative;
+      width: 1600px;
+      height: 620px;
+      overflow: hidden;
+      background: #dfe5d6;
+    }
+    .hero img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 48%;
+      display: block;
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent 50%, rgba(15, 25, 34, .38));
+    }
+    .message {
+      position: relative;
+      z-index: 2;
+      margin: -72px 64px 0;
+      padding: 42px 58px 38px;
+      min-height: 260px;
+      border-radius: 30px;
+      background: rgba(255, 255, 255, .98);
+      box-shadow: 0 22px 70px rgba(30, 39, 32, .18);
+      border: 1px solid rgba(23, 33, 43, .08);
+      text-align: center;
+    }
+    h1 {
+      margin: 0 0 18px;
+      font-size: 66px;
+      line-height: 1.06;
+      letter-spacing: -2px;
+    }
+    .message p {
+      margin: 0 auto;
+      max-width: 1280px;
+      color: #46515a;
+      font-size: 31px;
+      line-height: 1.42;
+      font-weight: 500;
+    }
+    .features {
+      padding: 48px 64px 34px;
+    }
+    .features h2 {
+      margin: 0 0 30px;
+      font-size: 40px;
+      line-height: 1.2;
+      text-align: center;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 22px;
+    }
+    .card {
+      min-height: 185px;
+      padding: 28px 28px 24px;
+      border: 2px solid #e6e1d4;
+      border-radius: 22px;
+      background: white;
+    }
+    .card:nth-child(1), .card:nth-child(4) { border-top: 8px solid #e8a919; }
+    .card:nth-child(2), .card:nth-child(5) { border-top: 8px solid #4d7a55; }
+    .card:nth-child(3), .card:nth-child(6) { border-top: 8px solid #39779c; }
+    .card h3 {
+      margin: 0 0 12px;
+      font-size: 30px;
+      line-height: 1.18;
+    }
+    .card p {
+      margin: 0;
+      color: #56616a;
+      font-size: 23px;
+      line-height: 1.35;
+    }
+    .footer {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      min-height: 290px;
+      padding: 38px 64px 42px;
+      color: white;
+      background: #17212b;
+      text-align: center;
+    }
+    .principles {
+      color: #f1bd43;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 1.4px;
+    }
+    .status {
+      margin: 24px auto 18px;
+      max-width: 1300px;
+      color: #eef0f2;
+      font-size: 25px;
+      line-height: 1.38;
+    }
+    .links {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 36px;
+      color: white;
+      font-size: 27px;
+      font-weight: 700;
+    }
+    .links .soon { color: #c9ced2; font-weight: 500; }
+    .dot { color: #e8a919; }
+  </style>
+</head>
+<body>
+  <main class="handout" aria-label="ApiaryLens pre-release marketing handout">
+    <header class="topbar">
+      <div class="brand">Apiary<span>Lens</span></div>
+      <div class="badge">Pre-release project</div>
+    </header>
+
+    <section class="hero" aria-label="Family beekeepers reviewing hive records">
+      <img src="../ApiaryLens_Marketing_Hero_2026-07.png" alt="An adult beekeeper and older teenage son reviewing records beside family apiary hives">
+    </section>
+
+    <section class="message">
+      <h1>Know every hive. Empower every beekeeper.</h1>
+      <p>A privacy-first, offline-first hive record designed for families and hobbyist beekeepers—and built to grow with them.</p>
+    </section>
+
+    <section class="features">
+      <h2>One clear history for every hive</h2>
+      <div class="grid">
+        <article class="card">
+          <h3>Offline inspections</h3>
+          <p>Record notes and follow-up work in the bee yard, even without a signal.</p>
+        </article>
+        <article class="card">
+          <h3>Hive &amp; queen history</h3>
+          <p>Keep each colony, queen, apiary, and equipment timeline together.</p>
+        </article>
+        <article class="card">
+          <h3>Photos &amp; videos</h3>
+          <p>Build a searchable visual history connected to the right hive.</p>
+        </article>
+        <article class="card">
+          <h3>Health &amp; treatments</h3>
+          <p>Track Varroa results, observations, treatments, and follow-up checks.</p>
+        </article>
+        <article class="card">
+          <h3>Weather &amp; blooms</h3>
+          <p>Add useful environmental context to inspections and seasonal trends.</p>
+        </article>
+        <article class="card">
+          <h3>Share selectively</h3>
+          <p>Work with family, mentors, or clubs without exposing everything.</p>
+        </article>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="principles">OPEN-SOURCE-FIRST <span class="dot">•</span> SELF-HOSTED-FIRST <span class="dot">•</span> PWA FIRST <span class="dot">•</span> AI OPTIONAL <span class="dot">•</span> PORTABLE DATA</div>
+      <div class="status">ApiaryLens is currently in research, architecture, and design. No application is available yet.</div>
+      <div class="links">
+        <span>github.com/ApiaryLens/apiarylens</span>
+        <span class="dot">•</span>
+        <span class="soon">apiarylens.org — coming soon</span>
+      </div>
+    </footer>
+  </main>
+</body>
+</html>

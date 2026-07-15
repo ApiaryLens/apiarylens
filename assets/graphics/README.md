@@ -9,6 +9,7 @@ stale or ambiguous.
 | `ApiaryLens_Capability_Map_2026-07.png` | Lucidchart document `36e00bfd-6fd9-46ed-ad8b-1032b1a34108` | Current public export for the Product Capability Overview |
 | `ApiaryLens_Roadmap_2026-07.png` | Lucidchart document `755f46d8-c741-45f7-85e3-88f87a07aeca` | Current public export of the directional roadmap |
 | `ApiaryLens_Marketing_Hero_2026-07.png` | OpenAI built-in image generation; prompt recorded below | Current pre-release marketing draft; requires normal human brand review before a formal campaign |
+| `ApiaryLens_Marketing_Handout_Social_2026-07.png` | Deterministic HTML/CSS composition using the current marketing hero | Shareable 4:5 pre-release handout for social media, messaging, and email |
 
 ## Marketing Hero Generation Record
 
@@ -27,3 +28,10 @@ stale or ambiguous.
 The earlier brochure pages, capability cards, and roadmap image remain only in the
 maintainer scratch directory `D:\git\apiarylens\assets`. They are not tracked,
 referenced, or approved ApiaryLens assets.
+
+## Shareable Handout
+
+The editable source for the social handout is
+[`sources/ApiaryLens_Marketing_Handout_Social_2026-07.html`](sources/ApiaryLens_Marketing_Handout_Social_2026-07.html).
+Its text is rendered deterministically so product claims, spelling, and pre-release
+status do not depend on text generated inside an image model.
