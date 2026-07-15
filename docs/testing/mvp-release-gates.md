@@ -11,11 +11,17 @@
 - [x] Cloudflare Worker and all three public properties are deployed over HTTPS.
 - [x] Public properties use no telemetry and block automatic response transformation.
 - [x] Release artifacts are content-addressed and remotely digest verified.
-- [ ] Source commit and build time identify an immutable reviewed revision.
+- [x] The live PWA/backend identity and manifest identify implementation commit
+      `2995026374e5b033619baab71f0889c7a0db716e` and UTC build time
+      `2026-07-15T17:28:10.5286323Z`.
 - [x] CycloneDX SBOM, license report, and unsigned provenance are published and
       remotely digest verified with the deployment bundles and Scout Bee executable.
 - [ ] Release artifacts and provenance are signed with the approved release identity.
-- [ ] All database predecessor migrations and rollback boundaries are tested.
+- [x] Compose and Cloudflare report the same immutable migration head (`0003`), the
+      ordered Compose migration test passes, a production pre-migration snapshot was
+      captured, and Cloudflare applied `0003` successfully.
+- [ ] Complete the seeded-predecessor update, interruption, rollback, and restore
+      scenarios on the isolated Cloudflare and Compose UAT deployments.
 - [x] Automated axe checks report no violations on `.org`, documentation, `.app`, the
       isolated demo, and both `.dev` entry points; dependency audit reports no known
       high-severity vulnerabilities.
