@@ -34,7 +34,8 @@ single-hive hobby tool toward commercial-apiary scale.
   rollback, diagnostics, and uninstall guidance.
 - `releases/` -- curated release notes, changelog, limitations, and support windows.
 - `roadmap/` -- product roadmap and gated portfolio execution plan.
-- `security/` -- canonical security architecture and risk register plus
+- `security/` -- canonical security architecture, the MVP threat model and
+  [ASVS verification map](security/threat-model-and-asvs.md), and risk register plus
   authentication, authorization, sharing, privacy, and secure-release design.
 - `source-documents/` -- original imported Word, PDF, and Markdown source files.
 - `strategy/` -- domain and project strategy notes.
