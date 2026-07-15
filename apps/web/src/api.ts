@@ -1,0 +1,76 @@
+import type { SessionView } from '@apiarylens/contracts';
+
+export type BootstrapSession = SessionView & { recoveryCodes: string[] };
+
+async function json<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, { credentials: 'same-origin', ...init });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => undefined)) as { message?: string } | undefined;
+    throw new Error(body?.message ?? `Request failed (${response.status})`);
+  }
+  return response.json() as Promise<T>;
+}
+
+export const api = {
+  bootstrapStatus: () =>
+    json<{ available: boolean; requiresToken?: boolean }>('/api/v1/bootstrap/status'),
+  session: () => json<SessionView>('/api/v1/session'),
+  bootstrap: (input: {
+    identifier: string;
+    displayName: string;
+    password: string;
+    organizationName: string;
+    timezone: string;
+    bootstrapToken?: string;
+  }) =>
+    json<BootstrapSession>('/api/v1/bootstrap', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    }),
+  signIn: (identifier: string, password: string) =>
+    json<SessionView>('/api/v1/auth/sign-in', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ identifier, password }),
+    }),
+  acceptInvitation: (token: string, password: string) =>
+    json<SessionView>('/api/v1/invitations/accept', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token, password }),
+    }),
+  recover: (identifier: string, recoveryCode: string, newPassword: string) =>
+    fetch('/api/v1/auth/recover', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ identifier, recoveryCode, newPassword }),
+    }).then((response) => {
+      if (!response.ok) throw new Error('Recovery failed. Check the identifier and unused code.');
+    }),
+  members: () =>
+    json<{
+      items: Array<{
+        id: string;
+        displayName: string;
+        identifier: string;
+        role: string;
+        status: string;
+      }>;
+    }>('/api/v1/members'),
+  invite: (
+    csrfToken: string,
+    input: { displayName: string; identifier: string; role: 'beekeeper' | 'viewer' },
+  ) =>
+    json<{ token: string; expiresAt: string }>('/api/v1/invitations', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-csrf-token': csrfToken },
+      body: JSON.stringify({ ...input, expiresInHours: 48 }),
+    }),
+  signOut: (csrfToken: string) =>
+    fetch('/api/v1/auth/sign-out', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'x-csrf-token': csrfToken },
+    }),
+};

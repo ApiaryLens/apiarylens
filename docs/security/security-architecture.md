@@ -2,8 +2,9 @@
 
 ## Status
 
-Proposed architecture direction and mandatory security outcomes. Component choices
-and detailed control mappings require threat modeling, research, and ADRs.
+Current security architecture and mandatory outcomes. ADR 0010 selects the MVP
+identity/session boundary. Threat modeling, the ASVS verification matrix, runtime
+measurements, and supply-chain evidence remain release gates.
 
 ## Security Objective
 

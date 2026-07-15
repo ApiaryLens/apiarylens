@@ -6,9 +6,9 @@ working in this repository. Human contributors should also read [CONTRIBUTING.md
 ## What this repo is
 
 The base monorepo for **ApiaryLens** — an open-source, self-hosted apiary intelligence
-and hive management platform for beekeepers. As of this writing the repo contains
-**only foundation files and folder structure — no application code**. Do not assume any
-app, package, or backend exists yet; check before referencing one.
+and hive management platform for beekeepers. The MVP architecture is accepted and
+implementation began on 2026-07-15. Check the current tree and release status before
+assuming an application, package, or deployment is complete.
 
 ## Non-negotiable direction
 
@@ -41,30 +41,31 @@ of proceeding:
    normal publicly trusted HTTPS. Secure defaults must not require a proprietary
    security service.
 
-## Tech direction — not yet locked
+## Accepted MVP technology
 
-The stack below is **likely direction**, documented so agents don't re-litigate it on
-every task, but it is **not final**. Do not treat it as a decision that's already been
-made; treat it as the current leaning.
+ADRs 0008 through 0011 select the implementation below. Change a durable choice
+through a new ADR; do not silently substitute a framework, database, identity
+service, synchronization model, or deployment executor.
 
-| Layer | Likely direction | Status |
+| Layer | Selection | Status |
 |---|---|---|
-| Frontend | React + TypeScript + Vite | Leaning, not chosen |
+| Frontend | React + TypeScript + Vite, service-worker PWA, Dexie/IndexedDB | Accepted |
 | Mobile | PWA first; committed iPhone App Store client later, with wrapper/native approach still open | Direction committed; implementation open |
-| Backend | Undecided | Open |
-| Database | PostgreSQL for portable server; D1 candidate for Cloudflare family profile | Leaning, not chosen |
-| Self-hosted server deployment | Docker Compose on personally controlled hardware | Priority accepted; implementation open |
-| Cloud deployment | Cloudflare-native family profile first; Compose on a Linux VM second | Priority accepted; technical design open |
+| Backend | Hono + Zod/OpenAPI on Cloudflare Workers and Node 24 | Accepted |
+| Database | Shared SQLite schema: D1 on Cloudflare, `node:sqlite` in Compose | Accepted |
+| Media | Private R2 on Cloudflare, private filesystem volume in Compose | Accepted |
+| Identity | Built-in accounts and secure opaque sessions; optional OIDC later | Accepted |
+| Self-hosted server deployment | Docker Compose on personally controlled hardware | Accepted MVP target |
+| Cloud deployment | Cloudflare-native family profile first; Compose on a Linux VM second | Accepted MVP targets |
 | Official public frontend hosting | Cloudflare Workers Static Assets | Accepted |
+| Scout Bee | Embedded React UI with Go loopback executor and versioned plan | Accepted |
 
-If a task requires actually choosing one of these (e.g. scaffolding the first app),
-propose the decision as an ADR under `docs/` for human review rather than silently
-picking and building on top of it.
+See [`docs/adr/0008-mvp-application-platform.md`](docs/adr/0008-mvp-application-platform.md)
+through [`docs/adr/0011-scout-bee-and-deployment-execution.md`](docs/adr/0011-scout-bee-and-deployment-execution.md).
 
 ## Repository structure and how to use it
 
-- `apps/` — deployable applications (web client, API service, etc.). Empty until the
-  first app is scaffolded.
+- `apps/` — deployable PWA, Node server, Cloudflare Worker, and Scout Bee applications.
 - `packages/` — shared code consumed by multiple apps. Don't create a package for
   something only one app uses.
 - `docs/` — architecture notes and ADRs. Any non-trivial technical decision (stack
@@ -137,7 +138,7 @@ picking and building on top of it.
   long-lived bearer tokens in browser storage, or make a separate identity provider
   mandatory for the family profile. Follow
   [`docs/security/security-architecture.md`](docs/security/security-architecture.md)
-  and complete the required research/ADR before choosing authentication libraries.
+  and follow ADR 0010 when choosing or reviewing authentication code.
 - Treat authorization as a server-side boundary. Every organization-scoped query,
   object lookup, media operation, export, and administrative action requires
   organization-isolation and negative authorization tests.
@@ -163,6 +164,5 @@ picking and building on top of it.
   component, generated artifact, and asset for compatible licensing and provenance;
   do not add AGPL/SSPL, source-available, noncommercial, unlicensed, or proprietary
   runtime requirements without an accepted ADR and explicit distribution analysis.
-- No application code exists yet. If asked to "add a feature," first check whether the
-  underlying app/package exists at all — if not, that's a scaffolding task, not a
-  feature task, and should probably start with an ADR in `docs/`.
+- Do not claim a feature or profile is complete merely because its scaffold exists.
+  Verify it against the accepted MVP contract and release gates.

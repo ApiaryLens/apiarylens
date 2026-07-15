@@ -1,0 +1,54 @@
+# Accessibility Audit: ApiaryLens MVP Release Candidate
+
+**Standard:** WCAG 2.1 AA  
+**Date:** 2026-07-15  
+**Build:** 0.1.0-rc.1
+
+## Summary
+
+Automated axe-core scans found zero WCAG 2.1 A/AA violations on the `.org` home and
+documentation hub, `.app` entry, isolated PWA demo, `.dev` home, and API reference.
+The mobile PWA has named landmarks, no unlabeled form controls, no horizontal
+overflow at 320 CSS pixels, visible native keyboard focus, and no visible interactive
+target below 44 by 44 CSS pixels after remediation.
+
+Automated checks do not prove full conformance. Manual NVDA/VoiceOver reading,
+keyboard completion of every destructive/recovery flow, and 200% browser zoom on
+the signed UAT device matrix remain release gates.
+
+## Findings and Remediation
+
+| # | Area | Criterion | Severity | Result |
+|---|---|---|---|---|
+| 1 | Demo exit link target was 85 by 21 CSS pixels | 2.5.5 Target Size | Major | Fixed with a 44-pixel minimum interactive height |
+| 2 | Organization/version button was 236 by 23 CSS pixels | 2.5.5 Target Size | Major | Fixed with a 44-pixel minimum interactive height |
+| 3 | Form naming and landmarks | 1.3.1, 3.3.2, 4.1.2 | None | No unlabeled visible controls; header, main, and named primary navigation present |
+| 4 | Narrow reflow | 1.4.10 | None | No horizontal document overflow at 320 CSS pixels |
+| 5 | Keyboard focus | 2.4.7 | None | Focused demo exit link exposes a visible browser outline |
+
+## Automated Scan Evidence
+
+| Page | Passed rules | Total violations | Serious/critical |
+|---|---:|---:|---:|
+| `https://apiarylens.org` | 18 | 0 | 0 |
+| `https://apiarylens.org/docs/` | 10 | 0 | 0 |
+| `https://apiarylens.app` | 8 | 0 | 0 |
+| `https://demo.apiarylens.app/app/` | 18 | 0 | 0 |
+| `https://apiarylens.dev` | 8 | 0 | 0 |
+| `https://apiarylens.dev/api/` | 8 | 0 | 0 |
+
+Run `npm run audit` in the `.org` repository to repeat the scan.
+
+## Manual Acceptance Still Required
+
+- [ ] Complete onboarding, apiary/hive editing, inspection, photo, care, family,
+      conflict, export, update, and destructive flows using keyboard only.
+- [ ] Verify logical announcements and live status with NVDA on Windows.
+- [ ] Verify VoiceOver on iPhone and iPad, including installed-PWA navigation.
+- [ ] Verify text resize and browser zoom to 200% on each supported desktop browser.
+- [ ] Verify contrast and non-color cues in forced-colors/high-contrast mode.
+- [ ] Confirm modal focus containment, Escape behavior, focus restoration, error
+      summary movement, and no unexpected focus changes.
+
+The MVP release gate remains open until these items are recorded in the
+[MVP UAT Record](mvp-uat.md).

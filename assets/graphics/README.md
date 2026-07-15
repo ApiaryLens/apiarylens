@@ -10,6 +10,22 @@ stale or ambiguous.
 | `ApiaryLens_Roadmap_2026-07.png` | Lucidchart document `755f46d8-c741-45f7-85e3-88f87a07aeca` | Current public export of the directional roadmap |
 | `ApiaryLens_Marketing_Hero_2026-07.png` | OpenAI built-in image generation; prompt recorded below | Current pre-release marketing draft; requires normal human brand review before a formal campaign |
 | `ApiaryLens_Marketing_Handout_Social_2026-07.png` | Deterministic HTML/CSS composition using the current marketing hero | Shareable 4:5 pre-release handout for social media, messaging, and email |
+| `ApiaryLens_Web_Hero_Family_to_Professional_2026-07.png` | OpenAI built-in image generation; prompt recorded below | Purpose-built `.org` hero showing the family-to-professional ApiaryLens journey without embedded copy or UI |
+| `architecture/components-network-trust.png` through `architecture/primary-user-journeys.png` | Lucidchart document `72787958-9344-4a71-af56-98a216b35aa1`, pages 1-7 | Current accessible exports for components/trust, authorization, media/backup, Scout Bee, CI/CD, recovery, and primary journeys |
+
+## Family-to-Professional Web Hero Generation Record
+
+- **Use:** Primary responsive `apiarylens.org` hero photography
+- **Method:** AI-generated raster image using the built-in image-generation tool
+- **Date:** 2026-07-15
+- **Prompt summary:** An authentic family pair safely inspecting a Langstroth hive in
+  the foreground of a larger well-managed apiary, with natural golden light and
+  negative space for native web copy
+- **Product alignment:** Family connection is primary; professional scale is a
+  visible future journey. No feature, release, interface, or roadmap claims are
+  embedded in the image.
+- **Constraints:** No text, logos, application screens, private user data, unsafe
+  beekeeping, or proprietary source imagery
 
 ## Marketing Hero Generation Record
 

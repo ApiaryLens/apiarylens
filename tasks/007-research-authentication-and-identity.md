@@ -1,5 +1,10 @@
 # Task 007: Research Authentication and Identity Architecture
 
+## Status
+
+Architecture evidence completed 2026-07-15 and accepted through ADR 0010.
+Implementation abuse, performance, and recovery tests remain release gates.
+
 ## Goal
 
 Recommend the simplest secure authentication architecture that supports a

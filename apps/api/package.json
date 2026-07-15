@@ -1,0 +1,32 @@
+{
+  "name": "@apiarylens/server",
+  "version": "0.1.0-rc.1",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/app.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "dev": "node --experimental-strip-types src/server.ts",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "start": "node --experimental-strip-types dist/server.js",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@apiarylens/contracts": "workspace:*",
+    "@apiarylens/database": "workspace:*",
+    "@apiarylens/media": "workspace:*",
+    "@hono/node-server": "catalog:",
+    "fflate": "catalog:",
+    "hono": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

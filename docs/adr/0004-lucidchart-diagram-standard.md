@@ -33,5 +33,6 @@ open-source contributor to have a Lucid account merely to understand the design.
 - Open exports and Markdown explanations prevent Lucid from becoming a runtime or
   contributor-access dependency for the open-source product.
 - Diagram updates require refreshing the corresponding repository export.
-- The dedicated Lucid folder must be created before authoritative diagrams are
-  generated into the final location.
+- The dedicated Lucid folder was created on 2026-07-15. Authoritative source
+  documents and portable exports are cataloged in
+  [`docs/diagrams/README.md`](../diagrams/README.md).

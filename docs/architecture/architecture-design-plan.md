@@ -80,9 +80,10 @@ the current plan.
 
 ## Current Project State
 
-The repository is a foundation scaffold. There is no application, API, database,
-container image, or working Compose deployment yet. Technology selections listed
-below are direction or candidates until accepted through ADRs.
+The product architecture and MVP contract are accepted and application scaffolding
+is now authorized. The repository is transitioning from foundation documentation to
+implementation; the release is not complete until the code, deployments, and UAT
+gates described by this plan pass.
 
 Accepted decisions:
 
@@ -93,6 +94,10 @@ Accepted decisions:
 - [ADR 0005: Activate the Initial Repository Portfolio](../adr/0005-initial-repository-portfolio.md)
 - [ADR 0006: Cloudflare Hosting for Public Frontends](../adr/0006-cloudflare-public-frontends.md)
 - [ADR 0007: Deployment Profile Priority](../adr/0007-deployment-profile-priority.md)
+- [ADR 0008: MVP Application Platform](../adr/0008-mvp-application-platform.md)
+- [ADR 0009: Data, Media, and Offline Synchronization](../adr/0009-data-storage-and-offline-sync.md)
+- [ADR 0010: Built-in Identity, Sessions, and Authorization](../adr/0010-built-in-identity-and-security.md)
+- [ADR 0011: Scout Bee and Deployment Execution](../adr/0011-scout-bee-and-deployment-execution.md)
 
 Accepted product-scope decision:
 
@@ -110,13 +115,15 @@ or synchronize through the backend API. The backend coordinates relational data,
 media storage, background work, and optional provider adapters for weather, bloom,
 sensors, storage, identity, and AI.
 
-The authoritative system-context diagram will be created in the dedicated
-ApiaryLens Lucid folder and cataloged in [`docs/diagrams/README.md`](../diagrams/README.md).
+![ApiaryLens MVP system context](../../assets/graphics/architecture/system-context.png)
+
+The editable source is filed in the dedicated ApiaryLens Lucid folder and cataloged
+in [`docs/diagrams/README.md`](../diagrams/README.md).
 
 The PWA communicates with the API when online but is not merely an online view of
-server state. It requires an explicit local data model, mutation queue,
-synchronization protocol, conflict behavior, and media retry lifecycle. Those
-mechanisms remain open decisions and require research before implementation.
+server state. Its IndexedDB replica, outbox, synchronization protocol, explicit
+conflict behavior, and media retry lifecycle are accepted in ADR 0009 and detailed
+in [Offline Synchronization Protocol](offline-sync-protocol.md).
 
 ## Supported Operating Models
 
@@ -212,14 +219,16 @@ Markdown so understanding the open-source architecture does not require a Lucid
 account. Existing Mermaid material is legacy migration input rather than the future
 authoring standard.
 
-The connected Lucid MCP is available for document operations but currently does not
-expose folder creation. The folder is therefore a pending workspace setup action.
-See [ADR 0004](../adr/0004-lucidchart-diagram-standard.md).
+The dedicated folder was created on 2026-07-15. The connected Lucid MCP creates and
+retrieves documents; the official Lucid REST API performs folder placement and
+deterministic export where the connector has no matching operation. See
+[ADR 0004](../adr/0004-lucidchart-diagram-standard.md).
 
 ## Application Architecture
 
-The core product is expected to contain these logical components. Their framework
-and packaging boundaries are not yet final.
+The core product uses the accepted TypeScript/pnpm platform in ADR 0008. Runtime
+composition is limited to adapter boundaries so the same contracts and behavior run
+on Cloudflare and the portable server.
 
 ### Web PWA
 
@@ -235,19 +244,12 @@ Responsibilities:
 - Clear indication of offline, pending, conflicted, and synchronized state
 - Same family record available across authorized devices after synchronization
 
-The device-local storage engine, durability guarantees, backup experience, and
-transition into family synchronization are open research questions. Browser storage
-must not become the only durable copy without explicit persistence and backup
-behavior.
-
-Current direction, not accepted stack:
-
-- React, TypeScript, and Vite
-- PWA first; committed iPhone App Store client later
-- Capacitor, another wrapper, or a native implementation selected through research and ADR
-- IndexedDB and/or SQLite-backed local persistence
-- MapLibre for maps
-- A suitable accessible charting library for trends
+The PWA uses React, TypeScript, Vite, a service worker, and Dexie over IndexedDB.
+Browser storage is a working replica and outbox, not the only durable family copy.
+The UI exposes local durability and sync state, and the server/export paths provide
+verified backup. PWA first remains accepted; native Apple packaging is post-MVP.
+Map rendering and a chart library are added only when an accepted P0 screen needs
+them and after accessibility/license review.
 
 ### iPhone App Store Client
 
@@ -284,12 +286,14 @@ Responsibilities:
 - Export, portability, and administrative operations
 - Provider abstractions rather than hard-coded SaaS dependencies
 
-Candidate frameworks remain FastAPI and NestJS. A research comparison and ADR are
-required before installation or scaffolding.
+Hono is the accepted API framework. Shared Zod schemas drive request validation and
+OpenAPI 3.1. The API runs in Cloudflare Workers and Node 24; runtime and storage
+types do not enter domain packages.
 
 ### Background Worker
 
-Responsibilities may include:
+The MVP does not require a separately deployed background worker. Future
+responsibilities may include:
 
 - Weather and bloom synchronization
 - Media processing
@@ -298,45 +302,41 @@ Responsibilities may include:
 - Optional AI analysis
 - Retryable integration tasks
 
-The queue, scheduler, delivery guarantees, retry policy, and packaging remain open.
+Client-side thumbnail creation and request-driven export cover MVP work. A durable
+queue and worker require a later ADR when weather ingestion, video, notifications,
+sensor processing, or optional AI establishes measured delivery requirements.
 
 ### Data Store
 
-PostgreSQL is the current portable server direction, not yet an accepted decision.
-D1 is the expected relational candidate for the Cloudflare-first family profile,
-also not yet accepted. The design must define shared data contracts, adapter
-boundaries, migrations, backup and restore, organization isolation, auditing,
-conformance tests, data export, and migration between profiles without assuming the
-two databases are directly interchangeable.
+The accepted MVP relational engines are D1 for Cloudflare and Node's built-in
+SQLite for Compose. They consume shared migration SQL, repositories, domain rules,
+and conformance tests through a small asynchronous SQL port. PostgreSQL is a future
+organization-scale adapter only when measurements justify it.
 
-Initial domain concepts include:
+The accepted MVP domain concepts are:
 
-- Organization, User, Membership, and Role
-- Apiary, Hive, HiveComponent, Box, and Frame
-- Queen and queen history
-- Inspection and InspectionObservation
-- MiteCount, DiseaseObservation, Treatment, and Feeding
-- Harvest
-- MediaAsset and optional AIReview
-- WeatherRecord, BloomRecord, and Plant
-- Task, ShareLink, and AuditLog
+- Organization, User, Membership, Session, Invitation, Recovery Code, and Role
+- Apiary, Hive, Queen, and Equipment Box
+- Inspection, Mite Count, Health Observation, Treatment, Feeding, Harvest, and
+  Follow-up Item
+- Media Asset, Audit Event, Change Log, and Idempotency Record
 
-The authoritative model requires a dedicated design, Lucid ERD with an accessible
-public export, and ADRs for the database and migration strategy before implementation.
+The detailed model and Lucid export are in [MVP Data Model](data-model.md).
 
 ### Media Storage
 
-Local filesystem storage is the initial direction. An S3-compatible adapter may be
-added later. Media design must cover metadata, integrity, authorization, offline
-capture, resumable upload, processing state, thumbnails, retention, export, backup,
-and migration between storage backends.
+Private R2 objects are used on Cloudflare and a private filesystem volume is used in
+Compose. Relational metadata carries authorization, hashes, dimensions, capture
+time, and upload state. Client-side thumbnails reduce MVP processing cost. Media is
+included with relational data in verified backup, restore, export, and profile
+migration.
 
 Media is core product data, not an optional attachment subsystem.
 
 ## Offline and Synchronization Architecture
 
-Offline behavior is a first-order architecture concern and requires a research
-spike before the data layer is chosen. The final design must define:
+Offline behavior is a first-order architecture concern and is accepted in ADR 0009.
+The implemented protocol defines:
 
 - Which records and media are available locally
 - Local identifiers and server identifiers
@@ -348,11 +348,14 @@ spike before the data layer is chosen. The final design must define:
 - Storage limits and partial synchronization for large commercial datasets
 - Observability and user-visible synchronization status without telemetry egress
 
-The product must not claim offline-first based only on caching static assets.
+Stable UUIDs, base versions, operation IDs, idempotency records, an
+organization-scoped change log, opaque cursors, tombstones, and visible conflicts
+provide the synchronization contract. Material care data never uses silent
+last-writer-wins. See [Offline Synchronization Protocol](offline-sync-protocol.md).
 
 ## Identity, Authorization, and Sharing
 
-Current direction:
+Accepted direction from ADR 0010:
 
 - Password-optional operation only for a genuinely device-only profile that is not
   reachable over a LAN, VPN, tunnel, or public interface
@@ -361,20 +364,23 @@ Current direction:
 - Organization and membership model from the beginning
 - Optional standards-based OIDC federation for organization deployments; a
   separate identity provider is not required for family use
-- Roles such as Owner, Admin, Apiary Manager, Inspector, Mentor, Viewer, and Club Member
-- Explicit permissions for viewing, editing, inspecting, uploading media, approving AI notes, managing members, sharing, and exporting
+- MVP roles Owner, Beekeeper, and Viewer, with later roles expressed through the
+  same capability model
+- Explicit capabilities for every protected data, media, member, recovery, and
+  export action
 
 Scout Bee and server validation must prevent no-auth operation on a non-loopback
 interface. Networked credentials and sessions require encrypted transport.
 Internet-facing profiles require publicly trusted HTTPS, secure first-owner
 bootstrap, generated secrets, throttling, session protection, and safe recovery.
-The PWA should use secure same-origin cookie sessions; future native clients require
+The PWA uses secure same-origin opaque cookie sessions; future native clients require
 an OAuth Authorization Code with PKCE design using an external user-agent.
 
-The final design requires [Task 007](../../tasks/007-research-authentication-and-identity.md)
-and ADRs covering password storage, sessions, account recovery, bootstrap
-administration, tenant isolation, audit behavior, offline authentication,
-invitations, public links, optional federation, and native-client authorization.
+PBKDF2-HMAC-SHA-256 with per-password salts, a server pepper, hashed rotating
+sessions, one-time recovery codes, atomic first-owner bootstrap, throttling,
+origin/CSRF defenses, and organization-scoped authorization are release controls.
+Optional OIDC, passkeys, public links, and native-client authorization are later
+extensions.
 
 See [Authentication, Authorization, and Sharing](../security/authentication-and-sharing.md).
 
@@ -518,9 +524,8 @@ self-hosted path must cover:
 - Air-gapped or restricted-network considerations where practical
 
 Docker Compose is the portable server foundation, not the complete experience for a
-non-technical family. The project will research a device-local personal mode and a
-guided `Scout Bee` bootstrapper that can install or update a profile or emit a
-secret-free, versioned deployment-plan JSON document.
+non-technical family. Scout Bee provides a React guide and Go loopback executor that
+can install or update a profile or emit a secret-free, versioned deployment plan.
 
 For cloud deployment, the ranked targets are:
 
@@ -530,9 +535,9 @@ For cloud deployment, the ranked targets are:
 3. Later provider-specific managed-container or infrastructure templates
 4. A future optional managed ApiaryLens service
 
-The Cloudflare ranking is accepted, but its exact runtime, data, media,
-authentication, backup, quota, and migration designs remain gated by Task 006 and
-follow-up ADRs.
+The Cloudflare runtime, data, media, authentication, backup, and migration design is
+accepted in ADRs 0008 through 0011. Current free allowances remain dated capacity
+inputs and implementation acceptance gates, never permanent promises.
 
 Do not make a provider's free tier a core backend architecture requirement or
 promise of permanent free hosting. Publish provider-neutral server artifacts and
@@ -543,11 +548,11 @@ not change the accepted Cloudflare hosting decision for official public frontend
 [Installation and Deployment Experience](installation-and-deployment-experience.md)
 and [Cloud Free-Tier Deployment Spike](../research/cloud-free-tier-deployment-spike.md).
 
-The project will research and publish a reference family cloud profile optimized for
-two to five people, synchronized PWA use, simple recovery, and zero or predictably
-near-zero recurring cost. The selected profile must publish dated cost assumptions,
-quota behavior, data portability, and a migration path. See
-[`tasks/006-research-family-cloud-profile.md`](../../tasks/006-research-family-cloud-profile.md).
+The reference family workload, dated allowances, capacity calculation, and gates
+are published in
+[Application Platform and Storage Research](../research/2026-07-15-application-platform-and-storage-spike.md).
+Measured implementation results are appended before the profile is declared
+release-ready.
 
 Kubernetes, Helm, provider-specific managed-container templates, and SaaS
 infrastructure are later deployment tracks and do not replace Compose. See
@@ -607,52 +612,19 @@ Every relevant design or ADR must address:
 - Gallery or registry impact when reusable/community assets are involved
 - Alternatives, consequences, migration, and rollback where applicable
 
-## Required Decisions Before Application Scaffolding
+## Application Scaffolding Gate
 
-The following work is required before dependent implementation begins:
+The architecture gate is satisfied on 2026-07-15 by ADRs 0003 and 0008 through
+0011, the two dated research spikes, the detailed data/sync/Scout designs, the
+versioning and update lifecycle, the accepted MVP contract, and the initial Lucid
+set. Application dependencies and infrastructure may now be introduced.
 
-1. Preserve accepted ADR 0003, Apache-2.0 licensing, DCO 1.1 sign-off, and
-   dependency/asset license provenance.
-2. Research MVP PWA local storage, offline durability, backup interaction, and
-   synchronization; defer no-server device-only identity and migration to P1.
-3. Research and select the frontend stack and offline persistence approach.
-4. Research the `Scout Bee` packaging, privileged executor, signing, update, and rollback model.
-5. Research local-network HTTPS, PWA installation, and multi-device access.
-6. Research and select the backend framework.
-7. Define the initial domain model and organization-isolation rules.
-8. Select the database, migration, and data-access tooling for each supported footprint.
-9. Design the offline synchronization and conflict-resolution protocol.
-10. Complete identity and authentication research, then accept ADRs for exposure
-    modes, sessions, account recovery, optional OIDC, authorization, organization
-    isolation, and sharing.
-11. Design media storage, upload, processing, export, and backup.
-12. Define background-job requirements and select tooling if a worker is needed for MVP.
-13. Define the versioned API and OpenAPI workflow.
-14. Define the versioned, secret-free deployment-plan JSON schema.
-15. Complete the Compose deployment, upgrade, backup, restore, and diagnostics design.
-16. Create the dedicated Lucid folder and migrate the legacy diagrams.
-17. Define the public brand brief, visual identity, asset formats, licensing, and provenance manifest.
-18. Validate the Cloudflare-first family cloud profile and Compose-on-VM fallback
-    using measured cost, capacity, quota, backup, and migration evidence.
-19. Define the supported iPhone, iPad, and desktop PWA compatibility matrix.
-20. Define the versioned deployment-connection contract used by PWA and future native clients.
-21. Define provider-neutral secret inputs and optional secret-manager adapter boundaries.
-22. Complete the initial threat model, ASVS verification mapping, software-supply-chain
-    controls, and release signing/provenance design.
-23. Define and prove the common Cloudflare Workers Static Assets build, preview,
-    custom-domain, security-header, production approval, and rollback convention for
-    the three public frontends.
-24. Define the product-version source of truth, release manifest, release channels,
-    independently versioned API/synchronization/migration/deployment/export
-    contracts, PWA update behavior, support window, and cross-profile recovery
-    policy described by
-    [Versioning, Release, and Update Lifecycle](versioning-release-and-update-lifecycle.md).
-25. Produce the ordered implementation plan from the approved
-    [MVP Definition and UAT Contract](../product/mvp-definition.md) and accepted
-    implementation decisions.
-
-Some decisions can proceed in parallel, but no framework or infrastructure should
-be installed merely because it appears as the current direction in this document.
+The following remain implementation and release gates rather than architecture
+blockers: measured Worker/Compose capacity, local-network TLS instructions,
+deployment-plan schema tests, threat-model/ASVS verification, supply-chain
+artifacts, public-site production proof, supported-device results, profile-to-profile
+restore proof, and complete UAT evidence. A failed gate changes or blocks the
+affected profile; it never silently weakens security, portability, or offline data.
 
 ## Documentation and Source-of-Truth Map
 

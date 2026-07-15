@@ -2,9 +2,9 @@
 
 ## Status
 
-Proposed architecture direction. The exposure rules in this document are security
-requirements. Authentication libraries, passwordless options, OIDC providers, and
-protocol topology require research and an ADR before implementation.
+Current MVP architecture. ADR 0010 accepts the built-in account, session,
+organization-authorization, and recovery design. Optional OIDC, passkeys, public
+links, and native-client authorization remain later decisions.
 
 ## Security Boundary
 
@@ -22,14 +22,14 @@ while authentication is disabled. Binding a no-auth service to `0.0.0.0`, a LAN
 address, a tunnel, or a public interface is an invalid configuration.
 Credentials and session material must never cross a network over plaintext.
 
-## Proposed Identity Model
+## Identity Model
 
 ApiaryLens should support two server identity paths without making a separate
 identity server part of the family installation.
 
 ### Built-in accounts
 
-Built-in local accounts are the proposed default for family and small self-hosted
+Built-in local accounts are the accepted default for family and small self-hosted
 deployments. They provide multiple users, invitations, recovery, sessions, and
 roles within ApiaryLens. This is application authentication, not an attempt to
 build a general-purpose identity provider.
@@ -52,10 +52,10 @@ must not make the installation or its data unrecoverable.
 
 ## Sessions and Credentials
 
-The detailed design must include:
+The accepted session and credential design includes:
 
-- Password hashing with a modern memory-hard function such as Argon2id and
-  parameters that can be upgraded
+- PBKDF2-HMAC-SHA-256 through Web Crypto with a unique salt, server pepper,
+  versioned parameters, and a measured initial target of 600,000 iterations
 - Current password guidance, breached-password checks that preserve privacy, and
   no arbitrary composition rules
 - Same-origin PWA sessions using `HttpOnly`, `Secure`, and appropriate `SameSite`
@@ -82,15 +82,15 @@ the built-in account path and optional OIDC path expose that contract.
 Use organizations and memberships from the beginning so the same model supports a
 family, mentor relationship, bee club, research group, or commercial team.
 
-Initial role concepts include:
+MVP roles are:
 
 - Owner
-- Admin
-- Apiary Manager
-- Inspector
-- Mentor
-- Read-only Viewer
-- Club Member
+- Beekeeper
+- Viewer
+
+Admin, Apiary Manager, Inspector, Mentor, club, research, and commercial role
+templates are later extensions over the same capability model.
+
 
 Roles are convenience groupings, not the authorization boundary. Server-side
 permissions must govern each organization-scoped operation, including viewing,
@@ -105,12 +105,12 @@ sharing are later capabilities. Public links must be unguessable, narrowly scope
 revocable, expiring where appropriate, and unable to reveal precise apiary locations
 or other sensitive data by default.
 
-## Required Decision Work
+## Implementation and Verification Work
 
-Complete [Task 007](../../tasks/007-research-authentication-and-identity.md) and
-accept an ADR before implementing server authentication. See the broader
-[Security Architecture](security-architecture.md) for transport, secrets,
-software-supply-chain, and release requirements.
+Implement ADR 0010 and verify hashing cost, bootstrap races, session rotation,
+recovery, throttling, CSRF/origin controls, role capabilities, and cross-organization
+negative cases. See the broader [Security Architecture](security-architecture.md)
+for transport, secrets, software-supply-chain, and release requirements.
 
 ## Standards Baseline
 

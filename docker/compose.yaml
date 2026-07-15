@@ -1,0 +1,84 @@
+name: apiarylens
+
+services:
+  api:
+    image: apiarylens-api:${APIARYLENS_VERSION:-0.1.0-rc.1}
+    build:
+      context: ..
+      dockerfile: docker/api.Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      APIARYLENS_DATABASE: /data/apiarylens.sqlite
+      APIARYLENS_MEDIA: /data/media
+      APIARYLENS_SOURCE_COMMIT: ${APIARYLENS_SOURCE_COMMIT:-development}
+      APIARYLENS_BUILD_TIME: ${APIARYLENS_BUILD_TIME:-development}
+      APIARYLENS_ARTIFACT_IDENTITY: ${APIARYLENS_ARTIFACT_IDENTITY:-ApiaryLens@0.1.0-rc.1+development}
+    volumes:
+      - apiarylens_data:/data
+    networks:
+      - backend
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    image: apiarylens-web:${APIARYLENS_VERSION:-0.1.0-rc.1}
+    build:
+      context: ..
+      dockerfile: docker/web.Dockerfile
+      args:
+        APIARYLENS_SOURCE_COMMIT: ${APIARYLENS_SOURCE_COMMIT:-development}
+        APIARYLENS_BUILD_TIME: ${APIARYLENS_BUILD_TIME:-development}
+        APIARYLENS_ARTIFACT_IDENTITY: ${APIARYLENS_ARTIFACT_IDENTITY:-ApiaryLens@0.1.0-rc.1+development}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      APIARYLENS_SITE_ADDRESS: ${APIARYLENS_SITE_ADDRESS:-localhost}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    ports:
+      - '${APIARYLENS_HTTP_PORT:-80}:80'
+      - '${APIARYLENS_HTTPS_PORT:-443}:443'
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - frontend
+      - backend
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+
+volumes:
+  apiarylens_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  frontend:
+  backend:
+    internal: true

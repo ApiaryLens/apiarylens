@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://apiarylens.dev/schemas/release-manifest-v1.json",
+  "title": "ApiaryLens release manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "product",
+    "productVersion",
+    "channel",
+    "sourceCommit",
+    "buildTime",
+    "contracts",
+    "profiles",
+    "artifacts",
+    "knownLimitations"
+  ],
+  "properties": {
+    "product": { "const": "ApiaryLens" },
+    "productVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "channel": { "enum": ["development", "release-candidate", "stable"] },
+    "sourceCommit": { "type": "string", "minLength": 7 },
+    "buildTime": { "type": "string", "minLength": 1 },
+    "contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["api", "sync", "databaseMigration", "deploymentPlan", "export", "localStore"],
+      "properties": {
+        "api": { "type": "string" },
+        "sync": { "type": "integer", "minimum": 1 },
+        "databaseMigration": { "type": "string" },
+        "deploymentPlan": { "type": "integer", "minimum": 1 },
+        "export": { "type": "integer", "minimum": 1 },
+        "localStore": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "items": { "enum": ["cloudflare", "compose"] },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "kind", "target", "url", "sha256", "bytes"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "kind": {
+            "enum": ["deployment-bundle", "deployment-tool", "sbom", "license-report", "provenance"]
+          },
+          "target": { "enum": ["cloudflare", "compose", "windows-amd64", "release"] },
+          "url": { "type": "string", "format": "uri", "pattern": "^https://" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "bytes": { "type": "integer", "minimum": 1 }
+        }
+      },
+      "minItems": 2
+    },
+    "knownLimitations": { "type": "array", "items": { "type": "string" } }
+  }
+}

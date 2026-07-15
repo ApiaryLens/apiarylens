@@ -5,25 +5,37 @@ Lucidchart is the authoritative diagram and flowchart system for ApiaryLens. See
 
 ## Lucid Workspace
 
-All editable diagrams must live in a dedicated Lucid folder named `ApiaryLens`.
-The connected Lucid MCP supports document search, creation, retrieval, sharing, and
-export, but currently exposes no folder-management operation. No existing Lucid
-document or folder named ApiaryLens was found during the 2026-07-15 search. New
-documents are temporarily created at the connected workspace root and must be moved
-into the required `ApiaryLens` folder through Lucid when that folder is available.
+All editable diagrams live in the dedicated Lucid folder named `ApiaryLens`, created
+on 2026-07-15. The connected Lucid MCP is used for document creation and retrieval;
+the Lucid REST API is used for folder placement and deterministic PNG export when
+the connector does not expose those operations. Credentials and the private folder
+identifier are never stored in the public repository.
 
 ## Diagram Catalog
 
 | Diagram | Lucid document | Repository export | Status |
 |---|---|---|---|
-| Product capability map | `36e00bfd-6fd9-46ed-ad8b-1032b1a34108` | `../../assets/graphics/ApiaryLens_Capability_Map_2026-07.png` | Current; move Lucid source into `ApiaryLens` folder |
-| System context | Pending migration | `system-context.mmd` legacy source | Awaiting Lucid folder |
-| Deployment tiers and user journey | Pending | Pending | Awaiting Lucid folder |
-| Repository and domain boundaries | Pending | Pending | Awaiting Lucid folder |
-| Cloudflare public frontends and portable backend boundary | Pending | Pending | Awaiting Lucid folder |
-| Research, ADR, and implementation flow | Pending | Pending | Awaiting Lucid folder |
-| Initial domain data model | Pending migration | `data-model.mmd` legacy source | Awaiting data-model design and Lucid folder |
-| Product roadmap | `755f46d8-c741-45f7-85e3-88f87a07aeca` | `../../assets/graphics/ApiaryLens_Roadmap_2026-07.png` | Current; move Lucid source into `ApiaryLens` folder |
+| Product capability map | `36e00bfd-6fd9-46ed-ad8b-1032b1a34108` | `../../assets/graphics/ApiaryLens_Capability_Map_2026-07.png` | Current; source filed |
+| Product roadmap | `755f46d8-c741-45f7-85e3-88f87a07aeca` | `../../assets/graphics/ApiaryLens_Roadmap_2026-07.png` | Current; source filed |
+| MVP system context | `73bdf09b-fb53-4932-8c9e-e63b18d27b2a` | `../../assets/graphics/architecture/system-context.png` | Current |
+| MVP deployment profiles | `8ee0123c-f6c3-4906-853c-ad893b2915fa` | `../../assets/graphics/architecture/deployment-profiles.png` | Current |
+| MVP logical data model | `a22b915a-180b-47c9-b495-c68d3528cc99` | `../../assets/graphics/architecture/logical-data-model.png` | Current |
+| Offline synchronization | `8e918109-d2e8-4392-a514-cc0f677daf11` | `../../assets/graphics/architecture/offline-synchronization.png` | Current |
+| Authentication trust flow | `ae289dca-1262-4998-8422-8e73fe83fe13` | `../../assets/graphics/architecture/authentication-trust-flow.png` | Current |
+| Safe update lifecycle | `684a4da4-37d9-4dd7-ae89-11bd97557b82` | `../../assets/graphics/architecture/safe-update-lifecycle.png` | Current |
+| Repository and domain boundaries | `5abe71fa-b4ac-498f-84da-bf129ed08a20`, page 1 | `../../assets/graphics/architecture/repository-domain-boundaries.png` | Current |
+| Research, ADR, and implementation flow | `5abe71fa-b4ac-498f-84da-bf129ed08a20`, page 2 | `../../assets/graphics/architecture/research-adr-implementation-flow.png` | Current |
+| Components and network trust boundaries | `72787958-9344-4a71-af56-98a216b35aa1`, page 1 | `../../assets/graphics/architecture/components-network-trust.png` | Current |
+| Authorization boundaries | `72787958-9344-4a71-af56-98a216b35aa1`, page 2 | `../../assets/graphics/architecture/authorization-boundaries.png` | Current |
+| Media lifecycle, backup, and restore | `72787958-9344-4a71-af56-98a216b35aa1`, page 3 | `../../assets/graphics/architecture/media-backup-restore.png` | Current |
+| Scout Bee executor | `72787958-9344-4a71-af56-98a216b35aa1`, page 4 | `../../assets/graphics/architecture/scout-bee-executor.png` | Current |
+| CI/CD and release promotion | `72787958-9344-4a71-af56-98a216b35aa1`, page 5 | `../../assets/graphics/architecture/cicd-release-promotion.png` | Current |
+| Update, rollback, and recovery | `72787958-9344-4a71-af56-98a216b35aa1`, page 6 | `../../assets/graphics/architecture/update-rollback-recovery.png` | Current |
+| Primary MVP user journeys | `72787958-9344-4a71-af56-98a216b35aa1`, page 7 | `../../assets/graphics/architecture/primary-user-journeys.png` | Current |
+
+Legacy Mermaid sources remain only as migration history and are not authoritative.
+See [Operational Architecture and Journeys](operational-architecture.md) for
+accessible descriptions of the seven-page operational diagram set.
 
 ## Publishing Rules
 

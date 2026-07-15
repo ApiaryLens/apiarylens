@@ -1,3 +1,14 @@
 # Claude Code local settings (logs and machine-local overrides only — agents/hooks/settings are committed)
 .claude/logs/
 .claude/settings.local.json
+
+# Local Cloudflare/Wrangler state
+.wrangler/
+
+# Generated dependency and build output
+node_modules/
+dist/
+coverage/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

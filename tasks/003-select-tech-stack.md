@@ -1,23 +1,31 @@
 # Task 003: Select Technology Stack
 
-Review the architecture docs and create final stack recommendations.
+## Status
 
-Current likely direction:
+Completed 2026-07-15.
 
-- React + TypeScript + Vite frontend
-- Accessible design-system and styling candidates to be evaluated rather than assumed
-- PWA first
-- Committed iPhone client later; Capacitor, another wrapper, or native implementation remains open
-- PostgreSQL
+The accepted stack is recorded in
+[ADR 0008](../docs/adr/0008-mvp-application-platform.md), with storage, identity,
+synchronization, and deployment decisions in ADRs 0009 through 0011.
+
+Selected MVP platform:
+
+- React + TypeScript + Vite PWA
+- Dexie/IndexedDB local replica and outbox
+- Accessible shared design-system primitives
+- Hono + Zod/OpenAPI on Cloudflare Workers and Node 24
+- D1 and Node SQLite behind shared schema/repository contracts
+- Private R2 and filesystem media adapters
+- pnpm workspace, Vitest, and Playwright
 - Docker Compose for the first complete self-hosted server and portable cloud fallback
-- Cloudflare-native runtime and storage adapters for the first cloud profile
-- Backend framework undecided: FastAPI or NestJS
-- Cloudflare Workers Static Assets for official public frontend hosting (already accepted)
+- Cloudflare-native family profile as the first cloud target
+- Cloudflare Workers Static Assets for official public frontends
+- PWA first; the committed iPhone client remains post-MVP
 
-Evaluate licensing, offline behavior, accessibility, resource footprint, security,
-maintainer experience, Cloudflare frontend compatibility, self-hosting, upgrade
-paths, and long-term support. Produce the relevant ADRs before installing dependencies.
+The selection considered licensing, offline behavior, accessibility, resource
+footprint, security, Cloudflare/Compose parity, self-hosting, updates, and support.
+See the dated
+[application platform research](../docs/research/2026-07-15-application-platform-and-storage-spike.md).
 
-Follow [ADR 0007](../docs/adr/0007-deployment-profile-priority.md) for deployment
-order without treating the Cloudflare runtime, D1/R2 adapters, or PostgreSQL data
-path as already selected technical implementations.
+Implementation and release measurements remain required; a failed acceptance gate
+changes the affected profile rather than weakening the accepted principles.

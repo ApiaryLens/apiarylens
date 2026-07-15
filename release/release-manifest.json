@@ -1,0 +1,71 @@
+{
+  "$schema": "./release-manifest.schema.json",
+  "product": "ApiaryLens",
+  "productVersion": "0.1.0-rc.1",
+  "channel": "release-candidate",
+  "sourceCommit": "development",
+  "buildTime": "reproducible-at-build",
+  "contracts": {
+    "api": "1.0",
+    "sync": 1,
+    "databaseMigration": "0003",
+    "deploymentPlan": 1,
+    "export": 1,
+    "localStore": 1
+  },
+  "profiles": ["cloudflare", "compose"],
+  "artifacts": [
+    {
+      "name": "apiarylens-0.1.0-rc.1-cloudflare-ef7a39025d9c.tar.gz",
+      "kind": "deployment-bundle",
+      "target": "cloudflare",
+      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-0.1.0-rc.1-cloudflare-ef7a39025d9c.tar.gz",
+      "sha256": "ef7a39025d9c05249431b8646656ea78c02d73c7d53897224aadfc1507981a92",
+      "bytes": 603816
+    },
+    {
+      "name": "apiarylens-0.1.0-rc.1-compose-3885f8fcfbb0.tar.gz",
+      "kind": "deployment-bundle",
+      "target": "compose",
+      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-0.1.0-rc.1-compose-3885f8fcfbb0.tar.gz",
+      "sha256": "3885f8fcfbb06d65eed0a40b4fc0afbd1458dc56236bda77eee3381c74461604",
+      "bytes": 102989
+    },
+    {
+      "name": "apiarylens-scout-bee-0.1.0-rc.1-windows-amd64.exe",
+      "kind": "deployment-tool",
+      "target": "windows-amd64",
+      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-scout-bee-0.1.0-rc.1-windows-amd64.exe",
+      "sha256": "3647f38ed8a274dd7866ffe6bfba6b93c7754dff8e93b6014657f4c02f4a7392",
+      "bytes": 7779840
+    },
+    {
+      "name": "apiarylens-sbom.cdx.json",
+      "kind": "sbom",
+      "target": "release",
+      "url": "https://apiarylens.org/releases/0.1.0-rc.1/apiarylens-sbom.cdx.json",
+      "sha256": "e422664b7e96c59f8586dfb79a4ed02eb72663e41e6fd737773b4389d5a5b33d",
+      "bytes": 38511
+    },
+    {
+      "name": "apiarylens-license-report.md",
+      "kind": "license-report",
+      "target": "release",
+      "url": "https://apiarylens.org/releases/0.1.0-rc.1/apiarylens-license-report.md",
+      "sha256": "58f81ee49d04c97511b9a5e6bbaa6b33c41227f74b7f10264dd0d68b485667bf",
+      "bytes": 820
+    },
+    {
+      "name": "apiarylens-provenance.intoto.jsonl",
+      "kind": "provenance",
+      "target": "release",
+      "url": "https://apiarylens.org/releases/0.1.0-rc.1/apiarylens-provenance.intoto.jsonl",
+      "sha256": "caa4a84c9ce1a6708b66ca92a1a354c33bdb4db4fcc4127a2b0dda5b23820f19",
+      "bytes": 1133
+    }
+  ],
+  "knownLimitations": [
+    "Native iPhone and Android applications are post-MVP.",
+    "AI, video, sensors, passkeys, and OIDC federation are post-MVP."
+  ]
+}

@@ -519,24 +519,18 @@ not waive any P0 release gate or convert explicitly excluded roadmap work into M
 scope. Any limitation in the checkpoint build must be visible and recorded rather
 than represented as completed functionality.
 
-## Blocking Decisions Before Implementation
+## Implementation Decisions Accepted
 
-- ADR 0003 and the project license are accepted; preserve their constraints
-- Select the frontend/PWA and offline-storage approach
-- Select backend runtimes and define shared domain boundaries
-- Select PostgreSQL data access for Compose and validate D1 or another accepted
-  relational implementation for Cloudflare
-- Define authentication, recovery, authorization, and session behavior
-- Define synchronization and conflict behavior
-- Define media storage and processing behavior
-- Define deployment-plan, Scout Bee, secret, backup, update, and rollback contracts
-- Define the product version, release manifest, API and sync compatibility,
-  migration, PWA activation, release channel, and support-window contracts
-- Complete the release-scope threat model and data model
+ADRs 0003 and 0008 through 0011 accept the license, application platform, D1/Node
+SQLite storage, offline synchronization, media, built-in identity, authorization,
+Scout Bee, secret, deployment, backup, update, and recovery boundaries. The data
+model, release/version lifecycle, and initial threat controls are recorded in the
+linked architecture and security documents.
 
-These decisions may be completed autonomously under the project owner's
-authorization, but their evidence and ADRs must still be recorded before dependent
-implementation.
+Implementation may proceed. The release-scope threat model, ASVS verification
+mapping, runtime measurements, supply-chain artifacts, cross-profile conformance,
+deployment proofs, and UAT results remain release gates rather than open technology
+choices.
 
 ## Change Control
 

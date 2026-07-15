@@ -1,0 +1,23 @@
+{
+  "name": "ApiaryLens",
+  "short_name": "ApiaryLens",
+  "description": "Private, offline-first apiary and hive management.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fffaf0",
+  "theme_color": "#f4b942",
+  "icons": [
+    {
+      "src": "/icons/apiarylens-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/apiarylens-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

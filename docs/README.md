@@ -30,12 +30,21 @@ single-hive hobby tool toward commercial-apiary scale.
   brief, living capability overview, pre-release marketing overview, and longer
   marketing/product narrative docs.
 - `research/` -- time-boxed architecture research and technical spikes.
+- `operator/` -- direct and Scout-assisted operations, backup, restore, update,
+  rollback, diagnostics, and uninstall guidance.
+- `releases/` -- curated release notes, changelog, limitations, and support windows.
 - `roadmap/` -- product roadmap and gated portfolio execution plan.
 - `security/` -- canonical security architecture and risk register plus
   authentication, authorization, sharing, privacy, and secure-release design.
 - `source-documents/` -- original imported Word, PDF, and Markdown source files.
 - `strategy/` -- domain and project strategy notes.
 - `testing/` -- deployment, PWA, device, offline, recovery, and cost test strategies.
+- `user/` -- installation, offline work, family access, records, media, and recovery
+  guidance for beekeepers.
+
+Use [Troubleshooting](troubleshooting.md) for symptom-based recovery and the
+[MVP release gates](testing/mvp-release-gates.md) for the current evidence-backed
+readiness status.
 
 Start with `00-handoff/README_HOW_TO_USE_THIS_HANDOFF.md` if you are orienting a
 new agent or session.

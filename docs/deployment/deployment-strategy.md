@@ -86,7 +86,7 @@ TLS, and reviewed preview/production workflows as defined by
 [ADR 0006](../adr/0006-cloudflare-public-frontends.md).
 
 This is separate from product-server deployment. The PWA frontend may be served by
-Cloudflare while its API, PostgreSQL database, media storage, and synchronization
+Cloudflare while its API, SQLite database, media storage, and synchronization
 services run in a portable Compose deployment, provider-neutral VM, another cloud,
 or a future managed ApiaryLens environment. Self-hosting never requires a
 Cloudflare account.

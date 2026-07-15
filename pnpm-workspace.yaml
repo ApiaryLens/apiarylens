@@ -1,0 +1,33 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+  - 'tests/*'
+
+allowBuilds:
+  esbuild: true
+  sharp: false
+  workerd: true
+
+catalog:
+  '@hono/node-server': '^2.0.9'
+  '@hono/zod-openapi': '^1.5.1'
+  '@cloudflare/workers-types': 'latest'
+  '@types/node': '^24.10.0'
+  '@types/react': '^19.2.0'
+  '@types/react-dom': '^19.2.0'
+  '@vitejs/plugin-react': 'latest'
+  'dexie': '^4.2.1'
+  'dexie-react-hooks': '^4.2.0'
+  'fake-indexeddb': '^6.2.5'
+  'fflate': '^0.8.2'
+  'hono': '^4.12.30'
+  'react': '^19.2.0'
+  'react-dom': '^19.2.0'
+  'typescript': '^7.0.2'
+  'vite': '^8.0.16'
+  'vitest': '^4.1.10'
+  'wrangler': '^4.107.0'
+  'zod': '^4.4.3'
+
+minimumReleaseAgeExclude:
+  - '@hono/node-server@2.0.9'

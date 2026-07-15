@@ -2,9 +2,9 @@
 
 ## Status
 
-Proposed architecture direction. The user experience goals are requirements; the
-storage engines, packaging tools, networking approach, and cloud templates require
-research and ADRs.
+Current MVP architecture. ADRs 0008 through 0011 select the application, storage,
+identity, synchronization, and Scout Bee design. Profile measurements, packaging,
+network/TLS proof, and deployment UAT remain release gates.
 
 ## MVP User
 
@@ -70,7 +70,7 @@ cross-browser behavior, and migration from local-only identity to shared identit
 Browser storage must not be treated as the only durable copy without an explicit
 backup experience.
 
-## Proposed Family and Server Mode
+## Family and Server Mode
 
 Family sharing and access from multiple devices require an available synchronization
 server. The server may run on a local device, an always-on home system, a generic
@@ -97,7 +97,7 @@ planner and bootstrapper. It is not a separate edition of the product. Its MVP
 target adapters and acceptance boundary are defined in the
 [MVP Definition and UAT Contract](../product/mvp-definition.md).
 
-Proposed responsibilities:
+Accepted MVP responsibilities:
 
 - Ask a small set of plain-language questions
 - Ask whether ApiaryLens will be used only on this device, by other devices on a
@@ -113,10 +113,9 @@ Proposed responsibilities:
 - Generate strong secrets and refuse no-auth/non-loopback, default-credential, or
   public-HTTP combinations
 
-A React interface may be appropriate, but the privileged executor, packaging,
-platform support, signing, and update mechanism require a research spike and ADR
-before implementation. Those decisions may change how Scout Bee is built, not
-whether the scoped MVP component is delivered.
+Scout Bee uses an embedded React interface and a Go loopback executor. Packaging,
+signing, and cross-platform builds follow ADR 0011; the plan schema and target
+adapters are verified during implementation.
 Scout Bee must consume the same versioned deployment schema used by automation; it
 must not hide an unrelated deployment implementation behind its UI.
 
@@ -188,16 +187,16 @@ and future managed deployments. Server discovery, QR or connection-file onboardi
 TLS trust, credential handling, and safe reconnection require dedicated security and
 usability design.
 
-## Decisions and Research Required
+## Remaining Implementation and Release Proof
 
-- Device-local storage and backup strategy
+- Post-MVP device-only storage and account-migration research
 - Transition from personal identity to organization membership
 - Built-in authentication/session architecture, recovery, organization isolation,
   and optional OIDC federation
-- Synchronization protocol and conflict resolution
-- Small-footprint database choice versus one database across all profiles
+- Synchronization protocol conformance, conflict, and recovery test evidence
+- D1/Node SQLite migration and cross-profile conformance evidence
 - Local-network HTTPS and PWA installation from secondary devices
-- Scout Bee packaging, executor, signing, update, and rollback model
+- Scout Bee packaging, signing, update, and rollback test evidence
 - Product version source of truth, release manifest, channels, support window, PWA
   activation, contract compatibility, migrations, and recovery behavior
 - Supported desktop and server operating systems

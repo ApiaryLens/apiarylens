@@ -1,5 +1,10 @@
 # Task 009: Establish the Cloudflare Frontend Foundation
 
+## Status
+
+Implementation in progress. ADR 0012 accepts the shared Vite and Workers Static Assets
+convention; local builds and deployment verification remain completion gates.
+
 ## Goal
 
 Define and prove a shared, secure Cloudflare Workers Static Assets deployment
