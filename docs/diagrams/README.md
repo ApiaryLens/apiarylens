@@ -25,17 +25,34 @@ identifier are never stored in the public repository.
 | Safe update lifecycle | `684a4da4-37d9-4dd7-ae89-11bd97557b82` | `../../assets/graphics/architecture/safe-update-lifecycle.png` | Current |
 | Repository and domain boundaries | `5abe71fa-b4ac-498f-84da-bf129ed08a20`, page 1 | `../../assets/graphics/architecture/repository-domain-boundaries.png` | Current |
 | Research, ADR, and implementation flow | `5abe71fa-b4ac-498f-84da-bf129ed08a20`, page 2 | `../../assets/graphics/architecture/research-adr-implementation-flow.png` | Current |
-| Components and network trust boundaries | `72787958-9344-4a71-af56-98a216b35aa1`, page 1 | `../../assets/graphics/architecture/components-network-trust.png` | Current |
-| Authorization boundaries | `72787958-9344-4a71-af56-98a216b35aa1`, page 2 | `../../assets/graphics/architecture/authorization-boundaries.png` | Current |
-| Media lifecycle, backup, and restore | `72787958-9344-4a71-af56-98a216b35aa1`, page 3 | `../../assets/graphics/architecture/media-backup-restore.png` | Current |
-| Scout Bee executor | `72787958-9344-4a71-af56-98a216b35aa1`, page 4 | `../../assets/graphics/architecture/scout-bee-executor.png` | Current |
-| CI/CD and release promotion | `72787958-9344-4a71-af56-98a216b35aa1`, page 5 | `../../assets/graphics/architecture/cicd-release-promotion.png` | Current |
-| Update, rollback, and recovery | `72787958-9344-4a71-af56-98a216b35aa1`, page 6 | `../../assets/graphics/architecture/update-rollback-recovery.png` | Current |
-| Primary MVP user journeys | `72787958-9344-4a71-af56-98a216b35aa1`, page 7 | `../../assets/graphics/architecture/primary-user-journeys.png` | Current |
+| Components and network trust boundaries | `72787958-9344-4a71-af56-98a216b35aa1`, page 1 | `../../assets/graphics/architecture/components-network-trust.png` | Current; source filed; connector-label collision requires polish |
+| Authorization boundaries | `72787958-9344-4a71-af56-98a216b35aa1`, page 2 | `../../assets/graphics/architecture/authorization-boundaries.png` | Current; source filed; decision labels require polish |
+| Media lifecycle, backup, and restore | `72787958-9344-4a71-af56-98a216b35aa1`, page 3 | `../../assets/graphics/architecture/media-backup-restore.png` | Current; source filed; visual review passed |
+| Scout Bee executor | `72787958-9344-4a71-af56-98a216b35aa1`, page 4 | `../../assets/graphics/architecture/scout-bee-executor.png` | Current; source filed; visual review passed |
+| CI/CD and release promotion | `72787958-9344-4a71-af56-98a216b35aa1`, page 5 | `../../assets/graphics/architecture/cicd-release-promotion.png` | Current; source filed; visual review passed |
+| Update, rollback, and recovery | `72787958-9344-4a71-af56-98a216b35aa1`, page 6 | `../../assets/graphics/architecture/update-rollback-recovery.png` | Current; source filed; pending-work labels require polish |
+| Primary MVP user journeys | `72787958-9344-4a71-af56-98a216b35aa1`, page 7 | `../../assets/graphics/architecture/primary-user-journeys.png` | Current; source filed; visual review passed |
 
 Legacy Mermaid sources remain only as migration history and are not authoritative.
 See [Operational Architecture and Journeys](operational-architecture.md) for
 accessible descriptions of the seven-page operational diagram set.
+
+## Final Visual Review
+
+The 2026-07-15 final-polish review confirmed a clear left-to-right reading order,
+consistent role colors, readable terminal states, and adequate export resolution on
+all seven operational pages. Three pages still require source edits before release:
+
+- Components and network trust: separate the API-to-data connector labels from the
+  API shape and from each other.
+- Authorization boundaries: move the three `yes` and `no` labels onto their own
+  decision branches so they do not overlap the decision shapes or adjacent paths.
+- Update, rollback, and recovery: separate the pending-work branch label from the
+  opening state and decision text.
+
+The other four pages passed this visual review. Source placement is no longer open:
+the operational document was verified in and, where necessary, moved into the
+dedicated `ApiaryLens` folder without changing its cataloged document ID.
 
 ## Publishing Rules
 
