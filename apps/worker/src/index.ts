@@ -692,6 +692,29 @@ app.post('/api/v1/operator/restore', requireScoutOperator, async (c) => {
   return c.json({ status: 'ok', restoredAt: now(), sessionsRevoked: true });
 });
 
+app.onError((error, c) => {
+  const operatorAuthorized =
+    Boolean(c.env.SCOUT_OPERATOR_TOKEN) &&
+    c.req.header('authorization') === `Bearer ${c.env.SCOUT_OPERATOR_TOKEN}`;
+  const diagnosticMessage = error instanceof Error ? error.message : String(error);
+  console.error(
+    JSON.stringify({
+      event: 'request_failed',
+      requestId: c.get('requestId'),
+      method: c.req.method,
+      path: c.req.path,
+      error: diagnosticMessage,
+    }),
+  );
+  return apiError(
+    c,
+    500,
+    'internal_error',
+    operatorAuthorized
+      ? `Operator diagnostic: ${diagnosticMessage}`
+      : 'The request could not be completed',
+  );
+});
 app.notFound((c) => apiError(c, 404, 'not_found', 'The requested endpoint does not exist'));
 export default app;
 
@@ -1015,7 +1038,7 @@ function setSessionCookie(c: AppContext, token: string) {
 
 function apiError(
   c: AppContext,
-  status: 400 | 401 | 403 | 404 | 409,
+  status: 400 | 401 | 403 | 404 | 409 | 500,
   code: string,
   message: string,
 ) {

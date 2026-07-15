@@ -21,6 +21,26 @@
   ],
   "observability": { "enabled": false },
   "env": {
+    "uat": {
+      "name": "apiarylens-family-uat",
+      "workers_dev": true,
+      "preview_urls": false,
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "apiarylens-family-uat",
+          "database_id": "8e33a873-9665-4455-a480-44e67f6ad16c",
+          "migrations_dir": "migrations",
+        },
+      ],
+      "r2_buckets": [
+        {
+          "binding": "MEDIA",
+          "bucket_name": "apiarylens-family-media-uat",
+        },
+      ],
+      "observability": { "enabled": false },
+    },
     "production": {
       "name": "apiarylens-family-production",
       "workers_dev": false,

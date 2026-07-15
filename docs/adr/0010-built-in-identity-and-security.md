@@ -28,8 +28,12 @@ The MVP provides local ApiaryLens accounts as the default identity system.
   atomically after success.
 - Passwords are hashed with PBKDF2-HMAC-SHA-256 through Web Crypto, using a unique
   random salt, a server-side pepper, and a stored work-factor/version record. The
-  initial target is 600,000 iterations and must pass measured Worker CPU and login
-  latency gates; increasing the work factor rehashes on successful login.
+  preferred target is 600,000 iterations, but Cloudflare's deployed Web Crypto
+  runtime rejects a single PBKDF2 request above 100,000 iterations. The portable MVP
+  parameter is therefore 100,000 iterations, recorded in every hash, with long
+  passwords, generic errors, throttling, and recovery controls as compensating
+  defenses. A stronger portable memory-hard construction remains a post-MVP security
+  upgrade and requires a new measured compatibility decision.
 - Recovery uses one-time high-entropy recovery codes shown to the owner once and
   stored only as hashes. It does not depend on email. Regeneration revokes the
   previous set and creates an audit event.
@@ -90,4 +94,3 @@ are never required by a user deployment.
 - [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
 - [OWASP Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
 - [NIST SP 800-63B-4](https://pages.nist.gov/800-63-4/sp800-63b.html)
-

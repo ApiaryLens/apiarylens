@@ -19,8 +19,12 @@ the MVP evidence report.
 OWASP currently prefers Argon2id, then scrypt, and specifies PBKDF2-HMAC-SHA-256 at
 600,000 iterations when PBKDF2 is used. Cloudflare Workers and current browsers
 provide Web Crypto PBKDF2, giving both server profiles the same audited primitive.
-The Worker CPU allowance makes a measured benchmark mandatory; security parameters
-are not reduced merely to fit a free tier.
+UAT found that the deployed Workers Web Crypto implementation rejects iteration
+counts above 100,000, independent of the configured CPU allowance. The MVP records
+that portable work factor in each hash and uses long-password support, generic
+errors, throttling, recovery controls, and organization isolation as compensating
+controls. Moving to a stronger portable memory-hard construction remains an explicit
+post-MVP security task rather than an undocumented per-profile divergence.
 
 OWASP session guidance and browser security guidance support opaque server-side
 sessions in Secure, HttpOnly, SameSite cookies rather than reusable authentication
@@ -87,4 +91,3 @@ and health checks that operators can use directly.
 
 Adopt ADR 0010 and ADR 0011. Optional OIDC, passkeys, native-client PKCE, public
 links, and provider-specific VM provisioning remain compatible post-MVP work.
-

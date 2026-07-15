@@ -1,5 +1,7 @@
 const encoder = new TextEncoder();
-const iterations = 310_000;
+// This value must remain readable by the Cloudflare Worker profile. Workerd's
+// Web Crypto implementation currently caps a PBKDF2 request at 100,000 rounds.
+const iterations = 100_000;
 
 function base64(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString('base64url');

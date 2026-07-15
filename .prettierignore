@@ -8,6 +8,7 @@ test-results
 docs/source-documents
 assets/graphics/**/*.png
 pnpm-lock.yaml
+apps/worker/worker-configuration.d.ts
 
 # Imported and separately maintained prose/assets predate the code formatter.
 **/*.md

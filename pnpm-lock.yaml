@@ -6,9 +6,6 @@ settings:
 
 catalogs:
   default:
-    '@cloudflare/workers-types':
-      specifier: latest
-      version: 5.20260714.1
     '@hono/node-server':
       specifier: ^2.0.9
       version: 2.0.9
@@ -183,9 +180,6 @@ importers:
         specifier: 'catalog:'
         version: 4.12.30
     devDependencies:
-      '@cloudflare/workers-types':
-        specifier: 'catalog:'
-        version: 5.20260714.1
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -1354,7 +1348,8 @@ snapshots:
   '@cloudflare/workerd-windows-64@1.20260708.1':
     optional: true
 
-  '@cloudflare/workers-types@5.20260714.1': {}
+  '@cloudflare/workers-types@5.20260714.1':
+    optional: true
 
   '@cspotcode/source-map-support@0.8.1':
     dependencies:

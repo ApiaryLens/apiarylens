@@ -104,12 +104,7 @@ func (a *cloudflareAdapter) maintain(ctx context.Context, input request, manifes
 		if err = validateZip(archive); err != nil {
 			return append(phases, failed("Read verified backup archive", err)), err
 		}
-		preRestoreRequest, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint+"backup", nil)
-		if err != nil {
-			return append(phases, failed("Back up current deployment before restore", err)), err
-		}
-		preRestoreRequest.Header.Set("authorization", "Bearer "+operatorToken)
-		preRestoreResponse, err := a.executor.client.Do(preRestoreRequest)
+		preRestoreResponse, err := a.operatorRequest(ctx, http.MethodGet, endpoint+"backup", operatorToken, nil)
 		if err != nil {
 			return append(phases, failed("Back up current deployment before restore", err)), err
 		}
@@ -131,13 +126,7 @@ func (a *cloudflareAdapter) maintain(ctx context.Context, input request, manifes
 			return append(phases, failed("Back up current deployment before restore", err)), err
 		}
 		phases = append(phases, pass("Back up current deployment before restore", recoveryPath))
-		request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint+"restore", bytes.NewReader(archive))
-		if err != nil {
-			return append(phases, failed("Restore records and private media", err)), err
-		}
-		request.Header.Set("authorization", "Bearer "+operatorToken)
-		request.Header.Set("content-type", "application/zip")
-		response, err := a.executor.client.Do(request)
+		response, err := a.operatorRequest(ctx, http.MethodPost, endpoint+"restore", operatorToken, archive)
 		if err != nil || response.StatusCode != http.StatusOK {
 			if err == nil {
 				response.Body.Close()
@@ -153,12 +142,7 @@ func (a *cloudflareAdapter) maintain(ctx context.Context, input request, manifes
 		return append(phases, pass("Verify restored deployment health", "The restored service reports the expected release identity.")), nil
 	}
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint+"backup", nil)
-	if err != nil {
-		return append(phases, failed("Create portable backup archive", err)), err
-	}
-	request.Header.Set("authorization", "Bearer "+operatorToken)
-	response, err := a.executor.client.Do(request)
+	response, err := a.operatorRequest(ctx, http.MethodGet, endpoint+"backup", operatorToken, nil)
 	if err != nil {
 		return append(phases, failed("Create portable backup archive", err)), err
 	}
@@ -193,6 +177,36 @@ func (a *cloudflareAdapter) maintain(ctx context.Context, input request, manifes
 		pass("Save portable backup archive", destination),
 	)
 	return phases, nil
+}
+
+func (a *cloudflareAdapter) operatorRequest(ctx context.Context, method, endpoint, token string, body []byte) (*http.Response, error) {
+	const attempts = 20
+	for attempt := 0; attempt < attempts; attempt++ {
+		var reader io.Reader
+		if body != nil {
+			reader = bytes.NewReader(body)
+		}
+		request, err := http.NewRequestWithContext(ctx, method, endpoint, reader)
+		if err != nil {
+			return nil, err
+		}
+		request.Header.Set("authorization", "Bearer "+token)
+		if body != nil {
+			request.Header.Set("content-type", "application/zip")
+		}
+		response, err := a.executor.client.Do(request)
+		if err != nil || response.StatusCode != http.StatusNotFound || attempt == attempts-1 {
+			return response, err
+		}
+		_, _ = io.Copy(io.Discard, response.Body)
+		response.Body.Close()
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
+	return nil, errors.New("operator authorization did not become available")
 }
 
 func validateZip(raw []byte) error {

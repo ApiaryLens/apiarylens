@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import app from './index.js';
 
 const emptyEnvironment = (operatorToken?: string) =>
@@ -42,5 +42,21 @@ describe('Cloudflare operator boundary', () => {
     );
     expect(response.status).toBe(400);
     expect(((await response.json()) as { code: string }).code).toBe('backup_invalid');
+  });
+});
+
+describe('Cloudflare error boundary', () => {
+  it('returns a generic request-correlated error without exposing internals', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const response = await app.request('/api/v1/bootstrap/status', {}, emptyEnvironment());
+    const body = (await response.json()) as { code: string; message: string; requestId: string };
+
+    expect(response.status).toBe(500);
+    expect(body.code).toBe('internal_error');
+    expect(body.message).toBe('The request could not be completed');
+    expect(body.requestId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(JSON.stringify(body)).not.toContain('first');
+    expect(logged).toHaveBeenCalledOnce();
+    logged.mockRestore();
   });
 });

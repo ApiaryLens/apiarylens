@@ -85,8 +85,9 @@ media silently or assumes the allowance is permanent.
 ## Acceptance Gates
 
 - The same API conformance suite passes on D1 and Node SQLite.
-- PBKDF2 login meets the selected work factor inside Worker limits with acceptable
-  end-to-end latency.
+- PBKDF2 login completes at the Worker-compatible, versioned 100,000-round parameter
+  with acceptable end-to-end latency; the security record preserves the preferred
+  higher target and the post-MVP memory-hard upgrade requirement.
 - A 500-operation sync batch stays within query and CPU limits or is split safely.
 - Fresh Compose runs within 512 MiB RAM at idle and remains usable on one vCPU.
 - Cloudflare reference activity remains within documented free allowances with
@@ -98,4 +99,3 @@ media silently or assumes the allowance is permanent.
 
 Adopt ADR 0008 and ADR 0009. Publish measurements and cost assumptions with each
 release rather than advertising permanent free hosting.
-

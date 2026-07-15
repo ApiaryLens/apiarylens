@@ -220,6 +220,38 @@ func TestCloudflareBackupUsesTemporaryAuthorizationAndWritesVerifiedArchive(t *t
 	}
 }
 
+func TestCloudflareOperatorRequestWaitsForSecretPropagation(t *testing.T) {
+	attempts := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts++
+		if r.Header.Get("authorization") != "Bearer temporary-token" {
+			t.Fatal("operator authorization was not sent")
+		}
+		if attempts == 1 {
+			http.NotFound(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	adapter := &cloudflareAdapter{executor: &executor{client: server.Client()}}
+	response, err := adapter.operatorRequest(
+		context.Background(),
+		http.MethodPost,
+		server.URL,
+		"temporary-token",
+		[]byte("archive"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK || attempts != 2 {
+		t.Fatalf("expected a successful retry after propagation, status=%d attempts=%d", response.StatusCode, attempts)
+	}
+}
+
 func commandArgs(commands []command) []string {
 	result := make([]string, 0, len(commands))
 	for _, command := range commands {

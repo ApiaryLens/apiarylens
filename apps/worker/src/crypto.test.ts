@@ -4,6 +4,7 @@ import { hashPassword, sha256, verifyPassword } from './crypto.js';
 describe('portable Worker cryptography', () => {
   it('hashes and verifies passwords without a Node-only API', async () => {
     const stored = await hashPassword('correct horse battery staple');
+    expect(stored).toMatch(/^pbkdf2-sha256\$100000\$/);
     expect(await verifyPassword('correct horse battery staple', stored)).toBe(true);
     expect(await verifyPassword('incorrect password', stored)).toBe(false);
   });

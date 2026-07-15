@@ -1,5 +1,7 @@
 const encoder = new TextEncoder();
-const iterations = 310_000;
+// Workerd's Web Crypto implementation rejects PBKDF2 requests above 100,000
+// iterations. Keep this portable with the Node profile and version it in the hash.
+const iterations = 100_000;
 
 const encode = (bytes: Uint8Array) => {
   let binary = '';

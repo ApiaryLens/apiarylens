@@ -55,7 +55,10 @@ must not make the installation or its data unrecoverable.
 The accepted session and credential design includes:
 
 - PBKDF2-HMAC-SHA-256 through Web Crypto with a unique salt, server pepper,
-  versioned parameters, and a measured initial target of 600,000 iterations
+  versioned parameters, and a portable MVP work factor of 100,000 iterations. The
+  value is the deployed Cloudflare Web Crypto maximum observed in UAT; it is lower
+  than the preferred target and is paired with throttling, long-password support,
+  generic errors, and a planned memory-hard upgrade.
 - Current password guidance, breached-password checks that preserve privacy, and
   no arbitrary composition rules
 - Same-origin PWA sessions using `HttpOnly`, `Secure`, and appropriate `SameSite`
