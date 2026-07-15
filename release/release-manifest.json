@@ -44,7 +44,7 @@
       "kind": "sbom",
       "target": "release",
       "url": "https://apiarylens.org/releases/0.1.0-rc.1/apiarylens-sbom.cdx.json",
-      "sha256": "c84d6a05093b84036a09283603b7e95f2c1c9107e8152acdf5f2d973c2a4b928",
+      "sha256": "6eb74ad5358ad2ca700da35c32f953fb887da8d1b166e90077a68cf00c907d74",
       "bytes": 38511
     },
     {
@@ -60,7 +60,7 @@
       "kind": "provenance",
       "target": "release",
       "url": "https://apiarylens.org/releases/0.1.0-rc.1/apiarylens-provenance.intoto.jsonl",
-      "sha256": "2ead29073f5ac14cc03223834c1e1a31025e3b2fa0d1605e37ec64ca866f1660",
+      "sha256": "eeea7dbdeb6a827de91494960339508131166fb5fedb16e7d07dbbe0c2fdd626",
       "bytes": 1134
     }
   ],
