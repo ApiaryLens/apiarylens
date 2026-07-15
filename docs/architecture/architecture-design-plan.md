@@ -141,15 +141,18 @@ and contribution model—not domain ownership alone.
 |---|---|---|---|
 | `apiarylens` | Public | Product monorepo: PWA, API, worker, packages, database, Compose, architecture, ADRs | Active |
 | `apiarylens-ops` | Private | Internal planning, dashboards, coordination, and operational procedures | Active |
-| `apiarylens.org` | Public | Marketing, public docs experience, tutorials, releases, roadmap, and community | Active foundation scaffold |
-| `apiarylens.app` | Public initially | Public demo deployment, safe seed data, and hosted-app configuration | Active foundation scaffold |
-| `apiarylens.dev` | Public | Developer portal, generated API reference, integrations, SDKs, plugins, contributor material | Active foundation scaffold |
-| `.github` | Public | Organization profile, shared templates, health files, and reusable workflows | Active |
+| `apiarylens.org` | Private | Marketing, public docs experience, tutorials, releases, roadmap, and community | Active foundation scaffold |
+| `apiarylens.app` | Private | Public demo deployment, safe seed data, and hosted-app configuration | Active foundation scaffold |
+| `apiarylens.dev` | Private | Developer portal, generated API reference, integrations, SDKs, plugins, contributor material | Active foundation scaffold |
+| `.github` | Private | Organization configuration, shared templates, health files, and reusable workflows | Active |
 
 The main `apiarylens` repository remains authoritative for product behavior,
 contracts, self-hosted deployment, and releases. Domain repositories consume
 versioned artifacts or generated documentation; they do not copy or fork the
-product implementation.
+product implementation. Repository visibility and deployment visibility are
+separate: the `.org`, `.app`, and `.dev` sites are public properties deployed from
+private repositories. The core open-source repository is the only public repository
+in the initial portfolio.
 
 Future production SaaS infrastructure may require a private `apiarylens-cloud` or
 `apiarylens-infrastructure` repository. The private `apiarylens-ops` repository must

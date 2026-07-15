@@ -25,10 +25,10 @@ repository accepted in ADR 0005.
 |---|---|---|
 | `ApiaryLens/apiarylens` | Public | `D:\git\apiarylens\apiarylens` |
 | `ApiaryLens/apiarylens-ops` | Private | `D:\git\apiarylens\apiarylens-ops` |
-| `ApiaryLens/apiarylens.org` | Public | `D:\git\apiarylens\apiarylens.org` |
-| `ApiaryLens/apiarylens.app` | Public initially | `D:\git\apiarylens\apiarylens.app` |
-| `ApiaryLens/apiarylens.dev` | Public | `D:\git\apiarylens\apiarylens.dev` |
-| `ApiaryLens/.github` | Public | `D:\git\apiarylens\.github` |
+| `ApiaryLens/apiarylens.org` | Private | `D:\git\apiarylens\apiarylens.org` |
+| `ApiaryLens/apiarylens.app` | Private | `D:\git\apiarylens\apiarylens.app` |
+| `ApiaryLens/apiarylens.dev` | Private | `D:\git\apiarylens\apiarylens.dev` |
+| `ApiaryLens/.github` | Private | `D:\git\apiarylens\.github` |
 
 ## Required Work
 
@@ -59,7 +59,7 @@ scripts/
 tasks/
 ```
 
-### Public frontend repositories
+### Public-facing frontend repositories (private source)
 
 ```text
 docs/
@@ -82,6 +82,6 @@ workflow-templates/
 - Repository visibility is correct.
 - Each repository clearly states what it owns and what it must not duplicate.
 - No scaffold selects a framework or service beyond accepted decisions.
-- Public frontend repositories name Cloudflare Workers Static Assets as their target
+- Public-facing frontend repositories name Cloudflare Workers Static Assets as their target
   without adding deployment credentials.
 - Baseline link, secret, and repository checks pass.

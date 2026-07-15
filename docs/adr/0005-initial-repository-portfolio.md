@@ -12,7 +12,9 @@ Accepted
 
 ADR 0001 defines separate repositories for the open-source product, private
 operations, public project website, hosted application property, developer portal,
-and organization-wide GitHub configuration. The original activation guidance
+and organization-wide GitHub configuration. Only the open-source product repository
+is public; the other repository sources are private even when they deploy public
+websites. The original activation guidance
 deferred several repositories until their implementation content existed.
 
 ApiaryLens is now moving from direction capture into coordinated discovery,
@@ -29,10 +31,10 @@ foundation phase:
 |---|---|---|
 | `apiarylens` | Public | Existing core product monorepo and architecture source of truth |
 | `apiarylens-ops` | Private | Internal planning, portfolio coordination, dashboards, runbooks, and private operations |
-| `apiarylens.org` | Public | Project, marketing, documentation, tutorial, release, roadmap, and community frontend |
-| `apiarylens.app` | Public initially | Hosted PWA/demo frontend and safe public deployment configuration |
-| `apiarylens.dev` | Public | Developer portal, generated API reference, SDK, integration, plugin, and contributor frontend |
-| `.github` | Public | Organization profile, community health files, templates, and reusable workflows |
+| `apiarylens.org` | Private | Project, marketing, documentation, tutorial, release, roadmap, and community frontend |
+| `apiarylens.app` | Private | Hosted PWA/demo frontend and safe public deployment configuration |
+| `apiarylens.dev` | Private | Developer portal, generated API reference, SDK, integration, plugin, and contributor frontend |
+| `.github` | Private | Organization configuration, community health files, templates, and reusable workflows |
 
 Clone all six repositories under `D:\git\apiarylens`. Each newly activated
 repository receives a small responsibility-specific scaffold, its own agent and

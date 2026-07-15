@@ -21,8 +21,9 @@ D:\git\apiarylens\.github
 
 ## Strategy
 
-Use a public core-product monorepo with separate repositories for independently
-deployed public properties and private internal operations. Repository boundaries
+Use a public core-product monorepo with private repositories for independently
+deployed public properties and internal operations. A public website does not
+require its deployment source repository to be public. Repository boundaries
 follow ownership, visibility, deployment, release cadence, and contribution model;
 they do not exist solely because a domain name exists.
 
@@ -30,10 +31,10 @@ they do not exist solely because a domain name exists.
 |---|---|---|---|
 | `apiarylens` | Public | PWA, API, worker, packages, database, Compose, architecture, and ADRs | Active |
 | `apiarylens-ops` | Private | Internal planning, dashboards, coordination, and operations | Active |
-| `apiarylens.org` | Public | Marketing, public docs experience, tutorials, releases, roadmap, and community | Active foundation scaffold |
-| `apiarylens.app` | Public initially | Demo deployment, safe seed data, and hosted-app configuration | Active foundation scaffold |
-| `apiarylens.dev` | Public | Developer portal, API reference, integrations, SDKs, plugins, and contributor docs | Active foundation scaffold |
-| `.github` | Public | Organization profile, shared templates, and reusable workflows | Active |
+| `apiarylens.org` | Private | Marketing, public docs experience, tutorials, releases, roadmap, and community | Active foundation scaffold |
+| `apiarylens.app` | Private | Demo deployment, safe seed data, and hosted-app configuration | Active foundation scaffold |
+| `apiarylens.dev` | Private | Developer portal, API reference, integrations, SDKs, plugins, and contributor docs | Active foundation scaffold |
+| `.github` | Private | Organization configuration, shared templates, and reusable workflows | Active |
 
 Bootstrap each activated repository with a responsibility-specific README, agent
 guidance, governance baseline, and structure. The scaffold establishes ownership;
@@ -86,9 +87,11 @@ Its official frontend deploys through Cloudflare.
 
 ### `.github`
 
-The public organization repository owns the GitHub organization profile, default
-community health files, issue and pull-request templates, and reusable workflow
-catalog. Product-specific workflows remain with the repository that executes them.
+The private organization configuration repository owns shared community health
+files, issue and pull-request templates, and the reusable workflow catalog. A
+public organization profile is not published from this private repository; if one
+is wanted later, expose only intentionally reviewed profile material. Product-specific
+workflows remain with the repository that executes them.
 
 ## Future Galleries and Registries
 

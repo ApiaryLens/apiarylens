@@ -8,7 +8,9 @@ Accepted
 
 ApiaryLens needs one coherent open-source product codebase, separately deployed
 public websites, a hosted demo and possible future SaaS application, developer
-resources, and private internal operations. These concerns have different
+resources, and private internal operations. Only the core open-source repository
+is public; the source repositories for official web properties remain private even
+when their deployed sites are public. These concerns have different
 visibility, deployment, contribution, and release requirements.
 
 The project may also grow community galleries or registries for reusable assets,
@@ -29,10 +31,10 @@ Use separate repositories for independently owned or deployed properties:
 |---|---|---|
 | `apiarylens` | Public | PWA, API, worker, shared packages, database, Docker Compose, architecture, and ADRs |
 | `apiarylens-ops` | Private | Internal project management, dashboards, planning, coordination, and operational procedures |
-| `apiarylens.org` | Public | Marketing, public documentation experience, tutorials, releases, roadmap, and community site |
-| `apiarylens.app` | Public initially | Hosted demo deployment, demo configuration, and safe seeded content; future application entry point |
-| `apiarylens.dev` | Public | Developer portal, generated API reference, integrations, SDKs, plugins, and contributor resources |
-| `.github` | Public | Organization profile, shared community health files, templates, and reusable workflows |
+| `apiarylens.org` | Private | Marketing, public documentation experience, tutorials, releases, roadmap, and community site |
+| `apiarylens.app` | Private | Hosted demo deployment, demo configuration, and safe seeded content; future application entry point |
+| `apiarylens.dev` | Private | Developer portal, generated API reference, integrations, SDKs, plugins, and contributor resources |
+| `.github` | Private | Organization configuration, shared community health files, templates, and reusable workflows |
 
 The application source remains in `apiarylens`. Domain repositories consume
 versioned product artifacts or generated documentation instead of duplicating the
@@ -70,7 +72,7 @@ community assets.
 Benefits:
 
 - Product code and contracts remain aligned in one public monorepo.
-- Public sites can deploy and evolve independently.
+- Public sites can deploy from private source repositories and evolve independently.
 - Private operations stay separate from open-source product development.
 - Hosted deployments consume the same product released to self-hosters.
 - Community ecosystems can be separated later using explicit extraction criteria.

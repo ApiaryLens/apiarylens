@@ -67,7 +67,8 @@ requirement unless maintained as an optional adapter or deployment profile.
 
 ## Consequences
 
-- All public frontend repositories share a Cloudflare deployment convention.
+- All public-facing frontend repositories share a Cloudflare deployment convention;
+  their source repositories remain private.
 - Frontend preview, custom-domain, TLS, and edge behavior can be standardized.
 - Cloudflare configuration and credentials remain deployment concerns, never
   requirements for building or self-hosting the core product.
