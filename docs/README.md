@@ -26,8 +26,8 @@ single-hive hobby tool toward commercial-apiary scale.
 - `deployment/` -- self-hosting and deployment strategy notes.
 - `diagrams/` -- Lucidchart catalog and accessible public exports; legacy Mermaid
   sources await migration.
-- `product/` -- product brief, living capability overview, and marketing/product
-  narrative docs.
+- `product/` -- product brief, living capability overview, pre-release marketing
+  overview, and longer marketing/product narrative docs.
 - `research/` -- time-boxed architecture research and technical spikes.
 - `roadmap/` -- product roadmap and gated portfolio execution plan.
 - `security/` -- canonical security architecture and risk register plus

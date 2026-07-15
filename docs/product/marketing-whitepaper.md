@@ -1,8 +1,14 @@
 # ApiaryLens Product Overview and Capability Whitepaper
 
+**Status:** Pre-release product narrative. For the concise audience-facing version,
+see the [Marketing Overview](marketing-overview.md).
+
 ## What is ApiaryLens?
 
-ApiaryLens is an open-source apiary intelligence platform for beekeepers. It helps track hives, queens, inspections, hive health, photos, weather, blooms, honey production, and long-term colony history.
+ApiaryLens is a planned open-source apiary intelligence platform for beekeepers. It
+is being designed to track hives, queens, inspections, hive health, photos, weather,
+blooms, honey production, and long-term colony history. No application has been
+released yet, and the formal open-source license still requires a project decision.
 
 ApiaryLens is designed to be simple enough for a family getting its first hive and powerful enough to grow into bee club, research, and commercial use.
 
