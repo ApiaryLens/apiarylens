@@ -7,9 +7,9 @@ provider-specific deployment because offers and limits change.
 
 ## Question
 
-Which optional Cloudflare-native, Azure, AWS, Google Cloud, or provider-neutral
-backend profile can support the near-free synchronized family target without
-replacing the portable core?
+Can the Cloudflare-first family profile support the near-free synchronized family
+target, and can Docker Compose on an ordinary cloud VM provide a dependable portable
+fallback without replacing or forking the core product?
 
 Cloudflare hosting for the official `.org`, `.app`, and `.dev` frontends is already
 accepted by ADR 0006 and is not under evaluation in this spike. This spike evaluates
@@ -34,17 +34,19 @@ application backend, data, media, and synchronization hosting.
 
 ## Recommendation
 
-Do not make any provider's free tier the primary ApiaryLens architecture or promise
-that a deployment will remain free. Account creation, payment verification,
-time-limited credits, hard quotas, and provider-specific services conflict with the
-goal of a simple and durable family installation.
+Implement and test Cloudflare first among cloud profiles, as accepted by
+[ADR 0007](../adr/0007-deployment-profile-priority.md), but do not make its free tier
+the core ApiaryLens architecture or promise that a deployment will remain free.
+Account creation, payment verification, time-limited credits, hard quotas, and
+provider-specific services remain product risks that require visible safeguards and
+a migration path.
 
 This does not remove the goal of a free or near-free family cloud deployment. It
 means that goal must be proven against a reference workload, measured regularly,
 published with limits, and backed by a portable migration path rather than assumed
 from marketing labels.
 
-Build provider-neutral product artifacts first:
+Build provider-neutral product artifacts alongside the Cloudflare profile:
 
 - Installable PWA and researched device-local mode
 - OCI container images
@@ -52,9 +54,11 @@ Build provider-neutral product artifacts first:
 - Documented volumes, backup, restore, and upgrades
 - A versioned deployment-plan format
 
-Later provider templates may deploy those same artifacts to a generic VM or
-container platform. A provider-native/serverless implementation requires its own
-research and ADR because it changes portability, storage, operations, and testing.
+Docker Compose on a generic Linux VM is the second cloud target. Later provider
+templates may deploy those same artifacts to a VM or container platform. The
+Cloudflare-native implementation requires follow-up technical ADRs because it
+changes runtime, storage, operations, and testing while remaining bound to the same
+public contracts and portable exports.
 
 The follow-up is
 [`tasks/006-research-family-cloud-profile.md`](../../tasks/006-research-family-cloud-profile.md).
@@ -64,5 +68,7 @@ The follow-up is
 - What is the lowest supported local footprint?
 - Can personal mode safely avoid a server while preserving reliable backups?
 - Which generic VM sizes pass capacity tests for family use?
+- Does the Cloudflare profile pass the family workload, quota-exhaustion, backup,
+  restore, export, and migration gates?
 - Which provider templates can be maintained without implying guaranteed free use?
 - What support burden is created by each provider's account, DNS, TLS, and billing flow?

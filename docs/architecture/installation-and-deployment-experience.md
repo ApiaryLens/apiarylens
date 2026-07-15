@@ -114,6 +114,18 @@ platform support, signing, and update mechanism require a research spike and ADR
 Scout Bee must consume the same versioned deployment schema used by automation; it
 must not hide an unrelated deployment implementation behind its UI.
 
+The initial plain-language choice order is:
+
+1. Family Cloud - Cloudflare
+2. My Own Hardware - Docker Compose
+3. Cloud Virtual Machine - Docker Compose
+4. Only This Device
+5. Advanced deployment-plan export
+
+Usability research may refine the labels, but it must preserve the accepted
+deployment priority and clearly explain availability, ownership, cost, security,
+and portability consequences.
+
 ## Deployment Experiences
 
 | Experience | Purpose | Timing |
@@ -121,27 +133,28 @@ must not hide an unrelated deployment implementation behind its UI.
 | Public demo at `apiarylens.app` | Cloudflare-hosted PWA frontend connected to safe, resettable demo services | Early |
 | Installable personal PWA | Begin without operating a server | Research for MVP |
 | Scout Bee guided deployment | Non-technical local or small-server setup | MVP candidate after spike |
-| Docker Compose | Portable, documented self-hosting and advanced fallback | First supported server target |
-| Provider-neutral VM/container deployment | Always-on self-hosting without platform lock-in | After Compose |
-| Near-free family cloud reference | Always-available synchronization for phones, tablets, and computers with published cost limits | Research for MVP |
+| Docker Compose on personally controlled hardware | Complete local server on a laptop, mini-PC, home server, supported NAS, or local VM | First self-hosted server target |
+| Cloudflare-native family cloud | Always-available synchronization for phones, tablets, and computers with published cost and quota limits | First cloud target, gated by Task 006 |
+| Docker Compose on a cloud VM | Portable always-on cloud deployment without backend platform lock-in | Second cloud target and fallback |
 | Azure, AWS, GCP, or other one-click templates | Convenience wrappers over the same artifacts | Later, per provider |
 | Managed ApiaryLens service | Lowest-operations shared experience | Future optional SaaS |
 
 ## Cloud and Free-Tier Policy
 
-Do not make a provider's free tier the default or a promise of permanent free
-hosting. Free programs, limits, supported services, account requirements, and
-billing behavior change.
+The Cloudflare-native family profile is the first cloud implementation target, but
+the product must not promise permanent free hosting. Free programs, limits,
+supported services, account requirements, and billing behavior change.
 
 The core server should publish portable OCI images and a Compose deployment that can
 run on a local machine or ordinary VM. Provider templates may wrap those artifacts
 later without changing product behavior.
 
 Cloudflare is the accepted host for the official public frontends. A
-Cloudflare-native backend would still use a different runtime and database
-architecture from a conventional API plus PostgreSQL, so it remains a separately
-researched optional deployment profile. Frontend hosting and free usage alone are
-not reasons to fork the portable core backend.
+Cloudflare-native backend uses a different runtime and database architecture from a
+conventional API plus PostgreSQL, so it is the first cloud profile to research and
+validate rather than a replacement for the portable core. Shared contracts,
+conformance tests, export, and migration prevent the profiles from becoming separate
+products.
 
 See [Cloud Free-Tier Deployment Spike](../research/cloud-free-tier-deployment-spike.md).
 

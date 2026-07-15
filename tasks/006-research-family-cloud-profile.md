@@ -2,9 +2,10 @@
 
 ## Goal
 
-Recommend a supported, always-available cloud deployment for a family using
-ApiaryLens from iPhones, iPads, and computers at zero or predictably near-zero
-recurring cost.
+Validate and specify the accepted Cloudflare-first family cloud deployment for a
+family using ApiaryLens from iPhones, iPads, and computers at zero or predictably
+near-zero recurring cost. Define Docker Compose on an ordinary Linux VM as the
+second cloud target and portable fallback.
 
 ## Reference Workload
 
@@ -20,9 +21,9 @@ Define and justify a family workload before comparing providers, including:
 
 ## Options to Evaluate
 
-- A Cloudflare-native application backend using Workers, D1, R2, or related
-  services; public frontend hosting is already accepted and is not the decision here
-- A provider-neutral container or VM profile
+- The primary candidate: a Cloudflare-native application backend using Workers,
+  D1, R2, or related services; public frontend hosting is already accepted
+- The required fallback: Docker Compose on a provider-neutral Linux VM
 - Relevant Azure, AWS, and Google Cloud low-cost or free allowances
 - Managed database and object-storage combinations
 - User-owned deployment versus a future managed ApiaryLens service
@@ -45,9 +46,14 @@ Define and justify a family workload before comparing providers, including:
 
 - Research report with dated primary sources and measured tests
 - Cost table for the reference workload
-- Recommended family cloud profile and fallback
+- Validated Cloudflare family profile or evidence that an acceptance gate failed
+- Supported Compose-on-VM fallback and migration path
 - Required ADRs
 - Lucid deployment and data-flow diagrams
 - Reproducible deployment-plan JSON example with no secrets
 
-Do not select a provider solely because its current free tier appears sufficient.
+Cloudflare's implementation priority is accepted by
+[ADR 0007](../docs/adr/0007-deployment-profile-priority.md). Do not declare the
+profile supported solely because its current free tier appears sufficient; if it
+fails an acceptance gate, document the evidence and use the Compose-on-VM fallback
+without weakening the family-cloud outcome.

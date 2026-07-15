@@ -22,7 +22,9 @@ The MVP should include:
 - Harvest records
 - Weather history foundation
 - Bloom calendar foundation
-- Docker Compose
+- Docker Compose as the first complete server deployment on owned hardware
+- Cloudflare-native family cloud as the first cloud deployment target
+- Docker Compose on an ordinary Linux VM as the second cloud deployment target
 - PWA
 - Researched device-local personal mode
 - Offline synchronization foundation
@@ -44,7 +46,8 @@ Use
 [`docs/architecture/installation-and-deployment-experience.md`](../docs/architecture/installation-and-deployment-experience.md)
 as the deployment-experience source of truth. Do not select a storage engine,
 bootstrapper runtime, networking approach, or cloud provider without the required
-research and ADR.
+research and ADR. The deployment priority itself is accepted by
+[ADR 0007](../docs/adr/0007-deployment-profile-priority.md).
 
 Use the [Execution Plan](../docs/roadmap/execution-plan.md) for the required sequence
 from research through decisions, detailed design, implementation, verification, and

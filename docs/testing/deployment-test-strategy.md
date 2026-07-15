@@ -18,11 +18,11 @@ simple updates, recoverable data, and little or no recurring cost.
 | Environment class | Purpose |
 |---|---|
 | Local browser and device | PWA installation, offline workflows, storage, media, accessibility, and responsive UI |
-| Linux VM | Primary Compose installation, upgrades, backup/restore, resource use, and portability |
+| Personally controlled Linux host or VM | Primary Compose self-hosted installation, upgrades, backup/restore, resource use, and portability |
 | Windows host or VM | Scout Bee, local installation, filesystem, firewall, update, and uninstall behavior |
-| Provider-neutral cloud VM/container | Always-on family synchronization and baseline hosted cost |
+| Provider-neutral cloud Linux VM | Second cloud target using Compose; always-on family synchronization, portability, and baseline hosted cost |
 | Cloudflare public frontends | Required preview/production builds, custom domains, TLS, caching, security headers, rollback, and property isolation |
-| Optional Cloudflare-native backend profile | Evaluate low-idle-cost deployment, quotas, portability, D1/R2 implications, and operational limits |
+| Cloudflare-native family backend profile | First cloud target; validate low-idle-cost deployment, quotas, portability, D1/R2 implications, and operational limits |
 | Azure-style hosted profile | Evaluate portable container/VM deployment, managed services, identity options, and cost controls |
 | iPhone and iPad | Safari behavior, Add to Home Screen, offline launch, media capture, updates, and synchronization |
 | Desktop browsers | Current Safari where available, Chrome, Edge, and Firefox behavior |
@@ -74,6 +74,8 @@ maintainer account does not make that provider or account a product dependency.
 9. Recover from the synchronization server being unavailable.
 10. Move from the reference cloud profile to another supported deployment without
     losing portable data.
+11. Run equivalent domain, authorization, synchronization, and export conformance
+    journeys against Cloudflare-native and Compose server profiles.
 
 ## Offline and Failure Scenarios
 

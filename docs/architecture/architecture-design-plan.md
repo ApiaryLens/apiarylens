@@ -88,6 +88,7 @@ Accepted decisions:
 - [ADR 0004: Lucidchart Diagram Standard](../adr/0004-lucidchart-diagram-standard.md)
 - [ADR 0005: Activate the Initial Repository Portfolio](../adr/0005-initial-repository-portfolio.md)
 - [ADR 0006: Cloudflare Hosting for Public Frontends](../adr/0006-cloudflare-public-frontends.md)
+- [ADR 0007: Deployment Profile Priority](../adr/0007-deployment-profile-priority.md)
 
 Proposed formal decision:
 
@@ -124,10 +125,13 @@ capability tiers rather than separate product editions:
 | Family | Always-available synchronization through a small local or near-free cloud deployment | Primary product outcome after sync and cost research |
 | Organization | Always-on deployment for clubs, commercial operations, extension offices, and research | Later roadmap |
 
-Delivery experiences may include a public demo, installable personal PWA, guided
-`Scout Bee` deployment, Docker Compose, provider-neutral VM deployment, later cloud
-templates, and an optional future managed service. All consume the same core product
-and portable data contracts.
+Delivery experiences include a public demo, installable personal PWA, guided
+`Scout Bee` deployment, Docker Compose, a Cloudflare-native family cloud,
+provider-neutral VM deployment, later cloud templates, and an optional future
+managed service. Docker Compose is the first complete server target on personally
+controlled hardware. Cloudflare is the first cloud profile target; Compose on an
+ordinary Linux VM is the second. All consume the same core product and portable data
+contracts.
 
 See
 [Installation and Deployment Experience](installation-and-deployment-experience.md).
@@ -183,12 +187,11 @@ Cloudflare. New projects target Workers Static Assets with custom domains, manag
 TLS, caching, security headers, and reviewed preview/production workflows. The
 current `apiarylens.com` redirect to `.org` is also implemented on Cloudflare.
 
-This accepted hosting boundary does not select the frontend framework and does not
-move the core API, database, identity, media, or synchronization services onto
-Cloudflare. The `.app` PWA may be delivered from Cloudflare while connecting to a
-portable self-hosted, family-cloud, demo, or future managed backend. A
-Cloudflare-native backend remains an optional researched deployment profile, and a
-self-hoster requires no Cloudflare account.
+This accepted frontend-hosting boundary does not by itself select the frontend
+framework or backend services. [ADR 0007](../adr/0007-deployment-profile-priority.md)
+separately makes a Cloudflare-native family backend the first cloud target while
+preserving portable self-hosted, Compose-on-VM, demo, and future managed backends.
+A self-hoster requires no Cloudflare account.
 
 See [ADR 0006](../adr/0006-cloudflare-public-frontends.md) and
 [Task 009](../../tasks/009-establish-cloudflare-frontend-foundation.md).
@@ -295,9 +298,12 @@ The queue, scheduler, delivery guarantees, retry policy, and packaging remain op
 
 ### Data Store
 
-PostgreSQL is the current direction, not yet an accepted decision. The design must
-support local self-hosting, migrations, backup and restore, organization isolation,
-auditing, data export, and growth from a small installation to commercial use.
+PostgreSQL is the current portable server direction, not yet an accepted decision.
+D1 is the expected relational candidate for the Cloudflare-first family profile,
+also not yet accepted. The design must define shared data contracts, adapter
+boundaries, migrations, backup and restore, organization isolation, auditing,
+conformance tests, data export, and migration between profiles without assuming the
+two databases are directly interchangeable.
 
 Initial domain concepts include:
 
@@ -481,7 +487,11 @@ criteria are in
 
 ## Deployment Architecture
 
-The first supported deployment target is Docker Compose with the intended operator
+Deployment priority is defined separately for personally controlled hardware and
+cloud environments.
+
+For a complete server on a laptop, desktop, mini-PC, home server, supported NAS, or
+local VM, Docker Compose is the first supported target with the intended operator
 experience:
 
 ```text
@@ -508,11 +518,24 @@ non-technical family. The project will research a device-local personal mode and
 guided `Scout Bee` bootstrapper that can install or update a profile or emit a
 secret-free, versioned deployment-plan JSON document.
 
+For cloud deployment, the ranked targets are:
+
+1. A Cloudflare-native family profile, expected to evaluate Workers Static Assets,
+   Workers, D1, R2, and related services
+2. Docker Compose on an ordinary provider-neutral Linux VM
+3. Later provider-specific managed-container or infrastructure templates
+4. A future optional managed ApiaryLens service
+
+The Cloudflare ranking is accepted, but its exact runtime, data, media,
+authentication, backup, quota, and migration designs remain gated by Task 006 and
+follow-up ADRs.
+
 Do not make a provider's free tier a core backend architecture requirement or
-promise of permanent free hosting. Publish provider-neutral server artifacts first;
-Azure, AWS, GCP, a Cloudflare-native backend, or other convenience templates may be
-added later around the same versioned product. This does not change the accepted
-Cloudflare hosting decision for official public frontends. See
+promise of permanent free hosting. Publish provider-neutral server artifacts and
+maintain the Compose path while implementing and validating the ranked Cloudflare
+family profile. Azure, AWS, GCP, and other VM targets may run the same Compose
+artifacts; additional convenience templates follow only when justified. This does
+not change the accepted Cloudflare hosting decision for official public frontends. See
 [Installation and Deployment Experience](installation-and-deployment-experience.md)
 and [Cloud Free-Tier Deployment Spike](../research/cloud-free-tier-deployment-spike.md).
 
@@ -522,8 +545,8 @@ near-zero recurring cost. The selected profile must publish dated cost assumptio
 quota behavior, data portability, and a migration path. See
 [`tasks/006-research-family-cloud-profile.md`](../../tasks/006-research-family-cloud-profile.md).
 
-Kubernetes, Helm, a hosted demo, and SaaS infrastructure are later deployment
-tracks and do not replace Compose. See
+Kubernetes, Helm, provider-specific managed-container templates, and SaaS
+infrastructure are later deployment tracks and do not replace Compose. See
 [Deployment Strategy](../deployment/deployment-strategy.md).
 
 ## Testing and Validation Strategy
@@ -603,7 +626,8 @@ The following work is required before dependent implementation begins:
 15. Complete the Compose deployment, upgrade, backup, restore, and diagnostics design.
 16. Create the dedicated Lucid folder and migrate the legacy diagrams.
 17. Define the public brand brief, visual identity, asset formats, licensing, and provenance manifest.
-18. Research and select the near-free family cloud reference profile using measured costs.
+18. Validate the Cloudflare-first family cloud profile and Compose-on-VM fallback
+    using measured cost, capacity, quota, backup, and migration evidence.
 19. Define the supported iPhone, iPad, and desktop PWA compatibility matrix.
 20. Define the versioned deployment-connection contract used by PWA and future native clients.
 21. Define provider-neutral secret inputs and optional secret-manager adapter boundaries.

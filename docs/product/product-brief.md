@@ -51,8 +51,9 @@ scope includes:
 - Device-only personal use plus authenticated family synchronization
 - Organization membership and server-enforced authorization
 - Backup, restore, export, upgrades, and recovery
-- Docker Compose and guided Scout Bee deployment
-- A safe public demo and a measured near-free family-cloud reference
+- Docker Compose as the first complete server deployment on owned hardware
+- Cloudflare-native family cloud first, with Compose on a cloud VM as the portable fallback
+- Guided Scout Bee deployment and a safe public demo
 - Weather and bloom foundations that can grow into historical intelligence
 - Optional AI and native clients only after the non-AI PWA and public contracts are mature
 

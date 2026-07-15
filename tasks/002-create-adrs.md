@@ -12,6 +12,8 @@ dependent implementation begins.
 - Lucidchart diagram standard
 - Initial repository activation
 - Cloudflare hosting for official public frontends
+- Deployment profile priority: Compose first on owned hardware, Cloudflare first in
+  cloud, and Compose on a cloud VM second
 
 ## Proposed Decision Awaiting Acceptance
 
@@ -31,7 +33,8 @@ dependent implementation begins.
 - Scout Bee packaging, updates, signing, and rollback
 - Secrets and optional secret-manager adapters
 - Release signing, SBOM, checksums, and provenance
-- Near-free family-cloud backend profile
+- Cloudflare-native family-cloud runtime, D1/R2 adapters, quotas, backup, export,
+  and migration within the accepted deployment priority
 - Public frontend framework, content, and generation conventions within the accepted
   Cloudflare hosting boundary
 - Future native-client implementation and App Store delivery

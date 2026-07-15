@@ -18,10 +18,13 @@ The detailed user journeys, capability tiers, and open research questions are in
 
 1. A safe public demo for trying ApiaryLens without installation.
 2. A researched device-local personal PWA mode without a required server account.
-3. A guided `Scout Bee` bootstrapper for personal or small-server deployment.
-4. Docker Compose as the portable, documented server deployment and advanced fallback.
-5. A researched near-free family cloud reference profile with published limits,
-   measured costs, backup, restore, and migration guidance.
+3. A guided `Scout Bee` bootstrapper that presents the ranked deployment profiles.
+4. Docker Compose as the first complete server deployment on personally controlled
+   hardware.
+5. A Cloudflare-native profile as the first cloud deployment target, with published
+   limits, measured costs, backup, restore, and migration guidance.
+6. Docker Compose on an ordinary Linux VM as the second cloud target and portable
+   fallback.
 
 The intended Compose experience remains:
 
@@ -37,7 +40,10 @@ diagnostics, and recovery workflows.
 - Self-hosted and offline-first
 - No required paid cloud account
 - No required maintainer-private, cloud, or internal project service
-- Provider-neutral OCI images and Compose artifacts first
+- Provider-neutral OCI images and Compose artifacts for every complete self-hosted
+  release
+- Cloudflare-native family profile first among cloud deployments, subject to
+  measured acceptance gates
 - Local media storage first; optional S3-compatible storage later
 - Same contracts and portable data across personal, family, and organization tiers
 - Hosted demo and optional SaaS consume the same core product
@@ -67,10 +73,30 @@ services run in a portable Compose deployment, provider-neutral VM, another clou
 or a future managed ApiaryLens environment. Self-hosting never requires a
 Cloudflare account.
 
+## Deployment Priority
+
+For personally controlled hardware, Docker Compose is the first supported complete
+server target. A device-only PWA remains available as a lighter personal mode after
+its storage and recovery model is proven.
+
+For cloud deployment, the priority is:
+
+1. Cloudflare-native family cloud using evaluated Workers, D1, R2, and related
+   services
+2. Docker Compose on a provider-neutral Linux VM, including Azure, AWS, GCP, or
+   another suitable provider
+3. Later provider-specific managed-container or infrastructure templates
+4. Future optional managed ApiaryLens service
+
+Cloudflare's position is an implementation priority, not permission to couple the
+portable core to a required provider. See
+[ADR 0007](../adr/0007-deployment-profile-priority.md).
+
 ## Future Deployment Tracks
 
-- Provider-neutral VM or container-host instructions
-- Optional Azure, AWS, GCP, Cloudflare-native backend, or other convenience templates
+- Provider-neutral VM or container-host instructions for the Compose cloud fallback
+- Optional Azure, AWS, GCP, or other convenience templates after the two primary
+  cloud profiles
 - Kubernetes and Helm after there is demonstrated operational need
 - Managed hosted service
 - Commercial/research capacity profiles

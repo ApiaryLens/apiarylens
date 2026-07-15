@@ -52,8 +52,9 @@ made; treat it as the current leaning.
 | Frontend | React + TypeScript + Vite | Leaning, not chosen |
 | Mobile | PWA first; committed iPhone App Store client later, with wrapper/native approach still open | Direction committed; implementation open |
 | Backend | Undecided | Open |
-| Database | PostgreSQL | Leaning, not chosen |
-| Deployment | Docker Compose | Leaning, not chosen |
+| Database | PostgreSQL for portable server; D1 candidate for Cloudflare family profile | Leaning, not chosen |
+| Self-hosted server deployment | Docker Compose on personally controlled hardware | Priority accepted; implementation open |
+| Cloud deployment | Cloudflare-native family profile first; Compose on a Linux VM second | Priority accepted; technical design open |
 | Official public frontend hosting | Cloudflare Workers Static Assets | Accepted |
 
 If a task requires actually choosing one of these (e.g. scaffolding the first app),
@@ -101,6 +102,12 @@ picking and building on top of it.
   PWA experience across iPhone, iPad, and computers as a primary product outcome.
   Use [`docs/testing/deployment-test-strategy.md`](docs/testing/deployment-test-strategy.md)
   for device, deployment, recovery, and cost acceptance criteria.
+- Follow the deployment ordering accepted in
+  [`docs/adr/0007-deployment-profile-priority.md`](docs/adr/0007-deployment-profile-priority.md):
+  Docker Compose first for a complete server on personally controlled hardware;
+  Cloudflare-native first for cloud; and Compose on an ordinary Linux VM second for
+  cloud. Do not treat that priority as approval of an unresearched framework,
+  database adapter, or permanent-free claim.
 - Treat Cloudflare Workers Static Assets as the required deployment target for the
   official `.org`, `.app`, and `.dev` frontends. This does not authorize coupling
   the portable API, database, identity, media, or synchronization backend to

@@ -44,8 +44,10 @@ deployment artifact.
 This decision also does not require the ApiaryLens API, PostgreSQL database, media
 store, identity system, or synchronization backend to run on Cloudflare. A
 Cloudflare-native family backend using Workers, D1, R2, KV, or related services is a
-separate deployment-profile research question. The portable server and self-hosted
-Docker Compose path remain first-class and operate without a Cloudflare account.
+separate deployment-profile design. [ADR 0007](0007-deployment-profile-priority.md)
+makes it the first cloud implementation target, subject to measured research and
+follow-up technical decisions. The portable server and self-hosted Docker Compose
+path remain first-class and operate without a Cloudflare account.
 
 ## Alternatives Considered
 
@@ -72,7 +74,8 @@ requirement unless maintained as an optional adapter or deployment profile.
 - Frontend preview, custom-domain, TLS, and edge behavior can be standardized.
 - Cloudflare configuration and credentials remain deployment concerns, never
   requirements for building or self-hosting the core product.
-- Backend portability and near-free family-cloud research remain open.
+- Cloudflare is the first family-cloud profile target, while its backend framework,
+  data, media, quota, backup, and portability decisions remain open.
 - If Cloudflare product recommendations change, the implementation may move between
   Cloudflare frontend services without changing the durable platform decision.
 

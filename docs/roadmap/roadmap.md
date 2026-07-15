@@ -58,7 +58,9 @@ experience heavier.
 - PostgreSQL schema
 - Offline synchronization foundation
 - Basic family membership and multi-device access
-- Docker Compose
+- Docker Compose as the first complete server target on personally controlled hardware
+- Cloudflare-native family cloud as the first cloud target
+- Docker Compose on an ordinary Linux VM as the second cloud target
 - Versioned deployment-plan schema
 - `Scout Bee` guided-deployment research and prototype
 - Safe public demo

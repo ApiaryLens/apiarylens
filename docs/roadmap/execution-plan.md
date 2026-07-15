@@ -61,8 +61,8 @@ Run time-boxed, evidence-producing spikes for material unknowns:
 - Authentication, authorization, OIDC, recovery, and offline sessions
 - Local-network HTTPS and deployment discovery
 - `Scout Bee` packaging, privileges, updates, signing, and rollback
-- Near-free family cloud deployment, including optional Cloudflare-native backend
-  evaluation without changing the portable core
+- Cloudflare-first family cloud deployment and Compose-on-VM fallback evaluation
+  without changing the portable core
 - Public `.org`, `.app`, and `.dev` information architecture and Cloudflare build
   requirements
 
@@ -83,6 +83,8 @@ Accept the minimum durable decisions required for implementation, including:
 - Media storage and processing
 - API/OpenAPI and client generation
 - Compose, secrets, HTTPS, backups, upgrades, and release integrity
+- Cloudflare-native runtime, D1/R2 adapters, quota behavior, backup, export, and
+  migration for the first cloud profile
 - Cloudflare frontend framework/build conventions for each public property
 
 Each accepted ADR updates the master architecture and any affected supporting
@@ -121,11 +123,12 @@ Build in thin, deployable vertical slices:
 2. Core API, database, identity, organizations, apiaries, and hives
 3. Synchronization across a family deployment
 4. Inspection and media workflows
-5. Compose packaging, backup, restore, update, and diagnostics
-6. Scout Bee guided deployment
-7. Cloudflare-hosted `.org`, `.app`, and `.dev` frontends consuming authoritative
+5. Compose packaging, backup, restore, update, and diagnostics for owned hardware
+6. Cloudflare-native family deployment, with Compose-on-VM cloud conformance
+7. Scout Bee guided deployment
+8. Cloudflare-hosted `.org`, `.app`, and `.dev` frontends consuming authoritative
    content and versioned product artifacts
-8. Safe public demo and measured family-cloud reference profile
+9. Safe public demo and measured family-cloud reference profile
 
 Every slice includes tests, security controls, migration behavior, documentation,
 and deployment support rather than treating them as later cleanup.

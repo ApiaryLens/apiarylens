@@ -48,8 +48,9 @@ ADR is written and merged under `docs/`.
 | Frontend | React + TypeScript + Vite |
 | Mobile | Progressive Web App first; committed iPhone App Store client later, with implementation approach decided by ADR |
 | Backend | Undecided |
-| Database | PostgreSQL (likely) |
-| Deployment | Docker Compose first; other orchestration options considered later |
+| Database | PostgreSQL for the portable server; D1 under evaluation for the Cloudflare family profile |
+| Self-hosted server deployment | Docker Compose first on personally controlled hardware (accepted priority; implementation open) |
+| Cloud deployment | Cloudflare-native family profile first; Docker Compose on a Linux VM second (accepted priority; technical design open) |
 | Official public frontend hosting | Cloudflare Workers Static Assets (accepted) |
 
 ## Repository layout
