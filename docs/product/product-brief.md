@@ -39,25 +39,21 @@ databases, DNS, TLS, identity providers, or cloud billing to get started safely.
 - Accessible and usable outdoors on phones and tablets
 - One core product from one hive through commercial scale
 - Easy installation, update, backup, restore, and diagnostics
+- Traceable versions, plain-language release notes, and safe guided updates that
+  preserve offline work and provide tested recovery
 
-## Initial Capability Direction
+## MVP Boundary
 
-Discovery and ADRs will set the final MVP boundary. The current outcome-oriented
-scope includes:
+The proposed [MVP Definition and UAT Contract](mvp-definition.md) is the
+authoritative product-scope boundary awaiting project-owner approval. It requires a
+complete installable offline-first PWA, equivalent MVP behavior across Cloudflare
+and Compose backends, finished Scout Bee deployment for the Hyper-V UAT VM and
+Cloudflare, portable cloud-VM support, and completed brand, UX, Lucidchart,
+documentation, security, lifecycle, and release artifacts.
 
-- Apiaries, hives, queens, equipment, inspections, health observations, treatments,
-  feeding, harvests, and media
-- A PWA that supports offline work and visible synchronization state
-- Device-only personal use plus authenticated family synchronization
-- Organization membership and server-enforced authorization
-- Backup, restore, export, upgrades, and recovery
-- Docker Compose as the first complete server deployment on owned hardware
-- Cloudflare-native family cloud first, with Compose on a cloud VM as the portable fallback
-- Guided Scout Bee deployment and a safe public demo
-- Weather and bloom foundations that can grow into historical intelligence
-- Optional AI and native clients only after the non-AI PWA and public contracts are mature
-
-See the [Product Capability Overview](product-capability-overview.md) for the
+The native iPhone App Store application, Android application, AI, sensors,
+commercial workflows, and other later capabilities are explicitly outside the MVP.
+See the [Product Capability Overview](product-capability-overview.md) for the broader
 capability narrative and the [Roadmap](../roadmap/roadmap.md) for delivery sequence.
 
 ## Public Properties

@@ -29,6 +29,7 @@ This plan governs:
 - Offline PWA behavior and synchronization
 - APIs, data, identity, authorization, media, background work, and integrations
 - Public project, application, and developer properties
+- Product versioning, release artifacts, updates, migrations, recovery, and support
 - Future optional hosted-service architecture
 - Community galleries and registries
 - Architecture research, ADRs, documentation, and repository boundaries
@@ -71,6 +72,8 @@ the current plan.
   hosting cost, without promising that a third-party free tier will remain free.
 - **Easy to start and operate:** a family or hobbyist must not need database,
   container, DNS, TLS, identity-provider, or cloud-billing expertise to begin.
+- **Safe to keep current:** every supported profile has a traceable, guided,
+  backup-first update and tested recovery path that preserves offline work.
 - **Tiered without editions:** personal, family, and organization footprints use the
   same core product, contracts, and portable data formats.
 - **Documented before implementation:** meaningful architecture decisions are reviewed and recorded before dependent code is built.
@@ -93,6 +96,10 @@ Accepted decisions:
 Proposed formal decision:
 
 - [ADR 0003: Open Source and Self-Hosted First](../adr/0003-open-source-first.md)
+
+Proposed product-scope decision:
+
+- [ApiaryLens MVP Definition and UAT Contract](../product/mvp-definition.md)
 
 The open-source, self-hosted, offline-first, privacy-first, and optional-AI
 constraints are already mandatory through `AGENTS.md`, even while ADR 0003 awaits
@@ -121,12 +128,12 @@ capability tiers rather than separate product editions:
 
 | Tier | Intended footprint | Direction |
 |---|---|---|
-| Personal | Device-local PWA with no required server or account | MVP research priority |
+| Personal | Device-local PWA with no required server or account | Post-MVP P1 research priority |
 | Family | Always-available synchronization through a small local or near-free cloud deployment | Primary product outcome after sync and cost research |
 | Organization | Always-on deployment for clubs, commercial operations, extension offices, and research | Later roadmap |
 
-Delivery experiences include a public demo, installable personal PWA, guided
-`Scout Bee` deployment, Docker Compose, a Cloudflare-native family cloud,
+Delivery experiences include a public demo, a later installable device-only personal
+PWA, completed MVP `Scout Bee` deployment, Docker Compose, a Cloudflare-native family cloud,
 provider-neutral VM deployment, later cloud templates, and an optional future
 managed service. Docker Compose is the first complete server target on personally
 controlled hardware. Cloudflare is the first cloud profile target; Compose on an
@@ -608,7 +615,8 @@ Every relevant design or ADR must address:
 The following work is required before dependent implementation begins:
 
 1. Accept the open-source/self-hosted posture ADR and choose the project license.
-2. Research personal-mode browser storage, durability, backup, and migration into synchronization.
+2. Research MVP PWA local storage, offline durability, backup interaction, and
+   synchronization; defer no-server device-only identity and migration to P1.
 3. Research and select the frontend stack and offline persistence approach.
 4. Research the `Scout Bee` packaging, privileged executor, signing, update, and rollback model.
 5. Research local-network HTTPS, PWA installation, and multi-device access.
@@ -636,7 +644,14 @@ The following work is required before dependent implementation begins:
 23. Define and prove the common Cloudflare Workers Static Assets build, preview,
     custom-domain, security-header, production approval, and rollback convention for
     the three public frontends.
-24. Produce a scoped MVP implementation plan from the accepted decisions.
+24. Define the product-version source of truth, release manifest, release channels,
+    independently versioned API/synchronization/migration/deployment/export
+    contracts, PWA update behavior, support window, and cross-profile recovery
+    policy described by
+    [Versioning, Release, and Update Lifecycle](versioning-release-and-update-lifecycle.md).
+25. Produce the ordered implementation plan from the approved
+    [MVP Definition and UAT Contract](../product/mvp-definition.md) and accepted
+    implementation decisions.
 
 Some decisions can proceed in parallel, but no framework or infrastructure should
 be installed merely because it appears as the current direction in this document.
@@ -655,7 +670,9 @@ be installed merely because it appears as the current direction in this document
 | Security architecture and risk register | [Security Architecture](../security/security-architecture.md) |
 | Authentication, authorization, and sharing design | [Authentication, Authorization, and Sharing](../security/authentication-and-sharing.md) |
 | Deployment design and runbooks | [`docs/deployment/`](../deployment/) |
+| Version, release, update, migration, and recovery contract | [Versioning, Release, and Update Lifecycle](versioning-release-and-update-lifecycle.md) |
 | Deployment, PWA, recovery, and cost testing | [`docs/testing/`](../testing/) |
+| Authoritative MVP scope and UAT contract | [MVP Definition and UAT Contract](../product/mvp-definition.md) |
 | Product direction and public narrative | [`docs/product/`](../product/) |
 | Delivery sequencing | [Roadmap](../roadmap/roadmap.md) |
 | Portfolio execution gates | [Execution Plan](../roadmap/execution-plan.md) |
@@ -687,6 +704,8 @@ Review this master plan whenever:
 - A repository or public property is activated
 - A technology or deployment target is selected
 - An installation tier, Scout Bee behavior, or local-storage assumption changes
+- A release version, contract compatibility, migration, update, rollback, support,
+  or artifact-promotion policy changes
 - Family cloud cost targets, device support, or provider reference profiles change
 - A source-of-truth boundary changes
 - Diagram tooling, Lucid folder structure, or export rules change

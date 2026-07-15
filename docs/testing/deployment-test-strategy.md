@@ -46,6 +46,10 @@ maintainer account does not make that provider or account a product dependency.
 
 - PWA local store against synchronization API
 - Database migrations from every supported release
+- Product release-manifest, build-identity, API/sync/schema/deployment/export version
+  agreement and incompatible-version rejection
+- PWA service-worker activation and local-store migrations with active or pending
+  offline work
 - Media capture, compression, queueing, upload, retry, and export
 - Authentication expiry and recovery while offline
 - Backup creation and restore into a fresh installation
@@ -103,8 +107,14 @@ Every supported deployment profile must test:
 - Guided first-run configuration
 - Re-running installation safely
 - Upgrade from the previous supported version
+- Upgrade from a seeded predecessor when validating the first public release
 - Automatic pre-upgrade backup
-- Failed upgrade and rollback
+- Release artifact signature, checksum, provenance, and immutable-identity checks
+- Interrupted update resume
+- Failed update with compatible application rollback
+- Irreversible migration with explicit full-restore recovery
+- Post-update version, health, authentication, media, synchronization, and
+  organization-isolation verification
 - Backup verification and full restore
 - Configuration export and import
 - Diagnostics bundle with secrets removed
@@ -162,6 +172,7 @@ quota is reached wherever the provider permits it.
 - Touch targets and contrast usable outdoors
 - Camera and image selection work through supported browser capabilities
 - Update prompts do not discard in-progress inspections
+- Client/server compatibility failures are clear and never strand pending local work
 - Layout works on phone, tablet, laptop, and desktop sizes
 - Accessibility tested to WCAG 2.1 AA or better
 - No required feature depends on push notifications or native-only APIs
@@ -174,6 +185,10 @@ A release is not ready for family use until:
 - Offline and synchronization recovery scenarios pass.
 - Backup and restore are verified against a fresh installation.
 - The supported Linux server profile passes install and upgrade tests.
+- Cloudflare and Compose profiles pass update, failed-update recovery, release
+  manifest, and build-traceability tests.
+- A PWA with pending offline work survives a compatible client and server update and
+  synchronizes exactly once.
 - Published resource requirements and cost estimates match measured evidence.
 - No test-only maintainer service is required by the released artifacts.
 - Known provider limits and unsupported paths are documented.

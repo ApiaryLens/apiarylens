@@ -6,6 +6,10 @@ The initial go-to-market user is a family or hobbyist beekeeper. The default jou
 must be easy to start, update, back up, restore, and understand without requiring
 container, database, DNS, TLS, identity-provider, or cloud-billing expertise.
 
+The proposed authoritative scope and release gates are in the
+[MVP Definition and UAT Contract](../product/mvp-definition.md). Roadmap items outside
+that document's P0 section do not block the MVP.
+
 ApiaryLens is designed in capability tiers: personal, family, and organization.
 Commercial and research scale remains on the roadmap, but it must not make the MVP
 experience heavier.
@@ -39,11 +43,14 @@ experience heavier.
 
 - Device-only, networked, and internet-facing security profiles
 - Built-in family authentication, secure sessions, bootstrap, and recovery
-- Optional OIDC architecture and interoperability baseline
 - Authorization and organization-isolation test foundation
 - Threat model and applicable OWASP ASVS verification matrix
 - Secret, dependency, static-analysis, and container scanning
 - Release SBOM, checksums, signing, and provenance
+- One semantic product release version, exact build identity, and machine-readable
+  release manifest across PWA, API, backend profiles, Scout Bee, and documentation
+- Independently versioned API, synchronization, migration, deployment-plan, and
+  portable-export contracts with a published compatibility policy
 - Organizations
 - Users
 - Roles
@@ -51,8 +58,8 @@ experience heavier.
 - Hives
 - Basic PWA shell
 - Approved PWA icons, application marks, and accessible brand assets
-- Device-local personal-mode research and prototype
-- Guided personal onboarding
+- Durable PWA local working set and offline behavior
+- Guided family onboarding
 - Backup, restore, and export foundation
 - Backend API
 - PostgreSQL schema
@@ -62,11 +69,19 @@ experience heavier.
 - Cloudflare-native family cloud as the first cloud target
 - Docker Compose on an ordinary Linux VM as the second cloud target
 - Versioned deployment-plan schema
-- `Scout Bee` guided-deployment research and prototype
+- Completed Scout Bee MVP for the Hyper-V Compose UAT VM and Cloudflare, with Azure
+  Compose automation conditional for the first UAT checkpoint
 - Safe public demo
 - Near-free, always-available family cloud reference research
 - iPhone, iPad, and desktop PWA compatibility testing
 - Deployment, upgrade, backup, restore, and cost acceptance suite
+- Guided and direct Cloudflare/Compose update paths with backup-before-update,
+  migrations, health verification, resume, compatible rollback, and full restore
+- PWA update activation that preserves active and pending offline work
+- Release index, curated release pages, changelog, roadmap, support window,
+  compatibility matrix, upgrade guide, recovery guide, and in-app Version and Build
+- Final logo family, PWA icons, UX designs, Lucidchart sources, accessible diagram
+  exports, screenshots, and complete user/operator/developer documentation
 
 ## Phase 2: Hive Records
 

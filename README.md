@@ -8,6 +8,10 @@ no application code has been written yet. See [`AGENTS.md`](AGENTS.md) for the
 project's direction and ground rules if you're an AI coding agent working in this repo.
 The authoritative assembled technical direction is the
 [Master Architecture and Design Plan](docs/architecture/architecture-design-plan.md).
+The proposed release scope is the
+[MVP Definition and UAT Contract](docs/product/mvp-definition.md).
+The proposed cross-profile versioning and safe-update contract is in
+[Versioning, Release, and Update Lifecycle](docs/architecture/versioning-release-and-update-lifecycle.md).
 
 ---
 
@@ -25,9 +29,8 @@ yet:
   returns.
 - **Privacy-first** — hive data, location data, and yield data are the beekeeper's own.
   Nothing is collected, transmitted, or monetized without explicit opt-in.
-- **AI-assisted, not AI-required** — AI features (e.g. inspection note parsing, health
-  anomaly detection) are optional enhancements layered on top of a platform that is
-  fully useful without them.
+- **AI-assisted later, not AI-required** — AI integrations are post-MVP optional
+  enhancements layered on top of a platform that is fully useful without them.
 - **SaaS-capable later** — the architecture should not preclude an optional hosted
   offering down the road, but self-hosting is never a second-class experience.
 - **Grows with the beekeeper** — the same platform should serve one hive in a backyard

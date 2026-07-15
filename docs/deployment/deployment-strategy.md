@@ -13,6 +13,8 @@ free offer.
 
 The detailed user journeys, capability tiers, and open research questions are in
 [Installation and Deployment Experience](../architecture/installation-and-deployment-experience.md).
+The shared release and upgrade contract is in
+[Versioning, Release, and Update Lifecycle](../architecture/versioning-release-and-update-lifecycle.md).
 
 ## Initial Experiences
 
@@ -48,6 +50,22 @@ diagnostics, and recovery workflows.
 - Same contracts and portable data across personal, family, and organization tiers
 - Hosted demo and optional SaaS consume the same core product
 - No promise that a third-party free tier will remain free or available
+
+## MVP Lifecycle
+
+Every supported server profile must be installable, updateable, recoverable, and
+traceable to an exact release. Scout Bee provides the guided lifecycle for its MVP
+targets, while documented Cloudflare and Compose procedures provide an independent
+operator path.
+
+An update discovers an explicit compatible release, performs preflight checks,
+creates and verifies a backup, stages immutable artifacts, applies versioned
+migrations, activates the release, verifies health and contract compatibility, and
+then commits the installed release identity. Failure invokes safe resume,
+application rollback, or full restore according to schema compatibility.
+
+PWA updates must preserve active forms, the local record store, pending mutations,
+and staged media. A server deployment is never silently auto-updated by default.
 
 ## Secrets and Private Operations
 

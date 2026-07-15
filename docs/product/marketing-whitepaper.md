@@ -31,9 +31,10 @@ ApiaryLens turns hive records into a living history.
 
 ## Initial Product Direction
 
-The first usable releases focus on practical family and hobbyist hive management.
-Discovery and architecture decisions will establish the final MVP boundary rather
-than treating every long-term capability as a launch requirement.
+The first usable release focuses on practical family and hobbyist hive management.
+The proposed [MVP Definition and UAT Contract](mvp-definition.md) establishes the
+exact release boundary; the broader capabilities below include post-MVP roadmap
+direction and are not all launch requirements.
 
 Current capability direction:
 

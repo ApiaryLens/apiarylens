@@ -36,6 +36,8 @@ The target first-run experience is:
   and computers through a supported always-available profile.
 - Installation does not require choosing a database, queue, object store, or identity provider.
 - Updates are guided, preserve data, and create or verify a backup first.
+- The current product, API, schema, synchronization, and deployment versions are
+  visible and traceable to the exact release notes and artifacts.
 - Backup, restore, export, diagnostics, and uninstall are first-class workflows.
 - The interface explains whether data is device-local, synchronized, or pending.
 - Advanced options are available without being presented during the default path.
@@ -49,14 +51,14 @@ or data portability.
 
 | Tier | Intended user | Footprint | Identity and access | Direction |
 |---|---|---|---|---|
-| Personal | Individual or hobbyist | Device-local PWA or loopback-only service, no required server | Password optional only while device-only; organization model remains hidden internally | MVP research priority |
+| Personal | Individual or hobbyist | Device-local PWA or loopback-only service, no required server | Password optional only while device-only; organization model remains hidden internally | Post-MVP P1 research priority |
 | Family | Family or small apiary | Small always-available sync service on a home server, VM, or near-free cloud profile | Mandatory built-in accounts, multiple identities, and sharing | Primary outcome after sync and cost research |
 | Organization | Club, commercial operation, extension office, or research team | Always-on server with scalable database, media, and worker options | Mandatory authentication, full membership, roles, audit, optional OIDC | Later roadmap |
 
 The data model should include organization and membership concepts from the start so
 moving between tiers does not require data conversion or a different edition.
 
-## Proposed Personal Mode
+## Post-MVP Proposed Device-Only Personal Mode
 
 The easiest path may be an installable PWA that stores data locally on the device
 and does not require a backend account. A user could later connect that installation
@@ -90,8 +92,10 @@ provider.
 
 ## Scout Bee Bootstrapper
 
-`Scout Bee` is the working name for a guided ApiaryLens deployment planner and
-bootstrapper. It is not a separate edition of the product.
+`Scout Bee` is the working name for the completed MVP guided ApiaryLens deployment
+planner and bootstrapper. It is not a separate edition of the product. Its MVP
+target adapters and acceptance boundary are defined in the
+[MVP Definition and UAT Contract](../product/mvp-definition.md).
 
 Proposed responsibilities:
 
@@ -110,9 +114,18 @@ Proposed responsibilities:
   public-HTTP combinations
 
 A React interface may be appropriate, but the privileged executor, packaging,
-platform support, signing, and update mechanism require a research spike and ADR.
+platform support, signing, and update mechanism require a research spike and ADR
+before implementation. Those decisions may change how Scout Bee is built, not
+whether the scoped MVP component is delivered.
 Scout Bee must consume the same versioned deployment schema used by automation; it
 must not hide an unrelated deployment implementation behind its UI.
+
+Scout Bee also owns the guided MVP update journey for its supported targets:
+discover an explicit release, show impact and compatibility, preflight, verify a
+backup, stage exact artifacts, run migrations, activate, verify health, and either
+commit or recover. Direct operator procedures remain supported so the bootstrapper
+does not become a product lock-in. See
+[Versioning, Release, and Update Lifecycle](versioning-release-and-update-lifecycle.md).
 
 The initial plain-language choice order is:
 
@@ -131,8 +144,8 @@ and portability consequences.
 | Experience | Purpose | Timing |
 |---|---|---|
 | Public demo at `apiarylens.app` | Cloudflare-hosted PWA frontend connected to safe, resettable demo services | Early |
-| Installable personal PWA | Begin without operating a server | Research for MVP |
-| Scout Bee guided deployment | Non-technical local or small-server setup | MVP candidate after spike |
+| Installable device-only personal PWA | Begin without operating a server | Post-MVP P1 research |
+| Scout Bee guided deployment | Complete MVP deployment experience for the Hyper-V Compose UAT VM and Cloudflare, with Azure Compose conditional for the first checkpoint | MVP required |
 | Docker Compose on personally controlled hardware | Complete local server on a laptop, mini-PC, home server, supported NAS, or local VM | First self-hosted server target |
 | Cloudflare-native family cloud | Always-available synchronization for phones, tablets, and computers with published cost and quota limits | First cloud target, gated by Task 006 |
 | Docker Compose on a cloud VM | Portable always-on cloud deployment without backend platform lock-in | Second cloud target and fallback |
@@ -185,6 +198,8 @@ usability design.
 - Small-footprint database choice versus one database across all profiles
 - Local-network HTTPS and PWA installation from secondary devices
 - Scout Bee packaging, executor, signing, update, and rollback model
+- Product version source of truth, release manifest, channels, support window, PWA
+  activation, contract compatibility, migrations, and recovery behavior
 - Supported desktop and server operating systems
 - Deployment-plan JSON schema and secret-reference model
 - Remote-access options and their privacy/security consequences

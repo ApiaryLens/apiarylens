@@ -98,6 +98,19 @@ picking and building on top of it.
   updates, backup, restore, and diagnostics must not require database, container,
   DNS, TLS, identity-provider, or cloud-billing expertise. Consult
   [`docs/architecture/installation-and-deployment-experience.md`](docs/architecture/installation-and-deployment-experience.md).
+- Treat the approved version of
+  [`docs/product/mvp-definition.md`](docs/product/mvp-definition.md) as the binding
+  MVP scope and UAT contract. Every P0 capability must work across the supported
+  Cloudflare and Compose profiles; P1 and explicitly excluded work must not delay
+  MVP delivery.
+- Treat safe platform updates as an MVP product workflow. Follow
+  [`docs/architecture/versioning-release-and-update-lifecycle.md`](docs/architecture/versioning-release-and-update-lifecycle.md)
+  for release identity, compatibility, backup-before-update, migrations, PWA
+  pending-work protection, health verification, rollback, restore, and release
+  documentation requirements.
+- Do not implement AI integrations during the MVP. Preserve optional extension
+  boundaries, but defer models, providers, image analysis, summaries,
+  recommendations, and diagnostic assistance until the post-MVP roadmap.
 - Treat an always-available, synchronized, zero or predictably near-zero-cost family
   PWA experience across iPhone, iPad, and computers as a primary product outcome.
   Use [`docs/testing/deployment-test-strategy.md`](docs/testing/deployment-test-strategy.md)
@@ -137,6 +150,10 @@ picking and building on top of it.
   public build inputs and source of truth. Follow [`docs/brand/README.md`](docs/brand/README.md).
   Never make a private studio, AI provider, or maintainer account necessary to build
   or run ApiaryLens, and never send user hive data or media to that workflow.
+- Treat final logos, application and PWA icons, UX flows, Lucidchart sources,
+  accessible diagram exports, screenshots, and synchronized user, operator, and
+  developer documentation as MVP release requirements rather than post-release
+  cleanup.
 - When a design introduces reusable, shareable, installable, or community-maintained
   assets, consult
   [`docs/architecture/community-galleries-and-registries.md`](docs/architecture/community-galleries-and-registries.md).

@@ -61,6 +61,8 @@ Run time-boxed, evidence-producing spikes for material unknowns:
 - Authentication, authorization, OIDC, recovery, and offline sessions
 - Local-network HTTPS and deployment discovery
 - `Scout Bee` packaging, privileges, updates, signing, and rollback
+- Product version source of truth, release manifest, contract compatibility,
+  database and PWA migrations, release promotion, and recovery
 - Cloudflare-first family cloud deployment and Compose-on-VM fallback evaluation
   without changing the portable core
 - Public `.org`, `.app`, and `.dev` information architecture and Cloudflare build
@@ -83,6 +85,8 @@ Accept the minimum durable decisions required for implementation, including:
 - Media storage and processing
 - API/OpenAPI and client generation
 - Compose, secrets, HTTPS, backups, upgrades, and release integrity
+- Product version, build identity, release manifest, channels, API/sync/schema/export
+  compatibility, PWA activation, and supported update/recovery windows
 - Cloudflare-native runtime, D1/R2 adapters, quota behavior, backup, export, and
   migration for the first cloud profile
 - Cloudflare frontend framework/build conventions for each public property
@@ -104,6 +108,8 @@ Produce:
 - Product requirements and scoped MVP specification
 - Domain and data model
 - API, synchronization, media, identity, deployment-plan, and connection contracts
+- Version, release manifest, artifact promotion, migration, update, rollback, restore,
+  and support-lifecycle contracts
 - Threat model, ASVS mapping, privacy analysis, and release-security design
 - UX flows and accessible design-system foundation
 - Test strategy, acceptance journeys, capacity assumptions, cost model, and rollback
@@ -123,9 +129,11 @@ Build in thin, deployable vertical slices:
 2. Core API, database, identity, organizations, apiaries, and hives
 3. Synchronization across a family deployment
 4. Inspection and media workflows
-5. Compose packaging, backup, restore, update, and diagnostics for owned hardware
-6. Cloudflare-native family deployment, with Compose-on-VM cloud conformance
-7. Scout Bee guided deployment
+5. Compose packaging, backup, restore, versioned update, recovery, and diagnostics
+   for owned hardware
+6. Cloudflare-native family deployment, versioned update and recovery, with
+   Compose-on-VM cloud conformance
+7. Scout Bee guided deployment and update orchestration
 8. Cloudflare-hosted `.org`, `.app`, and `.dev` frontends consuming authoritative
    content and versioned product artifacts
 9. Safe public demo and measured family-cloud reference profile
@@ -141,6 +149,9 @@ and deployment support rather than treating them as later cleanup.
   authorization isolation, upgrades, backup/restore, and cost limits.
 - Generate SBOMs, signatures, checksums, provenance, release notes, changelog,
   downloads, and versioned documentation.
+- Verify exact build identity, release-manifest traceability, upgrade from a seeded
+  predecessor or supported prior release, PWA pending-work preservation, failed
+  update recovery, and cross-profile compatibility.
 - Deploy public frontends through reviewed Cloudflare preview and production gates.
 - Publish support boundaries, known limitations, security-fix policy, and operator
   runbooks.
@@ -154,6 +165,7 @@ and deployment support rather than treating them as later cleanup.
    [Task 008 repository portfolio](../../tasks/008-bootstrap-repository-portfolio.md).
 3. Complete [Task 009: Establish the Cloudflare Frontend Foundation](../../tasks/009-establish-cloudflare-frontend-foundation.md).
 4. Accept ADR 0003 and select the project license.
-5. Execute the discovery and research program in dependency order.
-6. Convert research recommendations into ADRs and detailed designs.
-7. Produce the implementation-ready MVP plan.
+5. Approve the [MVP Definition and UAT Contract](../product/mvp-definition.md).
+6. Execute the discovery and research program in dependency order.
+7. Convert research recommendations into ADRs and detailed designs.
+8. Produce the implementation-ready task plan with requirement-to-UAT traceability.

@@ -25,7 +25,7 @@ dependent implementation begins.
 - Frontend/PWA framework and offline persistence
 - Backend framework and API approach
 - Database, migrations, and data access
-- Authentication, authorization, organization isolation, and optional OIDC
+- Authentication, authorization, and organization isolation
 - Offline synchronization and conflict resolution
 - Media storage and processing
 - Background work and scheduling
@@ -33,11 +33,19 @@ dependent implementation begins.
 - Scout Bee packaging, updates, signing, and rollback
 - Secrets and optional secret-manager adapters
 - Release signing, SBOM, checksums, and provenance
+- Product version source of truth, release manifest, channels, support window,
+  independently versioned API/sync/migration/deployment/export contracts, PWA
+  activation, update orchestration, and recovery policy
 - Cloudflare-native family-cloud runtime, D1/R2 adapters, quotas, backup, export,
   and migration within the accepted deployment priority
 - Public frontend framework, content, and generation conventions within the accepted
   Cloudflare hosting boundary
-- Future native-client implementation and App Store delivery
+
+## Post-MVP Decisions
+
+- Device-only personal mode and migration into family synchronization
+- Optional OIDC federation and passkeys
+- Native-client implementation and App Store delivery
 - Optional AI provider architecture
 
 Update the master architecture and every affected supporting document in the same

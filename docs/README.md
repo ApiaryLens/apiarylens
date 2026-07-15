@@ -20,14 +20,15 @@ single-hive hobby tool toward commercial-apiary scale.
   and import summary.
 - `adr/` -- initial ADRs and future decision records.
 - `architecture/` -- architecture design plan, feature inventory, repository
-  strategy, community gallery/registry considerations, media/AI notes, and related
-  technical planning.
+  strategy, version/release/update lifecycle, community gallery/registry
+  considerations, media/AI notes, and related technical planning.
 - `brand/` -- public brand, graphics, asset, licensing, provenance, and publishing guidance.
 - `deployment/` -- self-hosting and deployment strategy notes.
 - `diagrams/` -- Lucidchart catalog and accessible public exports; legacy Mermaid
   sources await migration.
-- `product/` -- product brief, living capability overview, pre-release marketing
-  overview, and longer marketing/product narrative docs.
+- `product/` -- proposed authoritative MVP definition and UAT contract, product
+  brief, living capability overview, pre-release marketing overview, and longer
+  marketing/product narrative docs.
 - `research/` -- time-boxed architecture research and technical spikes.
 - `roadmap/` -- product roadmap and gated portfolio execution plan.
 - `security/` -- canonical security architecture and risk register plus
