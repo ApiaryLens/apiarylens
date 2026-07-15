@@ -17,11 +17,24 @@ RUN pnpm --filter @apiarylens/contracts build && \
     VITE_ARTIFACT_IDENTITY="$APIARYLENS_ARTIFACT_IDENTITY" \
     pnpm --filter @apiarylens/web build
 
-FROM caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+FROM golang:1.26.5-alpine@sha256:0178a641fbb4858c5f1b48e34bdaabe0350a330a1b1149aabd498d0699ff5fb2 AS caddy-build
+ENV CGO_ENABLED=0
+RUN GOBIN=/out go install -trimpath -ldflags="-s -w -buildid=" github.com/caddyserver/caddy/v2/cmd/caddy@v2.11.4 && \
+    mkdir -p /runtime/config /runtime/data /runtime/srv /runtime/etc/caddy /runtime/etc/ssl/certs && \
+    cp /etc/ssl/certs/ca-certificates.crt /runtime/etc/ssl/certs/ca-certificates.crt && \
+    chown -R 10001:10001 /runtime/config /runtime/data /runtime/srv
+
+FROM scratch
 LABEL org.opencontainers.image.title="ApiaryLens PWA" \
       org.opencontainers.image.version="0.1.0-rc.1" \
       org.opencontainers.image.licenses="Apache-2.0"
-RUN apk upgrade --no-cache
+ENV XDG_CONFIG_HOME=/config \
+    XDG_DATA_HOME=/data
+COPY --from=caddy-build /out/caddy /usr/bin/caddy
+COPY --from=caddy-build /runtime/ /
 COPY docker/Caddyfile /etc/caddy/Caddyfile
-COPY --from=build /workspace/apps/web/dist /srv
+COPY --from=build --chown=10001:10001 /workspace/apps/web/dist /srv
+USER 10001:10001
 EXPOSE 80 443
+ENTRYPOINT ["/usr/bin/caddy"]
+CMD ["run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
