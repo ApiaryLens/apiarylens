@@ -252,6 +252,16 @@ func (a *cloudflareAdapter) deploy(ctx context.Context, input request, manifest 
 	cf := input.Plan.Cloudflare
 	token := input.Secrets["cloudflareApiToken"]
 	environment := map[string]string{"CLOUDFLARE_API_TOKEN": token}
+	if input.Plan.Operation == "update" {
+		backupInput := input
+		backupInput.Plan.Operation = "backup"
+		backupPhases, backupErr := a.maintain(ctx, backupInput, manifest)
+		phases = append(phases, backupPhases...)
+		if backupErr != nil {
+			return append(phases, failed("Require verified backup before update", backupErr)), backupErr
+		}
+		phases = append(phases, pass("Require verified backup before update", "A readable, versioned backup was saved before any migration or deployment change."))
+	}
 	databaseID, err := a.ensureD1(ctx, cf.D1DatabaseName, environment, input.Secrets)
 	if err != nil {
 		return append(phases, failed("Create or reuse records database", err)), err

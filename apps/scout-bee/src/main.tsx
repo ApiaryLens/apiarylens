@@ -328,9 +328,13 @@ function App() {
                   update={update}
                   placeholder="https://hives.example.com"
                 />
-                {(operation === 'backup' || operation === 'export') && (
+                {(operation === 'backup' || operation === 'export' || operation === 'update') && (
                   <Field
-                    label="Local folder for the archive (optional)"
+                    label={
+                      operation === 'update'
+                        ? 'Local folder for the required pre-update backup (optional)'
+                        : 'Local folder for the archive (optional)'
+                    }
                     name="backupDestination"
                     value={form.backupDestination}
                     update={update}

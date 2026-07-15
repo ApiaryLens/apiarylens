@@ -16,12 +16,12 @@
   "profiles": ["cloudflare", "compose"],
   "artifacts": [
     {
-      "name": "apiarylens-0.1.0-rc.1-cloudflare-c8c97fe1dd10.tar.gz",
+      "name": "apiarylens-0.1.0-rc.1-cloudflare-a0be34699eb7.tar.gz",
       "kind": "deployment-bundle",
       "target": "cloudflare",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-0.1.0-rc.1-cloudflare-c8c97fe1dd10.tar.gz",
-      "sha256": "c8c97fe1dd10eb0929e77f3682ea44583337de34e98c6db6e55d7e6709f8a7a6",
-      "bytes": 607068
+      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-0.1.0-rc.1-cloudflare-a0be34699eb7.tar.gz",
+      "sha256": "a0be34699eb706ecaa06b73c209a8769fa4eba43ef74a1c3ef8a97c686b61c85",
+      "bytes": 606980
     },
     {
       "name": "apiarylens-0.1.0-rc.1-compose-1da97168ae4e.tar.gz",
@@ -36,15 +36,15 @@
       "kind": "deployment-tool",
       "target": "windows-amd64",
       "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-scout-bee-0.1.0-rc.1-windows-amd64.exe",
-      "sha256": "7f5d54fe8cad55674a869ca8def75c7f54d6ba16b0fd8cc0998235fdce5ba203",
-      "bytes": 7795200
+      "sha256": "ff3f5abdf8b02fe8bf3f56ac5f7abb85be211c1ab6505abc18db26c1e06e7090",
+      "bytes": 7798272
     },
     {
       "name": "apiarylens-sbom.cdx.json",
       "kind": "sbom",
       "target": "release",
       "url": "https://apiarylens.org/releases/0.1.0-rc.1/apiarylens-sbom.cdx.json",
-      "sha256": "0818ac80ba96613d9cff0a91eb72a33846a2b9025cdffd2435911a7e206e518e",
+      "sha256": "5a42779788ee2e4e3e5533cce4e29f5831f33e8939abb1f956ba9954ecadf22a",
       "bytes": 38511
     },
     {
@@ -60,8 +60,8 @@
       "kind": "provenance",
       "target": "release",
       "url": "https://apiarylens.org/releases/0.1.0-rc.1/apiarylens-provenance.intoto.jsonl",
-      "sha256": "7249eeabb77b1acfff05cab26d13ebf9ca95fec001a8b8c321a7fdae4a36ab6f",
-      "bytes": 1134
+      "sha256": "a7b35698f5cd719b04c47c0bfc50823148380731bb5503dc0f8fd0a7fa99f85c",
+      "bytes": 1133
     }
   ],
   "knownLimitations": [

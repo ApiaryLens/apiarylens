@@ -246,6 +246,75 @@ func TestCloudflareBackupUsesTemporaryAuthorizationAndWritesVerifiedArchive(t *t
 	}
 }
 
+func TestCloudflareUpdateRequiresVerifiedBackupBeforeMigration(t *testing.T) {
+	artifact := testTarGz(t, map[string]string{
+		"worker/index.js":            "export default {fetch(){return new Response('ok')}}",
+		"worker/migrations/0001.sql": "select 1;",
+		"web/index.html":             "<!doctype html><title>ApiaryLens</title>",
+	})
+	artifactDigest := sha256.Sum256(artifact)
+	var backup bytes.Buffer
+	zipWriter := zip.NewWriter(&backup)
+	manifestFile, err := zipWriter.Create("manifest.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = manifestFile.Write([]byte(`{"product":"ApiaryLens","backupFormat":1}`))
+	if err = zipWriter.Close(); err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/bundle.tar.gz":
+			_, _ = w.Write(artifact)
+		case "/api/v1/operator/backup":
+			_, _ = w.Write(backup.Bytes())
+		case "/health":
+			_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok", "product": "ApiaryLens", "version": "0.1.0-rc.1"})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	p := validPlan()
+	p.Operation = "update"
+	p.Cloudflare.CustomDomain = server.URL
+	runner := &fakeRunner{}
+	adapter := &cloudflareAdapter{executor: &executor{runner: runner, client: server.Client()}}
+	manifest := releaseManifest{
+		Product: "ApiaryLens", ProductVersion: "0.1.0-rc.1",
+		Artifacts: []manifestArtifact{{
+			Name: "bundle.tar.gz", Kind: "deployment-bundle", Target: "cloudflare",
+			URL: server.URL + "/bundle.tar.gz", Sha256: hex.EncodeToString(artifactDigest[:]), Bytes: int64(len(artifact)),
+		}},
+	}
+	destination := t.TempDir()
+	phases, err := adapter.deploy(context.Background(), request{
+		Plan: p, Mode: "apply", Secrets: map[string]string{
+			"cloudflareApiToken": "runtime-only-token", "backupDestination": destination,
+		},
+	}, manifest)
+	if err != nil {
+		t.Fatalf("update failed: %v; phases=%+v", err, phases)
+	}
+	backupIndex, migrationIndex := -1, -1
+	for index, phase := range phases {
+		if phase.Name == "Require verified backup before update" && phase.State == "passed" {
+			backupIndex = index
+		}
+		if phase.Name == "Apply compatible database migrations" {
+			migrationIndex = index
+		}
+	}
+	if backupIndex < 0 || migrationIndex < 0 || backupIndex >= migrationIndex {
+		t.Fatalf("backup did not pass before migration: %+v", phases)
+	}
+	archives, _ := filepath.Glob(filepath.Join(destination, "apiarylens-backup-*.zip"))
+	if len(archives) != 1 {
+		t.Fatalf("expected one verified pre-update backup, got %v", archives)
+	}
+}
+
 func TestCloudflareOperatorRequestWaitsForSecretPropagation(t *testing.T) {
 	attempts := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
