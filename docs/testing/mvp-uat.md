@@ -60,18 +60,21 @@ not satisfy it.
 | 2026-07-15 | Isolated Cloudflare family UAT | Migration 0004 identity hardening through destructive restore | Pass | [`cloudflare-uat-evidence-2026-07-15-v2.json`](cloudflare-uat-evidence-2026-07-15-v2.json) | Runtime `037d548`; 11 automated checks passed, including opaque session rotation; temporary bootstrap and operator secrets removed while the durable authentication root was retained |
 | 2026-07-15 | Released Scout Bee / isolated Cloudflare UAT | Dry-run preflight and redacted diagnostics | Pass | [`scout-bee-cloudflare-preflight-2026-07-15.json`](scout-bee-cloudflare-preflight-2026-07-15.json) | Five phases passed in 2.61 seconds; runtime and loopback credentials were absent from diagnostics; no deployment applied |
 | 2026-07-15 | Cloudflare production family profile | Observation and current cost baseline | Pass | [`cloudflare-family-cost-and-observation-2026-07-15.md`](cloudflare-family-cost-and-observation-2026-07-15.md) | More than 41 minutes observed; quiet release-candidate traffic only, with dated allowances and explicit exclusions |
-| 2026-07-15 | GitHub/Sigstore release identity | Six release subjects signed and independently verified | Pass | [`release-signing-evidence-2026-07-15.json`](release-signing-evidence-2026-07-15.json) | Exact repository workflow identity, GitHub-hosted runner, OIDC certificate and Rekor transparency timestamp; CDN bytes match |
+| 2026-07-15 | GitHub/Sigstore release identity | Six release subjects signed and independently verified | Pass | [`release-signing-evidence-2026-07-15.json`](release-signing-evidence-2026-07-15.json) | Run `29455586598` signed verification revision `61622f8`; exact repository workflow identity, GitHub-hosted runner, OIDC certificate and Rekor timestamp; all CDN bytes match |
 | 2026-07-15 | Current released Scout Bee / isolated Cloudflare UAT | Refreshed cost-aware executable dry-run preflight | Pass | [`scout-bee-cloudflare-preflight-2026-07-15-v2.json`](scout-bee-cloudflare-preflight-2026-07-15-v2.json) | Current executable and manifest digests; five phases passed in 4.57 seconds; sanitized diagnostics; no deployment applied |
 | 2026-07-15 | Current released Scout Bee / isolated Cloudflare UAT | Guarded update apply and redacted diagnostics | Pass | [`scout-bee-cloudflare-update-2026-07-15.json`](scout-bee-cloudflare-update-2026-07-15.json) | All 17 phases passed, including verified backup before migration, resource reuse, migration, deployment, exact release identity, retained records/media, secret cleanup, and sanitized diagnostics |
+| 2026-07-15 | Current released Scout Bee / isolated Cloudflare lifecycle UAT | Seeded predecessor, interrupted update/resume, retained state, and full restore | Pass | [`scout-bee-cloudflare-lifecycle-2026-07-15.json`](scout-bee-cloudflare-lifecycle-2026-07-15.json) | Migration-0003 predecessor seeded; update canceled before the real migration command; same plan resumed after bounded edge-identity polling; exact released executable passed 17 phases; migration-0003 restore rejected safely; migration-0004 restore passed 9 phases with records/media retained and sessions revoked |
 
 The current isolated Cloudflare run additionally exercised invitations with three
 independent sessions, all 13 P0 resource types, original and thumbnail media, sync
 pull/push, follow-up completion, idempotent replay, a stale-version conflict, immediate
 rejection of a rotated session identifier, and session revocation after restore. The
 post-run target remained closed to bootstrap with one atomic bootstrap claim, and only
-the durable `AUTH_ROOT_SECRET` remained configured. Those results do not check the
-physical-device, offline PWA, Compose, seeded-predecessor update/rollback,
-accessibility, or uninstall steps whose wording requires separate evidence.
+the durable `AUTH_ROOT_SECRET` remained configured. A separate isolated lifecycle
+target now proves the Cloudflare seeded-predecessor update, interruption/resume, and
+compatible full-restore path. Those results still do not check the physical-device,
+offline PWA, Compose lifecycle, accessibility, or uninstall steps whose wording
+requires separate evidence.
 
 ## Acceptance
 

@@ -1,0 +1,241 @@
+{
+  "capturedAt": "2026-07-15T22:39:51Z",
+  "result": "pass",
+  "scope": "Seeded migration-0003 predecessor, interrupted update, resume, release propagation, retained data and media, incompatible-backup rejection, compatible full restore, and release signing on an isolated Cloudflare family target.",
+  "target": {
+    "profile": "cloudflare-family-isolated-uat",
+    "worker": "apiarylens-lifecycle-uat-0715a",
+    "database": "apiarylens-lifecycle-uat-0715a",
+    "media": "apiarylens-lifecycle-media-uat-0715a",
+    "address": "https://apiarylens-lifecycle-uat-0715a.hybridsolutionscloud.workers.dev",
+    "accountIdentifierRecorded": false
+  },
+  "predecessorSelection": {
+    "rejectedHistoricalBundle": {
+      "name": "apiarylens-0.1.0-rc.1-cloudflare-19777865d804.tar.gz",
+      "sha256": "19777865d804ee46c78024b464dc92b237cdaeb135563aec493feee6967b28af",
+      "sourceCommit": "458897a28bc4af72930ffe4a462c6a9b53400bfb",
+      "databaseMigration": "0003",
+      "result": "rejected",
+      "reason": "The archived Worker requested 310,000 PBKDF2 iterations; Workerd rejected values above 100,000. Tail diagnostics proved the failure before this bundle was accepted as the lifecycle predecessor."
+    },
+    "acceptedBundle": {
+      "name": "apiarylens-0.1.0-rc.1-cloudflare-6c52330f42d3.tar.gz",
+      "sha256": "6c52330f42d3d3054303e074963d13d32da15e7eaafb9c4b9a8b318339bc327b",
+      "bytes": 606244,
+      "manifestSha256": "6793b1ead00b1d5e220f9d2ad2f6ad6dba0d82619b5a8630d524aad8b994e751",
+      "sourceCommit": "28dcfaac2261d6395d5b55eac5a5b81f134387fc",
+      "buildTime": "2026-07-15T18:57:00.6351700Z",
+      "databaseMigration": "0003",
+      "result": "deployed-and-health-verified"
+    }
+  },
+  "seededPredecessor": {
+    "journeyStartedAt": "2026-07-15T21:50:45.124Z",
+    "journeyCompletedAt": "2026-07-15T21:51:08.720Z",
+    "checksPassed": 10,
+    "checks": [
+      "health-and-headers",
+      "protected-bootstrap",
+      "family-roles",
+      "p0-records",
+      "private-media",
+      "second-client-sync",
+      "conflict-and-idempotency",
+      "viewer-negative-authorization",
+      "portable-export",
+      "backup-and-restore"
+    ],
+    "seededCounts": { "users": 3, "organizations": 1, "memberships": 3, "resources": 13 },
+    "privateMediaObjects": 2,
+    "note": "The authenticated seed journey ran on the compatible migration-0003 runtime before the exact accepted predecessor bundle was deployed over the same database and media. Exact predecessor health, migration, counts, and private objects were reverified before update."
+  },
+  "interruptedUpdate": {
+    "planId": "8a9fc6ae-37e5-427f-b1e2-9ca9337ef76e",
+    "mode": "apply",
+    "startedAt": "2026-07-15T22:10:28.7394832Z",
+    "finishedAt": "2026-07-15T22:10:42.725098Z",
+    "status": "canceled",
+    "boundary": "Apply compatible database migrations",
+    "realMigrationCommandInvoked": false,
+    "passedBeforeCancellation": [
+      "Validate deployment plan",
+      "Check release identity",
+      "Find Cloudflare deployment tool",
+      "Verify Cloudflare account access",
+      "Review guarded cost profile",
+      "Download and verify deployment bundle",
+      "Stage deployment bundle",
+      "Create one-time maintenance authorization",
+      "Create portable backup archive",
+      "Verify portable backup archive",
+      "Save portable backup archive",
+      "Require verified backup before update",
+      "Create or reuse records database",
+      "Create or reuse private media storage"
+    ],
+    "backup": {
+      "name": "apiarylens-backup-20260715T221035Z.zip",
+      "bytes": 11186,
+      "sha256": "d0018855ef13a70fa70b678a58526fd9077dadbec79741a8ec70a2dabbab4000",
+      "entries": 13,
+      "manifestPresent": true
+    },
+    "stateAfterCancellation": {
+      "sourceCommit": "28dcfaac2261d6395d5b55eac5a5b81f134387fc",
+      "databaseMigration": "0003",
+      "users": 3,
+      "organizations": 1,
+      "memberships": 3,
+      "resources": 13,
+      "remainingSecretNames": ["AUTH_ROOT_SECRET"]
+    }
+  },
+  "propagationDefectAndFix": {
+    "firstResume": {
+      "planId": "8a9fc6ae-37e5-427f-b1e2-9ca9337ef76e",
+      "startedAt": "2026-07-15T22:11:38.6169496Z",
+      "finishedAt": "2026-07-15T22:12:10.1870328Z",
+      "status": "failed",
+      "failedPhase": "Verify deployment health",
+      "observation": "Migration and deployment succeeded, but the single health request reached a Cloudflare edge still reporting the predecessor identity. The expected identity converged within approximately 20 seconds."
+    },
+    "remediation": {
+      "codeCommit": "ac0989973be7e4046a654cbdcbc55c9d85bebd70",
+      "behavior": "Poll exact release identity for up to 60 seconds at 500 ms intervals while honoring cancellation.",
+      "regressionTest": "TestCloudflareHealthWaitsForExactBuildIdentityPropagation",
+      "goSuite": "pass",
+      "fullWorkspaceVerification": "pass"
+    },
+    "samePlanResumeAfterFix": {
+      "planId": "8a9fc6ae-37e5-427f-b1e2-9ca9337ef76e",
+      "mode": "resume",
+      "startedAt": "2026-07-15T22:22:28.7104485Z",
+      "finishedAt": "2026-07-15T22:23:02.5302459Z",
+      "status": "passed",
+      "phasesPassed": 17,
+      "failedPhases": 0
+    },
+    "harnessNote": "Two immediate resume requests omitted the runtime Cloudflare token and stopped at preflight without changing the target; the corrected request supplied the ephemeral token and passed."
+  },
+  "releasedScoutVerification": {
+    "executable": {
+      "name": "apiarylens-scout-bee-0.1.0-rc.1-windows-amd64.exe",
+      "sha256": "757059c5ebf5f773c47bf7e57f7aa93dd112a4c0a0b3cd4c8339ca1ef630e8c0",
+      "bytes": 7803904,
+      "goVersion": "go1.26.5",
+      "vcsRevision": "ac0989973be7e4046a654cbdcbc55c9d85bebd70",
+      "vcsModified": false
+    },
+    "exactExecutableUpdate": {
+      "planId": "33d425eb-163c-469c-a25c-ca3eff5cbe75",
+      "mode": "apply",
+      "startedAt": "2026-07-15T22:24:53.5819293Z",
+      "finishedAt": "2026-07-15T22:25:19.8249099Z",
+      "status": "passed",
+      "phasesPassed": 17,
+      "failedPhases": 0,
+      "finalPhase": "Verify deployment health"
+    },
+    "publicManifest": {
+      "url": "https://apiarylens.org/releases/0.1.0-rc.1/manifest.json",
+      "sha256": "c2ce7271f1c1e7990561c73f82a43b4f44acb2a2052665a3366e1c8a4d2ca16a",
+      "sourceCommit": "037d54881f79a9381212b94d4d382dc716bbdffc",
+      "databaseMigration": "0004",
+      "executableDigestMatched": true
+    },
+    "coreRevision": "61622f85800b5ea3cdfb598901cb50f1ff3e7dae",
+    "publicFrontendDeploymentVersion": "48ddb779-16a3-44fd-a13a-31bdd531e3b8",
+    "verificationRun": {
+      "id": 29455452824,
+      "url": "https://github.com/ApiaryLens/apiarylens/actions/runs/29455452824",
+      "conclusion": "success"
+    },
+    "signingRun": {
+      "id": 29455586598,
+      "url": "https://github.com/ApiaryLens/apiarylens/actions/runs/29455586598",
+      "conclusion": "success",
+      "independentLocalAttestationVerification": true
+    }
+  },
+  "postUpdateState": {
+    "databaseMigration": "0004",
+    "migrationsApplied": ["0001_initial.sql", "0002_identity.sql", "0003_audit_index.sql", "0004_atomic_bootstrap.sql"],
+    "counts": {
+      "users": 3,
+      "organizations": 1,
+      "memberships": 3,
+      "resources": 13,
+      "changes": 16,
+      "bootstrapClaims": 1
+    },
+    "resourceTypes": {
+      "apiary": 1,
+      "equipmentBox": 1,
+      "feedingEvent": 1,
+      "followUp": 1,
+      "harvest": 1,
+      "healthObservation": 1,
+      "hive": 2,
+      "inspection": 1,
+      "mediaAsset": 1,
+      "miteCount": 1,
+      "queen": 1,
+      "treatmentEvent": 1
+    },
+    "privateMedia": [
+      { "variant": "original", "bytes": 68, "sha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460" },
+      { "variant": "thumbnail", "bytes": 4, "sha256": "32461d5bd1773012acef0ba15636752949bd7c2ce50f9172159d9f56cf0dd9af" }
+    ],
+    "remainingSecretNames": ["AUTH_ROOT_SECRET"]
+  },
+  "recovery": {
+    "incompatibleBackupRejection": {
+      "planId": "f3c21851-3de3-43c1-84b4-aaff68d3e697",
+      "backupMigration": "0003",
+      "runtimeMigration": "0004",
+      "status": "failed-safe",
+      "failedPhase": "Restore records and private media",
+      "httpStatus": 400,
+      "stateUnchanged": true,
+      "temporaryAuthorizationRemoved": true
+    },
+    "compatibleFullRestore": {
+      "planId": "4eafd94a-8f8e-4adf-bbd4-2f1b7596f414",
+      "startedAt": "2026-07-15T22:35:22.7413669Z",
+      "finishedAt": "2026-07-15T22:35:33.5746231Z",
+      "status": "passed",
+      "phasesPassed": 9,
+      "selectedBackup": {
+        "name": "apiarylens-backup-20260715T222500Z.zip",
+        "bytes": 11381,
+        "sha256": "88b1e52a38afb8c88d011ca4d0af877e394aab427165b3ff63fc4bc25f621ae3",
+        "databaseMigration": "0004"
+      },
+      "automaticPreRestoreBackup": {
+        "name": "apiarylens-pre-restore-20260715T223528Z.zip",
+        "bytes": 11382,
+        "sha256": "0bb3ffebf9975eb0c146d02fdcc933d343a36d66a06430101f2e1eb9fbba3056"
+      },
+      "recordsAndMediaRestored": true,
+      "sessionsRevoked": true,
+      "healthIdentityVerified": true,
+      "postRestoreCounts": { "users": 3, "organizations": 1, "memberships": 3, "resources": 13, "changes": 16, "bootstrapClaims": 1, "sessions": 0 },
+      "postRestoreMediaDigestsMatched": true,
+      "remainingSecretNames": ["AUTH_ROOT_SECRET"]
+    }
+  },
+  "privacyAndDiagnostics": {
+    "runtimeCredentialsStoredInPlans": false,
+    "runtimeCredentialsPresentInEvidence": false,
+    "loopbackLaunchTokenPresentInEvidence": false,
+    "userIdentifiersPresentInEvidence": false,
+    "temporaryOperatorSecretPresentAfterOperations": false
+  },
+  "remainingGates": [
+    "Repeat the seeded predecessor, interruption/resume, and recovery journey on the required Hyper-V Linux Compose profile.",
+    "Complete physical iPhone, iPad, and computer offline and multi-device acceptance.",
+    "Complete manual keyboard, NVDA/VoiceOver, 200% zoom, high-contrast, and target-size acceptance.",
+    "Complete keep-data uninstall/reinstall on both required profiles and obtain project-owner acceptance."
+  ]
+}

@@ -1,10 +1,10 @@
 {
-  "capturedAt": "2026-07-15T21:27:10Z",
+  "capturedAt": "2026-07-15T22:40:30Z",
   "workflowRun": {
-    "id": 29451944803,
-    "url": "https://github.com/ApiaryLens/apiarylens/actions/runs/29451944803",
+    "id": 29455586598,
+    "url": "https://github.com/ApiaryLens/apiarylens/actions/runs/29455586598",
     "conclusion": "success",
-    "sourceCommit": "992d4d74a6e53b05269c131399c9aab5af4727fa",
+    "sourceCommit": "61622f85800b5ea3cdfb598901cb50f1ff3e7dae",
     "sourceRef": "refs/heads/main",
     "trigger": "workflow_dispatch"
   },
@@ -18,20 +18,21 @@
   "subjects": [
     { "name": "apiarylens-0.1.0-rc.1-cloudflare-df39978b1a03.tar.gz", "sha256": "df39978b1a03531a4dc204ed04d2c301cc1aad148370edc91bfe6092e54c7aa2" },
     { "name": "apiarylens-0.1.0-rc.1-compose-36b697c72823.tar.gz", "sha256": "36b697c72823dd506c350a507a4be9dcf0fd59c4d09ff8f3b4ff21a82bd3f355" },
-    { "name": "apiarylens-scout-bee-0.1.0-rc.1-windows-amd64.exe", "sha256": "c4101e4a91e70322336b3d64a561107cee00bd24514dfc989e3faed194e49cbe" },
-    { "name": "apiarylens-sbom.cdx.json", "sha256": "60869eda483fe5033a46c5364c70900b6cd13a9cc3f8a2a07baa270817bfb9df" },
+    { "name": "apiarylens-scout-bee-0.1.0-rc.1-windows-amd64.exe", "sha256": "757059c5ebf5f773c47bf7e57f7aa93dd112a4c0a0b3cd4c8339ca1ef630e8c0" },
+    { "name": "apiarylens-sbom.cdx.json", "sha256": "023d9342c840d19646b1d53a24044716021947dcb9126d233d119bfc379f2c36" },
     { "name": "apiarylens-license-report.md", "sha256": "58f81ee49d04c97511b9a5e6bbaa6b33c41227f74b7f10264dd0d68b485667bf" },
-    { "name": "apiarylens-provenance.intoto.jsonl", "sha256": "4468f57e9c050445623b2f4e15af7a0e76a69a4ad25f63f691c6225cd89898b1" }
+    { "name": "apiarylens-provenance.intoto.jsonl", "sha256": "021e412b8ab01a12bb774d987e6f4258a04934dd11777373791b1f78c383533c" }
   ],
   "transparencyLog": {
     "type": "Tlog",
     "uri": "https://rekor.sigstore.dev",
-    "timestamp": "2026-07-15T21:26:51Z"
+    "timestamp": "2026-07-15T22:29:55Z"
   },
   "verification": {
     "onlineCommand": "gh attestation verify <artifact> --repo ApiaryLens/apiarylens --signer-workflow ApiaryLens/apiarylens/.github/workflows/release-signing.yml --source-ref refs/heads/main",
     "allSubjectsVerifiedInWorkflow": true,
     "independentLocalVerification": true,
-    "publicCdnDigestsMatch": true
+    "publicCdnDigestsMatch": true,
+    "publicManifestSha256": "c2ce7271f1c1e7990561c73f82a43b4f44acb2a2052665a3366e1c8a4d2ca16a"
   }
 }

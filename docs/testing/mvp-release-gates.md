@@ -10,7 +10,8 @@
       backup/restore verification pass.
 - [x] Cloudflare Worker and all three public properties are deployed over HTTPS.
 - [x] Public properties use no telemetry and block automatic response transformation.
-- [x] Release artifacts are content-addressed and remotely digest verified.
+- [x] Deployment bundles are content-addressed, and every published release artifact
+      is remotely digest verified against the manifest.
 - [x] The live PWA/backend identity and manifest identify implementation commit
       `037d54881f79a9381212b94d4d382dc716bbdffc` and UTC build time
       `2026-07-15T19:54:48.2706596Z`.
@@ -29,8 +30,8 @@
       high-severity vulnerabilities.
 - [x] The release-scope threat model and OWASP ASVS 5.0.0 chapter map document
       implemented, partial, and non-applicable controls without claiming certification.
-- [x] Public MVP verification run `29451937016` passes for release-evidence revision
-      `992d4d74a6e53b05269c131399c9aab5af4727fa`, whose manifest pins product-source
+- [x] Public MVP verification run `29455452824` passes for release-evidence revision
+      `61622f85800b5ea3cdfb598901cb50f1ff3e7dae`, whose manifest pins product-source
       revision `037d54881f79a9381212b94d4d382dc716bbdffc`, including the secret scan,
       complete workspace verification, clean Compose image builds, and release checks.
 - [x] The SHA-256-pinned Grype 0.115.0 CI scan reports no unresolved high or critical
@@ -48,10 +49,11 @@
       label and connector collisions were rebuilt, filed, re-exported, and visually
       rechecked; rejected drafts are outside the authoritative folder.
 - [x] The released Scout Bee Windows executable passes a secret-redacted, pinned
-      release preflight and a 17-phase guarded update against the isolated Cloudflare
-      UAT resources, including backup-before-migration, resource reuse, migration,
-      deployment, exact build identity, retained data/media, cleanup, and redacted
-      diagnostics.
+      release preflight and 17-phase guarded updates against isolated Cloudflare UAT
+      resources, including backup-before-migration, an intentional stop at the
+      migration boundary, same-plan resume, bounded edge-identity convergence,
+      migration, deployment, retained data/media, incompatible-backup rejection,
+      compatible full restore, session revocation, cleanup, and redacted diagnostics.
 - [ ] The Hyper-V UAT target passes Scout Bee preflight; the combined target gate
       remains open until that independent run succeeds.
 - [x] The isolated Cloudflare family service passes protected bootstrap, roles, all
@@ -94,8 +96,14 @@ Cloudflare-plus-Compose or physical-device gates.
 
 The current released Scout Bee guarded Cloudflare update is recorded in
 [`scout-bee-cloudflare-update-2026-07-15.json`](scout-bee-cloudflare-update-2026-07-15.json).
-The two earlier dry-run preflights are retained as historical evidence. Release-signing
-evidence is recorded in
+The seeded-predecessor, interrupted-update/resume, propagation fix, exact released
+executable rerun, retained-data checks, incompatible-backup rejection, and compatible
+full restore are recorded in
+[`scout-bee-cloudflare-lifecycle-2026-07-15.json`](scout-bee-cloudflare-lifecycle-2026-07-15.json).
+That completes the Cloudflare half of the lifecycle gate; the combined checkbox stays
+open for the required Compose run and keep-data uninstall/reinstall. The two earlier
+dry-run preflights and first guarded update remain historical evidence. Release-signing
+evidence for verification revision `61622f85800b5ea3cdfb598901cb50f1ff3e7dae` is recorded in
 [`release-signing-evidence-2026-07-15.json`](release-signing-evidence-2026-07-15.json).
 The production observation and provider-allowance baseline is recorded in
 [`cloudflare-family-cost-and-observation-2026-07-15.md`](cloudflare-family-cost-and-observation-2026-07-15.md).
