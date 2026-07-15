@@ -30,8 +30,8 @@
       high-severity vulnerabilities.
 - [x] The release-scope threat model and OWASP ASVS 5.0.0 chapter map document
       implemented, partial, and non-applicable controls without claiming certification.
-- [x] Public MVP verification run `29455452824` passes for release-evidence revision
-      `61622f85800b5ea3cdfb598901cb50f1ff3e7dae`, whose manifest pins product-source
+- [x] Public MVP verification run `29459306695` passes for release-evidence revision
+      `b3094bc1ae944db48aad8d6555581194acbb3a0b`, whose manifest pins product-source
       revision `037d54881f79a9381212b94d4d382dc716bbdffc`, including the secret scan,
       complete workspace verification, clean Compose image builds, and release checks.
 - [x] The SHA-256-pinned Grype 0.115.0 CI scan reports no unresolved high or critical
@@ -54,6 +54,10 @@
       migration boundary, same-plan resume, bounded edge-identity convergence,
       migration, deployment, retained data/media, incompatible-backup rejection,
       compatible full restore, session revocation, cleanup, and redacted diagnostics.
+- [x] The exact released Scout Bee executable passes a fresh isolated Cloudflare
+      install, protected first-owner claim, invalid-code rejection, keep-data
+      uninstall, public-route removal, and reinstall while preserving the original
+      session, password sign-in, retained apiary, and durable authentication root.
 - [ ] The Hyper-V UAT target passes Scout Bee preflight; the combined target gate
       remains open until that independent run succeeds.
 - [x] The isolated Cloudflare family service passes protected bootstrap, roles, all
@@ -100,10 +104,12 @@ The seeded-predecessor, interrupted-update/resume, propagation fix, exact releas
 executable rerun, retained-data checks, incompatible-backup rejection, and compatible
 full restore are recorded in
 [`scout-bee-cloudflare-lifecycle-2026-07-15.json`](scout-bee-cloudflare-lifecycle-2026-07-15.json).
-That completes the Cloudflare half of the lifecycle gate; the combined checkbox stays
-open for the required Compose run and keep-data uninstall/reinstall. The two earlier
+Fresh install and keep-data uninstall/reinstall are recorded in
+[`scout-bee-cloudflare-install-reinstall-2026-07-15.json`](scout-bee-cloudflare-install-reinstall-2026-07-15.json).
+That completes the Cloudflare half of both lifecycle gates; the combined checkboxes
+stay open for the required Compose runs. The two earlier
 dry-run preflights and first guarded update remain historical evidence. Release-signing
-evidence for verification revision `61622f85800b5ea3cdfb598901cb50f1ff3e7dae` is recorded in
+evidence for verification revision `b3094bc1ae944db48aad8d6555581194acbb3a0b` is recorded in
 [`release-signing-evidence-2026-07-15.json`](release-signing-evidence-2026-07-15.json).
 The production observation and provider-allowance baseline is recorded in
 [`cloudflare-family-cost-and-observation-2026-07-15.md`](cloudflare-family-cost-and-observation-2026-07-15.md).

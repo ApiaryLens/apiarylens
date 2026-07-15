@@ -1,0 +1,84 @@
+{
+  "capturedAt": "2026-07-15T23:44:00Z",
+  "result": "pass",
+  "scope": "Exact released Scout Bee fresh install, protected first-owner claim, keep-data uninstall, native-route removal, reinstall, retained identity/data verification, signed release publication, and isolated-target cleanup on the Cloudflare family profile.",
+  "releasedScout": {
+    "name": "apiarylens-scout-bee-0.1.0-rc.1-windows-amd64.exe",
+    "sha256": "a0db8b48ed98874294aff57dbea5c58ca0a41f901c9e197b3d3560acfcc99ba7",
+    "bytes": 7812096,
+    "vcsRevision": "74f4b23a35895c69de6d754b9a76bc76aae4e356",
+    "vcsModified": false,
+    "releaseRevision": "b3094bc1ae944db48aad8d6555581194acbb3a0b"
+  },
+  "freshInstall": {
+    "target": "apiarylens-reinstall-uat-0715g",
+    "planId": "72a4246b-c292-4ffa-8a95-d0df68dc6338",
+    "status": "passed",
+    "phasesPassed": 14,
+    "protectedBootstrapRequired": true,
+    "invalidBootstrapCodeRejected": true,
+    "ownerCreated": true,
+    "recoveryCodesIssued": 8,
+    "retainedApiaryCreated": true,
+    "counts": { "organizations": 1, "users": 1, "memberships": 1, "sessions": 1, "apiaries": 1 }
+  },
+  "keepDataUninstall": {
+    "planId": "e799091f-09ca-48dd-9a53-e3b619bdc595",
+    "status": "passed",
+    "phasesPassed": 6,
+    "publicRouteConvergedToHttp404": true,
+    "databaseCountsRetained": true,
+    "privateMediaBucketRetained": true
+  },
+  "reinstall": {
+    "planId": "fbd81124-30ff-4dc9-8c6d-6f557706f436",
+    "status": "passed",
+    "phasesPassed": 14,
+    "reportedAuthenticationRootPreservation": true,
+    "originalSessionRemainedValid": true,
+    "freshPasswordSignInSucceeded": true,
+    "retainedApiaryReadable": true,
+    "bootstrapClosed": true,
+    "remainingWorkerSecretNames": ["AUTH_ROOT_SECRET"],
+    "counts": { "organizations": 1, "users": 1, "memberships": 1, "sessions": 2, "apiaries": 1 }
+  },
+  "defectsFoundAndRemediated": [
+    {
+      "observation": "Fresh Worker health did not consistently converge inside the former 60-second window.",
+      "remediation": "Bounded health polling was extended while preserving cancellation.",
+      "commit": "fc3dcb8"
+    },
+    {
+      "observation": "Wrangler telemetry documentation could be selected as the deployment address before the actual Worker URL.",
+      "remediation": "Scout now accepts only a URL whose hostname ends in .workers.dev, with telemetry-first regression coverage.",
+      "commit": "c36b1cd"
+    },
+    {
+      "observation": "A keep-data reinstall would generate a new authentication root and invalidate retained credentials and sessions.",
+      "remediation": "Scout inspects the retained Worker secret set, preserves AUTH_ROOT_SECRET, requires no new bootstrap code, and deploys without a replacement secrets file.",
+      "commit": "74f4b23"
+    }
+  ],
+  "releaseVerification": {
+    "publicManifestSha256": "a6bfc8dcef5131231186a3dd2d5dd7c21d759ac2411c226a8530d8417fe682ff",
+    "publicFrontendDeploymentVersion": "e85b5a97-d0a0-4cc9-8e26-3dd74114d59e",
+    "allSixPublicArtifactDigestsMatched": true,
+    "verificationRun": { "id": 29459306695, "conclusion": "success" },
+    "signingRun": { "id": 29459376270, "conclusion": "success" },
+    "allSixAttestationsIndependentlyVerified": true
+  },
+  "cleanup": {
+    "completed": true,
+    "freshInstallWorkerDatabaseAndBucketDeleted": true,
+    "reinstallWorkerDatabaseAndBucketDeleted": true,
+    "bothPublicAddressesReturnedHttp404": true,
+    "scoutProcessStopped": true
+  },
+  "privacy": {
+    "credentialsPersisted": false,
+    "runtimeCredentialsPresentInEvidence": false,
+    "accountIdentifiersPresentInEvidence": false,
+    "userIdentifiersPresentInEvidence": false
+  },
+  "remainingCombinedGate": "Repeat clean install and keep-data uninstall/reinstall on the required Hyper-V Linux Compose profile."
+}

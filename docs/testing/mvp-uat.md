@@ -22,7 +22,7 @@ not satisfy it.
 ## Critical Journey
 
 - [x] Verify manifest, signatures, SBOM, provenance, and content-addressed artifacts.
-- [ ] Deploy Cloudflare family profile with Scout Bee into an isolated UAT target.
+- [x] Deploy Cloudflare family profile with Scout Bee into an isolated UAT target.
 - [ ] Deploy the same Compose release to the approved Hyper-V Linux VM with Scout Bee.
 - [x] Confirm public HTTPS, secure headers, private storage, health, and build identity.
 - [x] Create the first owner and family using the one-time protected setup flow.
@@ -64,6 +64,7 @@ not satisfy it.
 | 2026-07-15 | Current released Scout Bee / isolated Cloudflare UAT | Refreshed cost-aware executable dry-run preflight | Pass | [`scout-bee-cloudflare-preflight-2026-07-15-v2.json`](scout-bee-cloudflare-preflight-2026-07-15-v2.json) | Current executable and manifest digests; five phases passed in 4.57 seconds; sanitized diagnostics; no deployment applied |
 | 2026-07-15 | Current released Scout Bee / isolated Cloudflare UAT | Guarded update apply and redacted diagnostics | Pass | [`scout-bee-cloudflare-update-2026-07-15.json`](scout-bee-cloudflare-update-2026-07-15.json) | All 17 phases passed, including verified backup before migration, resource reuse, migration, deployment, exact release identity, retained records/media, secret cleanup, and sanitized diagnostics |
 | 2026-07-15 | Current released Scout Bee / isolated Cloudflare lifecycle UAT | Seeded predecessor, interrupted update/resume, retained state, and full restore | Pass | [`scout-bee-cloudflare-lifecycle-2026-07-15.json`](scout-bee-cloudflare-lifecycle-2026-07-15.json) | Migration-0003 predecessor seeded; update canceled before the real migration command; same plan resumed after bounded edge-identity polling; exact released executable passed 17 phases; migration-0003 restore rejected safely; migration-0004 restore passed 9 phases with records/media retained and sessions revoked |
+| 2026-07-15 | Exact released Scout Bee / isolated Cloudflare install UAT | Fresh install, protected owner setup, keep-data uninstall, and reinstall | Pass | [`scout-bee-cloudflare-install-reinstall-2026-07-15.json`](scout-bee-cloudflare-install-reinstall-2026-07-15.json) | Exact `a0db8b48…` executable passed both 14-phase installs; invalid setup code rejected; public route removed; retained apiary, original session, and password sign-in survived; isolated resources deleted after verification |
 
 The current isolated Cloudflare run additionally exercised invitations with three
 independent sessions, all 13 P0 resource types, original and thumbnail media, sync
@@ -72,9 +73,11 @@ rejection of a rotated session identifier, and session revocation after restore.
 post-run target remained closed to bootstrap with one atomic bootstrap claim, and only
 the durable `AUTH_ROOT_SECRET` remained configured. A separate isolated lifecycle
 target now proves the Cloudflare seeded-predecessor update, interruption/resume, and
-compatible full-restore path. Those results still do not check the physical-device,
-offline PWA, Compose lifecycle, accessibility, or uninstall steps whose wording
-requires separate evidence.
+compatible full-restore path. A second isolated target proves fresh installation and
+the Cloudflare half of keep-data uninstall/reinstall, including retained identity and
+data. Those results still do not check the physical-device, offline PWA, Compose
+lifecycle/install/reinstall, or manual accessibility steps whose wording requires
+separate evidence.
 
 ## Acceptance
 
