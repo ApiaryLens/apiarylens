@@ -88,22 +88,19 @@ Accepted decisions:
 
 - [ADR 0001: Core Monorepo with Separate Properties and Operations](../adr/0001-project-structure.md)
 - [ADR 0002: Domain Strategy](../adr/0002-domain-strategy.md)
+- [ADR 0003: Open Source and Self-Hosted First](../adr/0003-open-source-first.md)
 - [ADR 0004: Lucidchart Diagram Standard](../adr/0004-lucidchart-diagram-standard.md)
 - [ADR 0005: Activate the Initial Repository Portfolio](../adr/0005-initial-repository-portfolio.md)
 - [ADR 0006: Cloudflare Hosting for Public Frontends](../adr/0006-cloudflare-public-frontends.md)
 - [ADR 0007: Deployment Profile Priority](../adr/0007-deployment-profile-priority.md)
 
-Proposed formal decision:
-
-- [ADR 0003: Open Source and Self-Hosted First](../adr/0003-open-source-first.md)
-
-Proposed product-scope decision:
+Accepted product-scope decision:
 
 - [ApiaryLens MVP Definition and UAT Contract](../product/mvp-definition.md)
 
 The open-source, self-hosted, offline-first, privacy-first, and optional-AI
-constraints are already mandatory through `AGENTS.md`, even while ADR 0003 awaits
-formal acceptance.
+constraints are mandatory through `AGENTS.md` and accepted ADR 0003. The public
+product uses Apache License 2.0 and DCO 1.1 contribution sign-off.
 
 ## System Context
 
@@ -614,7 +611,8 @@ Every relevant design or ADR must address:
 
 The following work is required before dependent implementation begins:
 
-1. Accept the open-source/self-hosted posture ADR and choose the project license.
+1. Preserve accepted ADR 0003, Apache-2.0 licensing, DCO 1.1 sign-off, and
+   dependency/asset license provenance.
 2. Research MVP PWA local storage, offline durability, backup interaction, and
    synchronization; defer no-server device-only identity and migration to P1.
 3. Research and select the frontend stack and offline persistence approach.

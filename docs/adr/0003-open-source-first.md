@@ -2,9 +2,13 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Date
+
+2026-07-15
+
+## Accepted
 
 2026-07-15
 
@@ -25,10 +29,10 @@ and may operate a managed service in the future. Those experiences can reduce se
 and operational work, but they must not turn the self-hosted product into an
 incomplete edition or make a third-party account a requirement for core operation.
 
-The repository is currently public but the project license has not been selected.
-Public source without an appropriate license is not sufficient to claim that the
-released product is open source. The licensing decision therefore blocks acceptance
-of this ADR and the first application dependency or release decision.
+The repository is public and must carry an OSI-approved license before application
+dependencies or release artifacts are introduced. Public source without an
+appropriate license is not sufficient to claim that the released product is open
+source.
 
 ## Decision
 
@@ -89,6 +93,31 @@ The open-source and hosted paths follow these additional requirements:
 - Dependencies and build tools must have licenses compatible with the selected
   ApiaryLens license and distribution model.
 
+### License and Contribution Policy
+
+ApiaryLens is licensed under the **Apache License, Version 2.0**, SPDX identifier
+`Apache-2.0`. It is an OSI-approved permissive license that supports use,
+modification, redistribution, self-hosting, and commercial services while including
+an explicit contributor patent grant and patent-litigation termination provision.
+
+The initial contribution mechanism is the **Developer Certificate of Origin 1.1**
+(DCO), recorded through a `Signed-off-by` line on every contribution. No separate
+Contributor License Agreement is required initially. The project may revisit that
+choice through a future ADR if governance or organizational contribution needs
+materially change.
+
+Project software, documentation source, schemas, build definitions, and public
+deployment automation use `Apache-2.0` unless a file or asset manifest explicitly
+records another compatible license. Brand marks, photographs, fonts, generated
+media, sample data, and third-party assets require individual provenance and license
+records; their presence in the repository does not silently relicense them.
+
+Distributions preserve applicable copyright, patent, trademark, attribution, and
+third-party notices. The project maintains `NOTICE` and third-party notice/SBOM
+artifacts when required. The Apache license does not grant permission to use
+ApiaryLens trade names or trademarks except as the license permits for reasonable
+description and required attribution.
+
 Docker Compose is the first complete server target for personally controlled
 hardware. A Cloudflare-native family profile is the first cloud target and Compose
 on an ordinary Linux VM is the second, as accepted in
@@ -123,8 +152,8 @@ to sell convenience, hosting, support, and operational commitments. Accepted.
 
 ## Consequences
 
-- The exact project license must be selected and the placeholder `LICENSE` replaced
-  before this ADR is accepted or application dependencies are committed.
+- The repository carries the complete Apache License 2.0 text and identifies
+  `Apache-2.0` in package and release metadata.
 - All dependencies, bundled components, assets, and generated artifacts require
   license and provenance review.
 - The supported Cloudflare family profile and Compose profile require shared
@@ -137,19 +166,11 @@ to sell convenience, hosting, support, and operational commitments. Accepted.
 - Private repository boundaries require continuing review whenever infrastructure,
   galleries, registries, build systems, or hosted features are introduced.
 
-## Open Item Blocking Acceptance
+## Acceptance Record
 
-Select the ApiaryLens license and record:
-
-- The license name and SPDX identifier
-- Compatibility expectations for dependencies, assets, SDKs, and plugins
-- Whether contributions use a Developer Certificate of Origin, a contributor
-  license agreement, or another documented mechanism
-- Copyright and third-party notice conventions
-
-Once that decision is made, update this ADR with the license, replace the repository
-license placeholder, reconcile contribution and security documentation, and return
-the ADR to the project owner for acceptance.
+Kristopher Turner accepted this ADR on 2026-07-15 and authorized completion of the
+approved MVP. The license implementation above closes the ADR's former blocking
+open item.
 
 ## References
 
@@ -160,3 +181,6 @@ the ADR to the project owner for acceptance.
 - [Repository Strategy](../architecture/repository-strategy.md)
 - [Deployment Strategy](../deployment/deployment-strategy.md)
 - [Security Architecture](../security/security-architecture.md)
+- [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+- [OSI Apache-2.0 record](https://opensource.org/license/apache-2-0)
+- [Developer Certificate of Origin 1.1](https://developercertificate.org/)

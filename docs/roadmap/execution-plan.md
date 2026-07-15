@@ -12,6 +12,7 @@ which the portfolio moves from foundation through release.
 - Documentation reconciliation: completed 2026-07-15
 - Six-repository GitHub portfolio activation and local cloning: completed 2026-07-15
 - Responsibility-specific foundation scaffolds: completed 2026-07-15
+- ADR 0003, Apache-2.0 licensing, and the MVP/UAT contract: accepted 2026-07-15
 - Cloudflare frontend implementation foundation: next after the documentation change
   is reviewed and the relevant framework/content research begins
 
@@ -164,8 +165,6 @@ and deployment support rather than treating them as later cleanup.
 2. Verify and maintain the completed
    [Task 008 repository portfolio](../../tasks/008-bootstrap-repository-portfolio.md).
 3. Complete [Task 009: Establish the Cloudflare Frontend Foundation](../../tasks/009-establish-cloudflare-frontend-foundation.md).
-4. Accept ADR 0003 and select the project license.
-5. Approve the [MVP Definition and UAT Contract](../product/mvp-definition.md).
-6. Execute the discovery and research program in dependency order.
-7. Convert research recommendations into ADRs and detailed designs.
-8. Produce the implementation-ready task plan with requirement-to-UAT traceability.
+4. Execute the discovery and research program in dependency order.
+5. Convert research recommendations into ADRs and detailed designs.
+6. Produce the implementation-ready task plan with requirement-to-UAT traceability.

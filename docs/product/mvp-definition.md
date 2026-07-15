@@ -2,13 +2,15 @@
 
 ## Document Status
 
-**Status:** Proposed for project-owner approval
+**Status:** Accepted
 
 **Date:** 2026-07-15
 
 **Decider:** Kristopher Turner, project owner
 
-After approval, this document is the authoritative ApiaryLens MVP scope. The
+**Accepted:** 2026-07-15
+
+This document is the authoritative ApiaryLens MVP scope. The
 [Feature Inventory](../architecture/feature-inventory.md) remains the broader
 roadmap inventory and must not be interpreted as MVP scope.
 
@@ -519,7 +521,7 @@ than represented as completed functionality.
 
 ## Blocking Decisions Before Implementation
 
-- Approve ADR 0003 and select the project license
+- ADR 0003 and the project license are accepted; preserve their constraints
 - Select the frontend/PWA and offline-storage approach
 - Select backend runtimes and define shared domain boundaries
 - Select PostgreSQL data access for Compose and validate D1 or another accepted
@@ -532,9 +534,9 @@ than represented as completed functionality.
   migration, PWA activation, release channel, and support-window contracts
 - Complete the release-scope threat model and data model
 
-These decisions may be completed autonomously after ADR 0003 approval under the
-project owner's authorization, but their evidence and ADRs must still be recorded
-before dependent implementation.
+These decisions may be completed autonomously under the project owner's
+authorization, but their evidence and ADRs must still be recorded before dependent
+implementation.
 
 ## Change Control
 

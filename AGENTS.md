@@ -159,9 +159,10 @@ picking and building on top of it.
   [`docs/architecture/community-galleries-and-registries.md`](docs/architecture/community-galleries-and-registries.md).
   The relevant design or ADR must record its gallery/registry impact, including when
   the conclusion is that no gallery or registry is needed.
-- This repo doesn't have a chosen license yet (see `LICENSE`) — don't add dependencies
-  whose license would conflict with likely OSS licensing (e.g. avoid AGPL-incompatible
-  or fully proprietary libraries) until a license is chosen.
+- The public product uses Apache License 2.0. Review every dependency, bundled
+  component, generated artifact, and asset for compatible licensing and provenance;
+  do not add AGPL/SSPL, source-available, noncommercial, unlicensed, or proprietary
+  runtime requirements without an accepted ADR and explicit distribution analysis.
 - No application code exists yet. If asked to "add a feature," first check whether the
   underlying app/package exists at all — if not, that's a scaffolding task, not a
   feature task, and should probably start with an ADR in `docs/`.

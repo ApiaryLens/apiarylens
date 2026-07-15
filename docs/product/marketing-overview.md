@@ -73,9 +73,9 @@ product narrative and the [Roadmap](../roadmap/roadmap.md) for current sequencin
 ## Open-Source and Self-Hosted Direction
 
 ApiaryLens is being designed as an open-source, self-hosted-first product with an
-offline-capable PWA and portable data. The formal open-source license has not yet
-been selected, so pre-release marketing must not claim that the product is already
-“100% open source.”
+offline-capable PWA and portable data. The public product uses the OSI-approved
+Apache License 2.0. Pre-release marketing must still distinguish released
+capabilities from planned capabilities.
 
 The intended outcome is:
 

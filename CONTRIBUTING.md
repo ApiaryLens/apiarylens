@@ -28,9 +28,28 @@ discussion or issue instead of a PR.
   AI-required). Contributions that conflict with these will be asked to change
   direction, human or AI-authored alike.
 - Be respectful. See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
-- No license has been finalized yet (see [LICENSE](LICENSE)). By contributing, you
-  agree your contribution can be released under whatever open-source license the
-  project ultimately adopts.
+- Contributions are licensed under [Apache License 2.0](LICENSE) and require DCO
+  1.1 sign-off as described below.
+
+## Developer Certificate of Origin
+
+ApiaryLens uses the
+[Developer Certificate of Origin 1.1](https://developercertificate.org/) rather
+than a separate Contributor License Agreement. Add a sign-off to every commit:
+
+```text
+Signed-off-by: Your Name <your-email@example.com>
+```
+
+Git can add it automatically to a commit with:
+
+```text
+git commit -s
+```
+
+The sign-off certifies that you have the right to submit the contribution under the
+project license. Use your real name and an email address associated with your Git
+identity. Contributions without a valid sign-off must be corrected before merge.
 
 ## Pull requests
 

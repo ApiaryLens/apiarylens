@@ -44,8 +44,8 @@ databases, DNS, TLS, identity providers, or cloud billing to get started safely.
 
 ## MVP Boundary
 
-The proposed [MVP Definition and UAT Contract](mvp-definition.md) is the
-authoritative product-scope boundary awaiting project-owner approval. It requires a
+The accepted [MVP Definition and UAT Contract](mvp-definition.md) is the
+authoritative product-scope boundary. It requires a
 complete installable offline-first PWA, equivalent MVP behavior across Cloudflare
 and Compose backends, finished Scout Bee deployment for the Hyper-V UAT VM and
 Cloudflare, portable cloud-VM support, and completed brand, UX, Lucidchart,

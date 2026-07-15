@@ -26,7 +26,7 @@ single-hive hobby tool toward commercial-apiary scale.
 - `deployment/` -- self-hosting and deployment strategy notes.
 - `diagrams/` -- Lucidchart catalog and accessible public exports; legacy Mermaid
   sources await migration.
-- `product/` -- proposed authoritative MVP definition and UAT contract, product
+- `product/` -- accepted authoritative MVP definition and UAT contract, product
   brief, living capability overview, pre-release marketing overview, and longer
   marketing/product narrative docs.
 - `research/` -- time-boxed architecture research and technical spikes.

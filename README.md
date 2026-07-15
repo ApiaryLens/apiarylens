@@ -70,7 +70,7 @@ apiarylens/
 ├── scripts/      # Repo automation and dev tooling
 ├── AGENTS.md     # Direction and rules for AI coding agents
 ├── README.md     # This file
-├── LICENSE       # Placeholder — license not yet finalized
+├── LICENSE       # Apache License 2.0
 ├── CONTRIBUTING.md
 ├── SECURITY.md
 └── CODE_OF_CONDUCT.md
@@ -88,4 +88,8 @@ See [SECURITY.md](SECURITY.md) for how to report a vulnerability.
 
 ## License
 
-A license has not been finalized yet. See [LICENSE](LICENSE).
+ApiaryLens is licensed under the
+[Apache License, Version 2.0](LICENSE) (`Apache-2.0`). Contributions use
+[Developer Certificate of Origin 1.1](CONTRIBUTING.md#developer-certificate-of-origin)
+sign-off. Brand and third-party assets may carry separately recorded compatible
+terms in their provenance manifests.

@@ -2,7 +2,7 @@
 
 This file captures the product requirements discussed in the chat.
 
-This is a full roadmap inventory, not the MVP scope. The proposed authoritative MVP
+This is a full roadmap inventory, not the MVP scope. The accepted authoritative MVP
 boundary is [ApiaryLens MVP Definition and UAT Contract](../product/mvp-definition.md).
 Items listed here do not become MVP requirements unless that document includes them
 as P0.

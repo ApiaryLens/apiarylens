@@ -14,14 +14,11 @@ dependent implementation begins.
 - Cloudflare hosting for official public frontends
 - Deployment profile priority: Compose first on owned hardware, Cloudflare first in
   cloud, and Compose on a cloud VM second
-
-## Proposed Decision Awaiting Acceptance
-
 - Open-source and self-hosted-first posture
+- Apache-2.0 project license and DCO 1.1 contribution sign-off
 
 ## Decisions Requiring Research and ADRs
 
-- Open-source license
 - Frontend/PWA framework and offline persistence
 - Backend framework and API approach
 - Database, migrations, and data access

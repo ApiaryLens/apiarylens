@@ -2,12 +2,12 @@
 
 ## Status
 
-Product scope defined on 2026-07-15 and awaiting project-owner approval. The
-authoritative proposed scope and acceptance contract is
+Product scope accepted by the project owner on 2026-07-15. The authoritative scope
+and acceptance contract is
 [ApiaryLens MVP Definition and UAT Contract](../docs/product/mvp-definition.md).
 
-The ordered engineering implementation plan will be produced after ADR 0003 is
-approved and the implementation-blocking research and ADRs are completed.
+ADR 0003 is accepted. The ordered engineering implementation plan is produced as
+implementation-blocking research and ADRs are completed.
 
 ## MVP Outcome
 
