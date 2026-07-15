@@ -12,8 +12,8 @@
 - [x] Public properties use no telemetry and block automatic response transformation.
 - [x] Release artifacts are content-addressed and remotely digest verified.
 - [x] The live PWA/backend identity and manifest identify implementation commit
-      `2995026374e5b033619baab71f0889c7a0db716e` and UTC build time
-      `2026-07-15T17:28:10.5286323Z`.
+      `6834a6d81d4a3129fba4b6f827a7bf464d8af6b0` and UTC build time
+      `2026-07-15T17:46:06.1745511Z`.
 - [x] CycloneDX SBOM, license report, and unsigned provenance are published and
       remotely digest verified with the deployment bundles and Scout Bee executable.
 - [ ] Release artifacts and provenance are signed with the approved release identity.
@@ -27,9 +27,10 @@
       high-severity vulnerabilities.
 - [x] The release-scope threat model and OWASP ASVS 5.0.0 chapter map document
       implemented, partial, and non-applicable controls without claiming certification.
-- [ ] The public MVP verification workflow passes for the exact release revision,
-      including the secret scan and Compose image builds; container vulnerability
-      scanning remains to be configured with a reviewed, immutable scanner supply chain.
+- [x] Public MVP verification run `29437744204` passes for the exact product-source
+      revision, including the secret scan and clean Compose image builds.
+- [ ] Container vulnerability scanning remains to be configured with a reviewed,
+      immutable scanner supply chain.
 - [ ] Manual keyboard, screen-reader, 200% zoom, and security review evidence has no
       open critical/high findings.
 - [x] Seven required Lucidchart pages have accessible PNG exports and are cataloged.

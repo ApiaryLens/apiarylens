@@ -3,8 +3,8 @@
   "product": "ApiaryLens",
   "productVersion": "0.1.0-rc.1",
   "channel": "release-candidate",
-  "sourceCommit": "2995026374e5b033619baab71f0889c7a0db716e",
-  "buildTime": "2026-07-15T17:28:10.5286323Z",
+  "sourceCommit": "6834a6d81d4a3129fba4b6f827a7bf464d8af6b0",
+  "buildTime": "2026-07-15T17:46:06.1745511Z",
   "contracts": {
     "api": "1.0",
     "sync": 1,
@@ -16,20 +16,20 @@
   "profiles": ["cloudflare", "compose"],
   "artifacts": [
     {
-      "name": "apiarylens-0.1.0-rc.1-cloudflare-2964b0bc2ef0.tar.gz",
+      "name": "apiarylens-0.1.0-rc.1-cloudflare-39ab04036b38.tar.gz",
       "kind": "deployment-bundle",
       "target": "cloudflare",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-0.1.0-rc.1-cloudflare-2964b0bc2ef0.tar.gz",
-      "sha256": "2964b0bc2ef00324e184eaa7ecbbf7c1c5bbb69e0dfc488962f396edb0aeda53",
-      "bytes": 605979
+      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-0.1.0-rc.1-cloudflare-39ab04036b38.tar.gz",
+      "sha256": "39ab04036b38c626ab60ab919ab52bb88e1f9c1602e46b77479f56642daa69c2",
+      "bytes": 605981
     },
     {
-      "name": "apiarylens-0.1.0-rc.1-compose-523d8bccccdb.tar.gz",
+      "name": "apiarylens-0.1.0-rc.1-compose-5fca10e7a608.tar.gz",
       "kind": "deployment-bundle",
       "target": "compose",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-0.1.0-rc.1-compose-523d8bccccdb.tar.gz",
-      "sha256": "523d8bccccdb3ebd51d480824d357e67f7972e78eece5b0f27faa0cd35144de2",
-      "bytes": 103905
+      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-0.1.0-rc.1-compose-5fca10e7a608.tar.gz",
+      "sha256": "5fca10e7a608e9e9c82d4e9d7a81707bd7070804c56c2047dca4ed041a73a942",
+      "bytes": 103919
     },
     {
       "name": "apiarylens-scout-bee-0.1.0-rc.1-windows-amd64.exe",
