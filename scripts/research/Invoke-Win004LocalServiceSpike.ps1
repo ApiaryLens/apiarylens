@@ -15,6 +15,7 @@ if (-not $outputPath.StartsWith($runnerTemp, [System.StringComparison]::OrdinalI
 New-Item -ItemType Directory -Force -Path $outputPath | Out-Null
 
 $fixture = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'win004-local-service-fixture.mjs')).Path
+$orphanParentFixture = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'win004-orphan-parent-fixture.ps1')).Path
 $node = (Get-Command node.exe -ErrorAction Stop).Source
 $lab = Join-Path $runnerTemp 'win004-local-service-lab'
 $dataDirectory = Join-Path $lab 'per-user-data'
@@ -136,11 +137,67 @@ $recordsBody = $records.Content | ConvertFrom-Json
 $recordSurvived = $null -ne ($recordsBody.records | Where-Object id -eq $recordId)
 if (-not $recordSurvived) { throw 'SQLite record did not survive forced service restart' }
 
+$httpClient = [System.Net.Http.HttpClient]::new()
+$concurrentRequests = [System.Collections.Generic.List[System.Net.Http.HttpRequestMessage]]::new()
+$concurrentTasks = [System.Collections.Generic.List[System.Threading.Tasks.Task[System.Net.Http.HttpResponseMessage]]]::new()
+foreach ($index in 1..8) {
+    $request = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Get, "http://127.0.0.1:$($ready2.port)/health")
+    $request.Headers.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $token2)
+    $request.Headers.Add('Origin', $allowedOrigin)
+    $concurrentRequests.Add($request)
+    $concurrentTasks.Add($httpClient.SendAsync($request))
+}
+[System.Threading.Tasks.Task]::WaitAll([System.Threading.Tasks.Task[]] $concurrentTasks.ToArray())
+$concurrentStatuses = @($concurrentTasks | ForEach-Object { [int] $_.Result.StatusCode })
+$concurrentClientsPassed = @($concurrentStatuses | Where-Object { $_ -ne 200 }).Count -eq 0
+$concurrentRequests | ForEach-Object Dispose
+$concurrentTasks | ForEach-Object { $_.Result.Dispose() }
+$httpClient.Dispose()
+if (-not $concurrentClientsPassed) { throw 'Concurrent authorized clients did not all receive healthy responses' }
+
 $shutdown = Invoke-ServiceRequest -Port $ready2.port -Path '/shutdown' -Token $token2 -Method POST
 if ($shutdown.StatusCode -ne 202 -or -not $service2.WaitForExit(10000) -or $service2.ExitCode -ne 0) {
     Stop-Process -Id $service2.Id -Force -ErrorAction SilentlyContinue
     throw 'Authenticated graceful shutdown failed'
 }
+
+$orphanToken = New-ControlToken
+$orphanData = Join-Path $lab 'orphan-data'
+$orphanReady = Join-Path $lab 'orphan-ready.json'
+$orphanChildPidFile = Join-Path $lab 'orphan-child.pid'
+New-Item -ItemType Directory -Force -Path $orphanData | Out-Null
+$env:APIARYLENS_CONTROL_TOKEN = $orphanToken
+$env:APIARYLENS_ALLOWED_ORIGIN = $allowedOrigin
+$env:APIARYLENS_DATA_DIRECTORY = $orphanData
+$env:APIARYLENS_READY_FILE = $orphanReady
+$env:APIARYLENS_INSTANCE_NAME = "${instanceName}-orphan"
+$env:WIN004_NODE_PATH = $node
+$env:WIN004_FIXTURE_PATH = $fixture
+$env:WIN004_CHILD_PID_FILE = $orphanChildPidFile
+try {
+    $orphanParent = Start-Process -FilePath (Get-Command pwsh.exe -ErrorAction Stop).Source -ArgumentList @('-NoProfile', '-File', $orphanParentFixture) -PassThru -WindowStyle Hidden
+} finally {
+    Remove-Item Env:APIARYLENS_CONTROL_TOKEN, Env:APIARYLENS_ALLOWED_ORIGIN, Env:APIARYLENS_DATA_DIRECTORY, Env:APIARYLENS_READY_FILE, Env:APIARYLENS_INSTANCE_NAME, Env:WIN004_NODE_PATH, Env:WIN004_FIXTURE_PATH, Env:WIN004_CHILD_PID_FILE -ErrorAction SilentlyContinue
+}
+if (-not $orphanParent.WaitForExit(10000) -or $orphanParent.ExitCode -ne 0) {
+    Stop-Process -Id $orphanParent.Id -Force -ErrorAction SilentlyContinue
+    throw 'Orphan-parent fixture did not start its child successfully'
+}
+$orphanChildPid = [int] (Get-Content -Raw -LiteralPath $orphanChildPidFile)
+$orphanExited = $false
+foreach ($attempt in 1..60) {
+    if (-not (Get-Process -Id $orphanChildPid -ErrorAction SilentlyContinue)) {
+        $orphanExited = $true
+        break
+    }
+    Start-Sleep -Milliseconds 250
+}
+if (-not $orphanExited) {
+    Stop-Process -Id $orphanChildPid -Force -ErrorAction SilentlyContinue
+    throw 'Service did not exit when its supervising parent disappeared'
+}
+$orphanReadyRemoved = -not (Test-Path -LiteralPath $orphanReady)
+$firewallRuleCount = @(Get-NetFirewallRule -ErrorAction SilentlyContinue | Where-Object DisplayName -like "*$instanceName*").Count
 
 $databasePath = Join-Path $dataDirectory 'apiarylens-research.sqlite3'
 $databaseExists = Test-Path -LiteralPath $databasePath
@@ -149,7 +206,7 @@ $logFiles = @(Get-ChildItem -LiteralPath $outputPath -File)
 $leakedSecret = $false
 foreach ($logFile in $logFiles) {
     $content = Get-Content -Raw -LiteralPath $logFile.FullName -ErrorAction SilentlyContinue
-    if ($content -and ($content.Contains($token1) -or $content.Contains($token2) -or $content.Contains($duplicateToken))) {
+    if ($content -and ($content.Contains($token1) -or $content.Contains($token2) -or $content.Contains($duplicateToken) -or $content.Contains($orphanToken))) {
         $leakedSecret = $true
     }
 }
@@ -174,15 +231,19 @@ $result = [ordered]@{
     forcedCrashExitCode = $service1.ExitCode
     recordSurvivedForcedRestart = $recordSurvived
     restartedWithDifferentPort = $ready1.port -ne $ready2.port
+    concurrentAuthorizedClientCount = $concurrentStatuses.Count
+    concurrentAuthorizedClientsPassed = $concurrentClientsPassed
     gracefulShutdownExitCode = $service2.ExitCode
     readyFileRemovedOnGracefulShutdown = $readyRemoved
+    childExitedAfterParentDeath = $orphanExited
+    orphanReadyFileRemoved = $orphanReadyRemoved
+    matchingFirewallRuleCount = $firewallRuleCount
     databaseExistsAfterShutdown = $databaseExists
     secretFoundInEvidence = $leakedSecret
     dataDirectory = 'runner-temporary per-user research directory'
     limitations = @(
         'Hosted Windows Server runner rather than a retail Windows profile',
         'Research fixture rather than the ApiaryLens production server',
-        'Parent-death orphan cleanup and multi-window concurrency require separate evidence',
         'Credential Manager storage and host-to-renderer secret transfer were not exercised'
     )
 }
