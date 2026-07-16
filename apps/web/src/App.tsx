@@ -51,7 +51,24 @@ export function App() {
   );
 
   useEffect(() => {
-    const online = () => setOffline(false);
+    const online = () => {
+      setOffline(false);
+      void (async () => {
+        try {
+          const active = await api.session();
+          await cacheSession(active);
+          setSession(active);
+          await synchronize(active.organization.id, active.csrfToken);
+          setNotice('Reconnected and synchronized.');
+        } catch (error) {
+          setNotice(
+            error instanceof Error
+              ? `Reconnected, but synchronization failed: ${error.message}`
+              : 'Reconnected, but synchronization failed. Tap Sync now to retry.',
+          );
+        }
+      })();
+    };
     const offlineHandler = () => setOffline(true);
     window.addEventListener('online', online);
     window.addEventListener('offline', offlineHandler);
