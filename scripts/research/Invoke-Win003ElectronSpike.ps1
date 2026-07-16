@@ -127,9 +127,9 @@ Set-Content -LiteralPath (Join-Path $labPath 'main.cjs') -Value $main -Encoding 
 
 Push-Location $labPath
 try {
-    pnpm install --frozen-lockfile=false
+    npm install --no-audit --no-fund
     if ($LASTEXITCODE -ne 0) { throw "Electron lab dependency install failed with exit code $LASTEXITCODE" }
-    pnpm exec electron-forge make --arch=x64
+    npx --no-install electron-forge make --arch=x64
     if ($LASTEXITCODE -ne 0) { throw "Electron Forge make failed with exit code $LASTEXITCODE" }
 } finally {
     Pop-Location
@@ -210,7 +210,7 @@ $measurement = [ordered]@{
     runnerImageVersion = $env:ImageVersion
     electronVersion = $probeResult.electron
     bundledNodeVersion = $probeResult.node
-    electronForgeVersion = (& pnpm --dir $labPath exec electron-forge --version)
+    electronForgeVersion = (Get-Content -Raw -LiteralPath (Join-Path $labPath 'node_modules/@electron-forge/cli/package.json') | ConvertFrom-Json).version
     webBundleBytes = (Get-ChildItem -LiteralPath (Join-Path $labPath 'web') -Recurse -File | Measure-Object Length -Sum).Sum
     packageDirectoryBytes = ($packageFiles | Measure-Object Length -Sum).Sum
     packageFileCount = $packageFiles.Count
@@ -237,6 +237,6 @@ $measurement | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $ou
 Copy-Item -LiteralPath $installer.FullName -Destination (Join-Path $outputPath 'electron-research-setup.exe')
 Copy-Item -LiteralPath $nupkg.FullName -Destination (Join-Path $outputPath $nupkg.Name)
 Copy-Item -LiteralPath $releases -Destination (Join-Path $outputPath 'RELEASES')
-Copy-Item -LiteralPath (Join-Path $labPath 'pnpm-lock.yaml') -Destination (Join-Path $outputPath 'pnpm-lock.yaml')
+Copy-Item -LiteralPath (Join-Path $labPath 'package-lock.json') -Destination (Join-Path $outputPath 'package-lock.json')
 
 $measurement | ConvertTo-Json -Depth 8
