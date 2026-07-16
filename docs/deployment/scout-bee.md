@@ -1,100 +1,308 @@
-# Scout Bee Deployment Design
+# Scout Bee Installer and Lifecycle Design
 
-## Purpose
+## Status and authority
 
-Scout Bee is ApiaryLens's guided deployment and update application. Its default
-language is for beekeepers; its exported plan and logs are precise enough for an
-operator or CI system.
+This is the detailed design baseline for the post-Preview Scout Bee product. The
+repository split is accepted by [ADR 0014](../adr/0014-scout-bee-separate-repository-and-release.md).
+The executor security boundary in [ADR 0011](../adr/0011-scout-bee-and-deployment-execution.md)
+still applies. Product implementation and repository migration remain unauthorized
+until the project owner approves the project plan and tracking dashboard.
 
-![Deployment profiles](../../assets/graphics/architecture/deployment-profiles.png)
+Scout Bee is not an ApiaryLens product client. It is the separately installed and
+released lifecycle application for acquiring, installing, updating, repairing,
+diagnosing, backing up, restoring, rolling back, and removing ApiaryLens clients
+and deployments.
 
-## Components
+## Required outcomes
+
+- A family Windows user can install Scout and manage ApiaryLens without installing
+  Go, Node, WSL, Docker, or a Linux shell.
+- Windows Scout can manage the local Windows client, Cloudflare, or a remote Linux
+  target over SSH. The target may be a Hyper-V VM, home server, mini-PC, or cloud
+  VM; the user is not expected to type Linux commands.
+- Linux users receive a versioned archive containing one executable and a concise
+  README.
+- Scout and ApiaryLens use independent semantic versions and release channels with
+  explicit compatibility metadata.
+- Stable is the default channel. Preview and RC channels require an explicit
+  advanced opt-in with a warning and a reversible channel-change path.
+- Source clones and GitHub source ZIPs are contributor workflows, never the normal
+  family installation path.
+- The core repository publishes immutable product artifacts and automation inputs;
+  it never deploys a personal environment.
+
+## Repository and release ownership
+
+`ApiaryLens/scout-bee` owns:
+
+- the embedded React guide;
+- the local executor and loopback API;
+- Windows and Linux packaging;
+- target adapters and prerequisite checks;
+- lifecycle state machines, recovery, redacted diagnostics, and plan export;
+- Scout signing, SBOM, provenance, checksums, release notes, and self-update; and
+- cross-version compatibility tests against published ApiaryLens manifests.
+
+`ApiaryLens/apiarylens` remains authoritative for:
+
+- API, sync, export, connection-profile, and deployment-plan contracts;
+- database migrations and compatibility declarations;
+- backend, web, Windows/client, Compose, and Cloudflare product artifacts;
+- product release manifests, checksums, SBOMs, attestations, and provenance; and
+- portable templates and versioned user/operator/developer documentation.
+
+`my-apiarylens` and similar personal repositories may store secret-free plans,
+artifact locks, verification records, and CI instructions. They do not receive a
+copy of product source or deployment credentials.
+
+## Packaged application architecture
 
 | Component | Responsibility |
 |---|---|
-| React UI | Questions, recommendation, cost/ownership explanation, progress, recovery, and diagnostics |
-| Go executor | Loopback API, preflight, safe process/SSH execution, target adapters, and structured logs |
-| Plan schema | Versioned, secret-free declaration of target, release, resource references, storage, networking, backup, and requested operations |
-| Release bundle | Pinned Compose/Worker artifacts, migrations, checksums, SBOM, provenance, and release manifest |
+| Embedded guide | Family-language questions, recommendations, cost/ownership explanation, confirmation, progress, recovery, and diagnostics |
+| Local executor | Loopback API, plan validation, release verification, process/SSH execution, target adapters, operation journal, and redacted logs |
+| Release resolver | Channel discovery, compatibility selection, immutable manifest acquisition, verification, and cache management |
+| Plan engine | Generates and validates the versioned secret-free `apiarylens-deployment.json` contract |
+| Lifecycle engine | Install, update, repair, backup, restore, rollback, uninstall, resume, and health verification state machines |
+| Adapter boundary | Local Windows, Cloudflare, remote Compose over SSH, and advanced export implementations |
+| Exporter | Plan, artifact lock, verification record, redacted summary, and provider-neutral CI instructions |
 
-The executor binds only to loopback on a random port and requires a random launch
-token passed to the UI through a URL fragment. It rejects remote binding. Browser
-responses use restrictive CSP, no external assets, and no telemetry.
+The packaged executable serves the embedded UI on a random loopback port. It binds
+only to loopback and requires a per-launch random authorization value delivered in
+the URL fragment. The value remains in memory, is never logged, and is required on
+every mutating request. Responses use a restrictive CSP and bundled assets. Scout
+has no telemetry or external analytics.
 
-## Guided Flow
+The browser-facing process never assembles shell strings. It submits typed actions
+to the executor. The executor uses allow-listed commands, argument arrays, bounded
+timeouts, cancellation, output limits, and structured redaction.
 
-1. Choose Family Cloud, My Own Hardware, Cloud VM, or Advanced Plan.
-2. Explain availability, ownership, expected cost, account/tool prerequisites,
-   backup responsibility, and portability.
-3. Gather non-secret configuration and request secret values only when applying.
-4. Validate a deployment plan and show the exact intended actions.
-5. Run preflight without changing the target.
-6. Apply only after explicit confirmation.
-7. Verify health, product/contracts, authentication bootstrap state, storage, and
-   backup readiness.
-8. Save a redacted result and next-step instructions.
+## Local data directories
 
-## Remote Compose Adapter
+Windows uses `%LOCALAPPDATA%\ApiaryLens\ScoutBee`; Linux uses the applicable XDG
+data/cache/state directories. The logical layout is:
 
-- Uses OpenSSH argument arrays and host-key verification.
-- Accepts host, port, user, and target directory; credentials are never serialized
-  into the plan.
-- The HTTPS address must use a resolvable hostname with a certificate authority
-  trusted by the operator device. Public Preview does not accept a
-  raw private-IP address as a working HTTPS endpoint because certificate selection
-  requires a server name. Preview users should verify the endpoint and keep a
-  current backup before applying any change.
-- Verifies Linux architecture, Docker Engine, Compose v2, space, time, ports, and
-  release requirements.
-- Transfers an immutable release bundle, verifies checksums, writes restrictive
-  secret files, and applies Compose with a unique project name.
-- Runs migrations once, waits for health, and performs an authenticated smoke test.
-- Creates and verifies a backup before update; failed activation selects compatible
-  rollback or complete restore according to migration reversibility.
+```text
+config/                non-secret preferences and selected channels
+cache/releases/        verified immutable artifacts grouped by product/version
+operations/<id>/       resumable state, checkpoints, and redacted results
+backups/               operator-selected local backups and verification metadata
+diagnostics/           explicitly generated redacted support bundles
+exports/               secret-free plans, locks, verification, and CI instructions
+```
 
-The adapter is provider-neutral. Hyper-V, Azure, AWS, GCP, a home server, and a
-hosted Linux VM differ only in provisioning and connection inputs.
+Temporary storage is used only for download staging and safe extraction. A staged
+artifact becomes cache-eligible only after every verification step passes. Verified
+versions needed by the active install, pending operation, and supported rollback
+window are retained. Cache cleanup is explicit and cannot remove the only rollback
+artifact for an unfinished operation.
 
-The exact Azure, AWS, and GCP prerequisites and compatibility acceptance record are
-maintained in [Cloud VM Docker Compose](cloud-vm-compose.md).
+Secrets, passwords, session cookies, provider tokens, SSH private keys, and recovery
+codes never enter these directories. Scout requests them only when required and
+keeps them in memory or delegates storage to the operating system or target secret
+store.
 
-## Cloudflare Adapter
+## Release discovery and artifact acquisition
 
-- Uses a user-owned API token with the minimum documented permissions.
-- Lists intended resources before creation and supports safe reuse by exact plan
-  identity.
-- Creates D1/R2 resources only when absent, applies migrations, uploads secrets via
-  the provider secret API, and deploys the pinned Worker/static-assets build.
-- Validates custom domain/TLS when requested and verifies D1/R2 access through the
-  health/readiness endpoint.
-- Shows the exact dated Workers, D1, and R2 free allowances, relevant exclusions and
-  exhaustion behavior, and requires acknowledgement that provider pricing or limits
-  can change before Cloudflare preflight or apply.
-- Supports D1 Time Travel guidance plus a product-level relational/media export.
-- Creates a one-time random maintenance authorization for backup, export, and
-  restore, removes it when the operation ends, and leaves the maintenance routes
-  indistinguishable from a missing endpoint at all other times.
-- Writes a verified ZIP containing identity data, family records, change history,
-  recovery codes, and private media. Restore validates the backup contract, creates
-  a local pre-restore recovery archive, restores allow-listed tables and media,
-  revokes prior sessions, and verifies release health.
-- Installs the user-chosen one-time owner setup code atomically with the first
-  Worker revision. Runtime credentials and local backup paths never enter the
-  deployment plan or diagnostic bundle.
+1. Resolve the configured Scout and product channel. Stable is assumed when no
+   channel is stored.
+2. Fetch the signed release index and exact product manifest from GitHub Releases.
+3. Verify repository/release identity, manifest schema, supported contract ranges,
+   signing/attestation policy, checksum, declared size, and actual size.
+4. Reject floating tags, mutable source archives, unknown artifacts, downgrade
+   attempts outside policy, incompatible plans/schemas, and untrusted manifests.
+5. Download into an operation-specific partial file with bounded retry and resume.
+6. Verify the completed bytes before safe extraction; reject path traversal,
+   links escaping the extraction root, unexpected executables, or size expansion
+   beyond policy.
+7. Atomically promote the verified artifact into the version cache and write a
+   secret-free verification record.
 
-## Plan Safety
+Scout never builds ApiaryLens from a clone during an end-user operation. Contributor
+source builds use separate documented commands and cannot be silently selected by
+the family flow.
 
-The schema rejects unknown properties, relative remote target paths, public HTTP,
-no-auth network profiles, floating release tags, missing checksums, and embedded
-secret-looking fields. Executors use allow-listed actions and never interpolate a
-plan value into a shell command string.
+## Guided plan generation
 
-## MVP Acceptance
+The user chooses one of four outcomes:
 
-- Generate, validate, dry-run, apply, re-run, and export a Cloudflare plan.
-- Generate, validate, dry-run, apply, re-run, update, back up, and restore a Compose
-  plan against the Hyper-V UAT VM.
-- Apply the same Compose plan shape to an existing Azure VM at the first UAT
-  checkpoint when the environment is available.
-- Produce redacted diagnostics and deterministic non-zero failure codes.
-- Provide equivalent operator documentation without Scout Bee.
+1. **Windows standalone** — install/manage the local Windows client and embedded
+   private service.
+2. **Family Cloud** — deploy a connected backend, optionally deploy the web
+   frontend, and connect an existing or newly installed Windows client.
+3. **Own hardware or cloud VM** — manage a compatible Linux target over SSH.
+4. **Advanced export** — validate and export an immutable plan/lock without applying
+   it locally.
+
+Scout explains availability, ownership, likely cost, prerequisites, backup
+responsibility, portability, and what data leaves the computer before requesting
+inputs. It gathers non-secret configuration, validates the plan, previews exact
+actions and destructive consequences, runs a non-mutating preflight, and requires
+explicit confirmation before apply.
+
+The plan schema rejects unknown properties, embedded secret-like fields, floating
+versions, relative remote target paths, public HTTP, no-auth network exposure, and
+unsupported contract combinations. A plan identity is deterministic across
+equivalent non-secret inputs.
+
+## Windows client adapter
+
+The local Windows adapter installs or updates only signed artifacts selected by the
+verified lock. It owns prerequisite remediation, application registration, data
+directory permissions, service/process supervision, local firewall expectations,
+health checks, and uninstall choices.
+
+For standalone installations it verifies a backup before any data-changing update,
+applies migrations once, starts the loopback-only service, verifies data/media
+counts, and activates the client atomically. Keep-data uninstall preserves a clear
+restore/reinstall path; permanent removal requires an explicit destructive choice.
+
+For connected mode Scout imports a secret-free connection profile into the current
+Windows installation. It never writes deployment credentials or a user's remote
+session token into that profile.
+
+## Remote Linux over SSH adapter
+
+- Uses the operating system SSH implementation with argument arrays and strict host
+  key verification.
+- Supports password, agent, key, or platform-approved authentication without
+  serializing credentials into a plan.
+- Verifies architecture, operating system, time, disk, ports, Docker Engine,
+  Compose v2, target permissions, and release requirements.
+- Presents guided Windows prerequisite remediation and target-side actions; users
+  are not sent to a Linux shell to finish a normal supported operation.
+- Transfers the exact verified bundle, verifies it again on the target, creates
+  restrictive secret files through the target secret boundary, runs migrations
+  once, health-checks, and performs an authenticated smoke test.
+- Treats any changed SSH host key as a blocking security event requiring explicit
+  operator reconciliation; it never auto-accepts the replacement.
+
+The adapter remains provider-neutral. Hyper-V, Azure, AWS, GCP, home servers, and
+hosted Linux differ only in provisioning and connection guidance.
+
+## Cloudflare adapter
+
+The adapter uses a user-owned minimum-permission API token held in memory. It lists
+the intended D1, R2, Worker, route, DNS, and secret changes before apply; reuses
+resources only when exact plan identity matches; applies migrations idempotently;
+uploads secrets through the provider API; deploys pinned Worker/static assets; and
+verifies readiness, authenticated access, D1/R2 operation, DNS, and TLS.
+
+Backup and restore use short-lived maintenance authorization. The authorization is
+removed when the operation ends, and maintenance endpoints otherwise behave as
+missing. Pricing/free-allowance statements are dated and linked; Scout never
+promises permanent-free service.
+
+## Lifecycle state machine
+
+Every mutating operation journals these phases:
+
+```text
+Requested → Validated → Preflighted → Confirmed → Acquiring → Verified →
+Backed up → Applying → Migrating → Activating → Health checking → Completed
+```
+
+An operation may move to `Paused`, `Cancelled`, `Recovery required`, `Rolling back`,
+`Restoring`, or `Failed safely`. Resume begins from the last verified idempotent
+checkpoint. A failed health check never reports success. Code rollback is allowed
+only when schema/data compatibility permits it; otherwise Scout restores the
+verified pre-operation backup or leaves the previous installation active.
+
+Update checks run when Scout opens and before lifecycle operations. Scout may also
+check product releases for managed installations. It must explain available
+versions and compatibility before download. Scout self-update uses Scout's own
+signed channel and rollback policy and is never coupled to the selected product
+channel.
+
+## Backup, restore, repair, and uninstall
+
+- Backup includes relational data, private media, release/contract identity,
+  configuration references, and verification metadata but excludes secrets.
+- Restore validates format, version compatibility, available space, and checksums;
+  creates a pre-restore recovery point; restores into staging; verifies counts and
+  media; then activates atomically.
+- Repair compares the installation against the artifact lock, restores missing or
+  corrupted product files, rechecks permissions/prerequisites, and never overwrites
+  user data as a shortcut.
+- Rollback selects only a verified compatible cached version and records why it was
+  chosen.
+- Uninstall distinguishes application removal, keep-data removal, target teardown,
+  and permanent deletion. Provider resources and backups are enumerated before any
+  destructive confirmation.
+
+## Diagnostics, privacy, and support
+
+Logs are structured, bounded, and redacted at creation. Diagnostics include Scout
+and product versions, manifest/lock hashes, operation states, prerequisite results,
+health results, safe environment facts, and recent redacted errors. They exclude
+credentials, cookies, tokens, private keys, secret values, hive records, media, and
+unrequested personal paths. The user previews a bundle before saving or sharing it.
+
+Scout performs no telemetry by default. Network access is limited to the selected
+release source, provider APIs, and deployment target required by the requested
+operation.
+
+## Advanced export and CI/CD handoff
+
+Advanced export produces:
+
+- `apiarylens-deployment.json`;
+- an artifact lock with immutable identities and hashes;
+- a verification record describing the trust policy and checked attestations;
+- provider-neutral environment/secret-name requirements;
+- CI instructions for GitHub Actions, Azure DevOps, or another supported runner;
+  and
+- a redacted human-readable action summary and recovery plan.
+
+The exported automation consumes released artifacts. It does not invoke a deploy
+workflow from the core source repository, copy product source into
+`my-apiarylens`, or persist secret values.
+
+## Failure and negative-test requirements
+
+The released packages must prove safe behavior for interrupted downloads, invalid
+checksums, wrong artifact sizes, untrusted or expired attestations, incompatible
+manifest/plan/schema versions, unsafe archives, missing prerequisites, changed SSH
+host keys, insufficient provider permissions, failed migrations, failed health
+checks, unavailable rollback, corrupt backup, full disk, process termination, and
+network loss during every resumable phase.
+
+Plans, caches, logs, exported bundles, diagnostics, CI repositories, and release
+artifacts must pass credential/secret scanning. Organization-isolation and negative
+authorization tests remain server requirements even when Scout performed the
+deployment.
+
+## Documentation and diagram deliverables
+
+The public guide must cover five-minute Windows/Linux setup, target selection,
+Windows-to-Linux, Cloudflare, install/update/backup/restore/repair/rollback/uninstall,
+plan export, release channels and verification, data/log locations, diagnostics,
+privacy, and troubleshooting. Contributor source-build instructions are linked but
+kept out of the normal installation path.
+
+The authoritative Lucidchart set must show repository/artifact ownership, loopback
+trust, release acquisition and cache, Windows-to-Linux SSH, Cloudflare execution,
+operation/update state machines, backup/recovery, and CI handoff. Accessible exports
+and adjacent explanatory text are required before implementation completion.
+
+## Decisions still requiring research or follow-on ADRs
+
+- Windows package/bootstrap technology and signing service.
+- Final executor language and UI host after clean-profile size, startup,
+  accessibility, supervision, licensing, and update measurements. The current Go
+  prototype is evidence, not permission to require Go on an end-user computer.
+- Operating-system credential-store integrations.
+- Supported SSH authentication methods and prerequisite remediation boundaries.
+- Cache retention/support window and emergency trust-root rotation.
+- Mobile Scout feasibility and secure provider authorization, only after the
+  Windows lifecycle is proven.
+
+## Acceptance gate
+
+Scout's repository transition and update mechanism are not complete until exact
+signed Windows and Linux release artifacts pass fresh install, update, backup,
+restore, repair, rollback, keep-data uninstall, reinstall, diagnostics, and negative
+tests; Windows successfully manages clean Cloudflare and Linux targets without
+typed Linux commands; `my-apiarylens` CI consumes immutable artifacts without copied
+source; all secret scans pass; and sanitized evidence is recorded on the live PMO
+dashboard.

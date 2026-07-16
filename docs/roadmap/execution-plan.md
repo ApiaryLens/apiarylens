@@ -172,19 +172,23 @@ and deployment support rather than treating them as later cleanup.
 
 ## Immediate Work Queue
 
-1. Execute the Windows-first/Scout research program and accept the host, embedded
+1. Complete and obtain project-owner approval of the detailed Windows-first/Scout
+   project plan, HeritageVA-style live dashboard, ADR 0014/0015 direction, and open
+   repository decisions. Product code and repository migration remain unauthorized
+   until that gate closes.
+2. Execute the Windows-first/Scout research program and accept the host, embedded
    service, native authentication, migration, shared-client, and update ADRs before
    framework-dependent implementation.
-2. Create the separate Scout Bee repository and independently versioned release
+3. Create the separate Scout Bee repository and independently versioned release
    pipeline without allowing core workflows to deploy user environments.
-3. Convert the Public Preview owner-feedback backlog into shared-client slices,
+4. Convert the Public Preview owner-feedback backlog into shared-client slices,
    starting with automatic online/reconnect synchronization, installed-client
    offline launch, update notification, member administration, and backup/restore.
-4. Prove pending inspection/media work survives the released PWA/server update and
+5. Prove pending inspection/media work survives the released PWA/server update and
    synchronizes exactly once on the required MVP profiles.
-5. Complete the intelligent-field and queen-identifier terminology discovery before
+6. Complete the intelligent-field and queen-identifier terminology discovery before
    changing stored values or UI controls.
-6. Track AWS, extended physical-device sessions, assistive-technology review, and
+7. Track AWS, extended physical-device sessions, assistive-technology review, and
    formal support operations in the Version 1.1 backlog.
-7. Record project-owner acceptance only after the remaining GA gates close; do not
+8. Record project-owner acceptance only after the remaining GA gates close; do not
    promote Preview 1 directly to stable merely because the preview is available.

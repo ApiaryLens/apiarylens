@@ -155,18 +155,24 @@ This strategic program takes precedence over Phase 2 and later feature expansion
 It makes a packaged Windows client the default family starting point while keeping
 the backend and optional web frontend as the portable connected core.
 
-### Now — research, decisions, and foundations
+### Now — owner approval, research, decisions, and foundations
 
+- Review and approve the detailed project plan, HeritageVA-style live tracker,
+  ADR 0014/0015 direction, and open repository decisions before product code starts
 - Move Scout Bee to a separate public repository, independent version, signing, and
   release channel while the core repository publishes product artifacts only
-- Restructure product client ownership as `apps/web`, `apps/windows`, `apps/ios`,
-  and `apps/android` beside the portable API and Cloudflare Worker
+- Decide through evidence and a follow-on ADR whether the Windows client remains in
+  the product monorepo initially or receives an independent repository; do not
+  scaffold either outcome before the approval and research gates
 - Run measured Windows host, packaging, embedded service, authentication, migration,
   shared UI, update, and Scout orchestration research spikes
 - Accept follow-on ADRs and produce detailed security, UX, lifecycle, and data designs
 - Create authoritative Lucidchart diagrams and accessible exports for standalone,
   connected, migration, update, backup, and repository/artifact flows
 - Continue framework-neutral standalone/connected connection contracts and tests
+- Define Scout's signed portable Windows executable (no Go, Node, WSL, or Linux
+  shell required), Linux single-executable archive, Stable-default channels,
+  verified artifact cache, secret-free plan export, and `my-apiarylens` CI handoff
 
 ### Next — Windows standalone and connected family
 
@@ -176,6 +182,9 @@ the backend and optional web frontend as the portable connected core.
   starting over or losing local records/media
 - Let Scout install/update Windows, deploy backend only or backend plus web to
   Cloudflare or Linux over SSH, and configure a secret-free connection profile
+- Let Scout verify immutable release manifests, checksums, attestations, sizes, and
+  compatibility before install, while retaining verified versions for resume and
+  rollback and updating Scout through its independent channel
 - Implement automatic connected synchronization, native-client authentication,
   migration/conflict/resume/rollback, diagnostics, repair, and safe uninstall
 - Incorporate all Preview owner-feedback fixes into shared client behavior
