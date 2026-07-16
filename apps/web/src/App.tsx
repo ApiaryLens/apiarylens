@@ -370,7 +370,7 @@ function AuthScreen({
           </label>
         )}
         <label>
-          Password
+          {invitationToken ? 'Create your password' : recovering ? 'New password' : 'Password'}
           <input
             name="password"
             required
@@ -380,6 +380,11 @@ function AuthScreen({
               bootstrapAvailable || invitationToken ? 'new-password' : 'current-password'
             }
           />
+          {invitationToken && (
+            <small>
+              Choose a new password for your ApiaryLens account. Use at least 12 characters.
+            </small>
+          )}
         </label>
         <button className="button primary" disabled={working || offline}>
           {working
