@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-07-16T13:23:00Z",
+  "result": "pass",
+  "scope": "Exact public ApiaryLens 0.1.0-rc.4 publication, signing, Cloudflare install, clean Ubuntu Compose install, runtime identity, and disposable-resource cleanup.",
+  "release": {
+    "version": "0.1.0-rc.4",
+    "sourceCommit": "df853cd4204cc9b1a47424460ae895e228d7ebbf",
+    "releaseRevision": "e15a03b3800a8d636615144c36bf24a7b7841497",
+    "buildTime": "2026-07-16T12:24:50.0323563Z",
+    "manifestSha256": "957aa8c399ed7cded53b5a9165d9ef543c871dee1ad0cd0b1b24eab8c2bb4c2e",
+    "cloudflareBundleSha256": "b7e712aed9fe31c21fa3d7b24c5c2b49742b4d61aab662c6b30f2b8256c0bfa1",
+    "composeBundleSha256": "29d6fa128b454a2a54c17f983e2af5630e5f77491f64794695aa3b3d325d3c97",
+    "scoutBeeSha256": "c3e436a3e7d8ab12f44fee7a3897a276ac173c4439ec92d0ec4b83982ab75c2c",
+    "publicVerificationRun": 29499014709,
+    "releaseSigningRun": 29499211922,
+    "orgDeploymentVersion": "aa6367f9-7ecb-46ab-88e9-66e039e9f93d",
+    "allSixPublicSubjectsMatchedManifest": true,
+    "allSixPublicSubjectsIndependentlyAttested": true
+  },
+  "cloudflare": {
+    "exactPublicScoutBee": true,
+    "installPhasesPassed": 14,
+    "releaseIdentityHealthPassed": true,
+    "databaseMigration": "0004",
+    "protectedBootstrapInstalled": true,
+    "disposableWorkerDatabaseAndBucketDeleted": true
+  },
+  "compose": {
+    "exactPublicScoutBee": true,
+    "host": "Disposable Ubuntu 24.04 Azure Linux VM",
+    "targetDirectory": "/opt/apiarylens",
+    "targetCreatedForNormalAdministrator": true,
+    "targetOwnerAndMode": "apiarylens:apiarylens 0700",
+    "installPhasesPassed": 13,
+    "publicHttpsHealthPassed": true,
+    "runtimeVersion": "0.1.0-rc.4",
+    "runtimeSourceCommit": "df853cd4204cc9b1a47424460ae895e228d7ebbf",
+    "databaseMigration": "0004",
+    "apiContainerHealthy": true,
+    "webContainerHealthy": true,
+    "uninstallPhasesPassed": 8,
+    "targetDirectoryRemoved": true,
+    "azureResourceGroupDeleted": true
+  },
+  "closedDefect": "Scout Bee now preflights and safely creates the documented /opt/apiarylens target on a clean Ubuntu host instead of failing on its root-owned /opt parent.",
+  "privacy": {
+    "credentialsPersisted": false,
+    "accountOrSubscriptionIdentifiersPresent": false,
+    "userIdentifiersPresent": false,
+    "temporaryLocalHelpersRemoved": true
+  },
+  "remainingAcceptance": [
+    "Physical iPhone, iPad, and computer offline, relaunch, and synchronization journey",
+    "Separate-device invitation and pending-work-across-update journey",
+    "Manual keyboard, NVDA, VoiceOver, 200 percent zoom, and forced-colors review",
+    "Project-owner product, visual, documentation, and stable-release acceptance"
+  ]
+}
