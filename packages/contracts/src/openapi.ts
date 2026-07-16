@@ -3,6 +3,8 @@ import {
   bootstrapRequestSchema,
   invitationAcceptSchema,
   invitationCreateSchema,
+  recoveryRequestSchema,
+  sessionViewSchema,
   signInRequestSchema,
 } from './auth.js';
 import { apiErrorSchema } from './common.js';
@@ -29,8 +31,16 @@ export function buildOpenApiDocument() {
       { name: 'Ownership' },
     ],
     paths: {
+      '/bootstrap/status': {
+        get: {
+          tags: ['Identity'],
+          summary: 'Check whether first-owner setup is available',
+          security: [],
+          responses: { '200': { description: 'Bootstrap availability' } },
+        },
+      },
       '/bootstrap': {
-        post: operation(
+        post: publicOperation(
           'Identity',
           'Create the first owner and family',
           bootstrapRequestSchema,
@@ -38,26 +48,82 @@ export function buildOpenApiDocument() {
         ),
       },
       '/auth/sign-in': {
-        post: operation('Identity', 'Start a secure browser session', signInRequestSchema, 200),
+        post: publicOperation(
+          'Identity',
+          'Start a secure browser session',
+          signInRequestSchema,
+          200,
+          sessionViewSchema,
+        ),
+      },
+      '/auth/recover': {
+        post: publicOperation(
+          'Identity',
+          'Consume a recovery code and replace the account password',
+          recoveryRequestSchema,
+          204,
+        ),
+      },
+      '/session': {
+        get: {
+          tags: ['Identity'],
+          summary: 'Rotate and read the current authenticated session',
+          responses: {
+            '200': { description: 'Current session', content: json(sessionViewSchema) },
+            '401': { description: 'Authentication required', content: json(apiErrorSchema) },
+          },
+        },
+      },
+      '/auth/sign-out': {
+        post: {
+          tags: ['Identity'],
+          summary: 'Revoke the current session',
+          security: [{ browserSession: [], csrf: [] }],
+          responses: {
+            '204': { description: 'Session revoked' },
+            '401': { description: 'Authentication required', content: json(apiErrorSchema) },
+            '403': { description: 'Request verification failed', content: json(apiErrorSchema) },
+          },
+        },
+      },
+      '/members': {
+        get: {
+          tags: ['Identity'],
+          summary: 'List active members in the current family',
+          responses: {
+            '200': { description: 'Member collection' },
+            '403': { description: 'Permission denied', content: json(apiErrorSchema) },
+          },
+        },
       },
       '/invitations': {
-        post: operation(
-          'Identity',
-          'Create an expiring family invitation',
-          invitationCreateSchema,
-          201,
+        post: csrfOperation(
+          operation(
+            'Identity',
+            'Create an expiring family invitation',
+            invitationCreateSchema,
+            201,
+          ),
         ),
       },
       '/invitations/accept': {
-        post: operation('Identity', 'Accept a family invitation', invitationAcceptSchema, 201),
+        post: publicOperation(
+          'Identity',
+          'Accept a family invitation',
+          invitationAcceptSchema,
+          201,
+          sessionViewSchema,
+        ),
       },
       '/sync/push': {
-        post: operation(
-          'Synchronization',
-          'Apply an ordered idempotent mutation batch',
-          syncPushRequestSchema,
-          200,
-          syncPushResponseSchema,
+        post: csrfOperation(
+          operation(
+            'Synchronization',
+            'Apply an ordered idempotent mutation batch',
+            syncPushRequestSchema,
+            200,
+            syncPushResponseSchema,
+          ),
         ),
       },
       '/sync/pull': {
@@ -85,10 +151,27 @@ export function buildOpenApiDocument() {
           responses: { '200': { description: 'Resource collection' } },
         },
       },
+      '/resources/{type}/{id}': {
+        get: {
+          tags: ['Resources'],
+          summary: 'Read one active organization-scoped record',
+          parameters: [
+            { name: 'type', in: 'path', required: true, schema: { type: 'string' } },
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          ],
+          responses: {
+            '200': { description: 'Resource record' },
+            '404': { description: 'Resource not found' },
+          },
+        },
+      },
       '/media/{id}/content': {
         get: mediaOperation('Download authorized original image'),
-        put: mediaOperation('Upload and integrity-check original image'),
-        delete: mediaOperation('Delete private image content'),
+        put: mediaOperation('Upload and integrity-check original image', true),
+        delete: mediaOperation('Delete private image content', true),
+      },
+      '/media/{id}/thumbnail': {
+        put: mediaOperation('Upload an authorized JPEG thumbnail', true),
       },
       '/export/full': {
         get: {
@@ -119,6 +202,20 @@ export function buildOpenApiDocument() {
   };
 }
 
+function publicOperation(
+  tag: string,
+  summary: string,
+  request: z.ZodType,
+  success: number,
+  response?: z.ZodType,
+) {
+  return { ...operation(tag, summary, request, success, response), security: [] };
+}
+
+function csrfOperation<T extends Record<string, unknown>>(value: T) {
+  return { ...value, security: [{ browserSession: [], csrf: [] }] };
+}
+
 function operation(
   tag: string,
   summary: string,
@@ -142,7 +239,7 @@ function operation(
   };
 }
 
-function mediaOperation(summary: string) {
+function mediaOperation(summary: string, csrf = false) {
   return {
     tags: ['Media'],
     summary,
@@ -153,5 +250,6 @@ function mediaOperation(summary: string) {
       '200': { description: 'Success' },
       '404': { description: 'Media not found' },
     },
+    ...(csrf ? { security: [{ browserSession: [], csrf: [] }] } : {}),
   };
 }

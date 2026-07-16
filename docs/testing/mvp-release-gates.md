@@ -80,6 +80,9 @@
 - [ ] Exercise backup, restore, predecessor update, interrupted update/resume,
       compatible rollback, keep-data uninstall, and recovery.
 - [ ] Verify organization isolation and negative authorization on every scoped route.
+      Engineering review and both implementation suites pass as recorded in
+      [`authorization-and-exposure-audit-2026-07-16.md`](authorization-and-exposure-audit-2026-07-16.md);
+      repeat the smoke checks after the next immutable candidate is deployed.
 - [ ] Verify offline draft, media staging, synchronization, and conflict behavior on
       iPhone, iPad, and computers.
 

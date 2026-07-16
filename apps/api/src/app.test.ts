@@ -35,6 +35,7 @@ describe('ApiaryLens API', () => {
       recoveryCodes: string[];
       user: { id: string };
       organization: { id: string };
+      membership: { id: string };
     };
     const cookie = response.headers.get('set-cookie')?.split(';')[0];
     if (!cookie) throw new Error('Session cookie missing');
@@ -241,6 +242,53 @@ describe('ApiaryLens API', () => {
     expect((await app.request(`/api/v1/media/${otherMediaId}/content`, { headers })).status).toBe(
       404,
     );
+    for (const [method, path, body] of [
+      ['PUT', `/api/v1/media/${otherMediaId}/content`, foreignBytes],
+      ['PUT', `/api/v1/media/${otherMediaId}/thumbnail`, foreignBytes],
+      ['DELETE', `/api/v1/media/${otherMediaId}/content`, undefined],
+    ] as const) {
+      expect(
+        (
+          await app.request(path, {
+            method,
+            headers: {
+              ...headers,
+              'content-type': 'image/jpeg',
+              'x-csrf-token': owner.body.csrfToken,
+            },
+            ...(body ? { body } : {}),
+          })
+        ).status,
+      ).toBe(404);
+    }
+    expect(await mediaStore.get(otherOrganizationId, otherMediaId)).toEqual(foreignBytes);
+    const crossFamilyUpdate = await app.request('/api/v1/sync/push', {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'content-type': 'application/json',
+        'x-csrf-token': owner.body.csrfToken,
+      },
+      body: JSON.stringify({
+        syncContractVersion: 1,
+        operations: [
+          {
+            operationId: randomUUID(),
+            clientId: randomUUID(),
+            entityType: 'apiary',
+            entityId: otherApiaryId,
+            action: 'update',
+            baseVersion: 1,
+            payload: { name: 'Unauthorized change' },
+            queuedAt: timestamp,
+          },
+        ],
+      }),
+    });
+    expect((await crossFamilyUpdate.json()).results[0].status).toBe('conflict');
+    expect(store.getResource(otherOrganizationId, 'apiary', otherApiaryId)?.name).toBe(
+      'Private other apiary',
+    );
     const members = await app.request('/api/v1/members', { headers });
     expect((await members.json()).items).toHaveLength(1);
 
@@ -280,6 +328,18 @@ describe('ApiaryLens API', () => {
       password_hash: string;
     };
     expect(upgraded.password_hash).toMatch(/^pbkdf2-sha256-v2\$/);
+  });
+
+  it('rejects an existing session after its membership is revoked', async () => {
+    const owner = await bootstrap();
+    store.database
+      .prepare("UPDATE memberships SET status = 'revoked' WHERE id = ?")
+      .run(owner.body.membership.id);
+
+    const response = await app.request('/api/v1/session', {
+      headers: { cookie: owner.cookie },
+    });
+    expect(response.status).toBe(401);
   });
 
   it('rotates the opaque session identifier when refreshing a session', async () => {

@@ -485,6 +485,20 @@ app.get('/api/v1/resources/:type', requireSession, async (c) => {
   return c.json({ items: response.results.map((row) => JSON.parse(row.value_json)) });
 });
 
+app.get('/api/v1/resources/:type/:id', requireSession, async (c) => {
+  const type = resourceTypeSchema.safeParse(c.req.param('type'));
+  if (!type.success) return apiError(c, 404, 'resource_type_unknown', 'Unknown resource type');
+  const item = await resource(
+    c.env.DB,
+    c.get('session').organizationId,
+    type.data,
+    c.req.param('id'),
+  );
+  return item && !item.deletedAt
+    ? c.json(item)
+    : apiError(c, 404, 'resource_not_found', 'The record was not found');
+});
+
 app.put('/api/v1/media/:id/content', requireSession, requireCsrf, async (c) => {
   if (!rolePermissions[c.get('session').role].includes('media:write'))
     return apiError(c, 403, 'permission_denied', 'You do not have permission for this action');
@@ -556,6 +570,8 @@ app.put('/api/v1/media/:id/thumbnail', requireSession, requireCsrf, async (c) =>
 });
 
 app.get('/api/v1/media/:id/content', requireSession, async (c) => {
+  if (!rolePermissions[c.get('session').role].includes('media:read'))
+    return apiError(c, 403, 'permission_denied', 'You do not have permission for this action');
   const metadata = await resource(
     c.env.DB,
     c.get('session').organizationId,

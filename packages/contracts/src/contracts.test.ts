@@ -1,9 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { deploymentPlanSchema, rolePermissions, syncPushRequestSchema } from './index.js';
+import {
+  buildOpenApiDocument,
+  deploymentPlanSchema,
+  rolePermissions,
+  syncPushRequestSchema,
+} from './index.js';
 
 describe('contracts', () => {
   it('does not grant write capabilities to viewers', () => {
     expect(rolePermissions.viewer.every((permission) => !permission.endsWith(':write'))).toBe(true);
+  });
+
+  it('publishes the implemented identity, resource, and media route security contract', () => {
+    const document = buildOpenApiDocument();
+    expect(Object.keys(document.paths)).toEqual(
+      expect.arrayContaining([
+        '/bootstrap/status',
+        '/auth/recover',
+        '/session',
+        '/auth/sign-out',
+        '/members',
+        '/resources/{type}/{id}',
+        '/media/{id}/thumbnail',
+      ]),
+    );
+    expect(document.paths['/bootstrap'].post.security).toEqual([]);
+    expect(document.paths['/auth/sign-in'].post.security).toEqual([]);
+    expect(document.paths['/sync/push'].post.security).toEqual([{ browserSession: [], csrf: [] }]);
   });
 
   it('rejects plaintext Compose URLs', () => {
