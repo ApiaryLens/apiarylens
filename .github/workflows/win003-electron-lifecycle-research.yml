@@ -1,0 +1,47 @@
+name: WIN-003 Electron lifecycle replay
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Workflow run containing win003-electron-installer-evidence
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  clean-install-lifecycle:
+    name: Replay Electron clean install and uninstall
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out current research automation
+        uses: actions/checkout@v5
+
+      - name: Download exact Electron artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: win003-electron-installer-evidence
+          path: ${{ runner.temp }}/win003-electron-input
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.source_run_id }}
+
+      - name: Run clean-profile Electron lifecycle probe
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003ElectronInstallProbe.ps1
+          -EvidenceDirectory "$env:RUNNER_TEMP/win003-electron-input"
+          -OutputDirectory "$env:RUNNER_TEMP/win003-electron-lifecycle"
+
+      - name: Upload Electron lifecycle evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: win003-electron-clean-install-evidence
+          path: ${{ runner.temp }}/win003-electron-lifecycle
+          if-no-files-found: warn
+          retention-days: 14

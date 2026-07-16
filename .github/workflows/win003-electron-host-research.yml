@@ -70,10 +70,10 @@ jobs:
           -OutputDirectory "$env:RUNNER_TEMP/win003-electron-lifecycle"
 
       - name: Upload Electron lifecycle evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: win003-electron-clean-install-evidence
           path: ${{ runner.temp }}/win003-electron-lifecycle
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
-

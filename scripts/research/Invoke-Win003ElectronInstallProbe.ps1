@@ -74,20 +74,47 @@ $installDirectory = if (Test-Path -LiteralPath $expectedInstallDirectory) {
 Get-Process -Name 'ApiaryLensElectronResearch' -ErrorAction SilentlyContinue |
     Where-Object { $_.Path -and $_.Path.StartsWith($installDirectory, [System.StringComparison]::OrdinalIgnoreCase) } |
     Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 500
 
-$installedHost = Get-ChildItem -LiteralPath $installDirectory -Recurse -Filter 'ApiaryLensElectronResearch.exe' | Select-Object -First 1
+$appDirectory = Get-ChildItem -LiteralPath $installDirectory -Directory -Filter 'app-*' |
+    Sort-Object Name -Descending |
+    Select-Object -First 1
+$installedHost = if ($appDirectory) {
+    Get-ChildItem -LiteralPath $appDirectory.FullName -Filter 'ApiaryLensElectronResearch.exe' |
+        Select-Object -First 1
+} else { $null }
 $updateExecutable = Join-Path $installDirectory 'Update.exe'
 if (-not $installedHost -or -not (Test-Path -LiteralPath $updateExecutable)) {
     throw 'Electron installed host or Squirrel Update.exe was not found'
 }
 
 $probePath = Join-Path $runnerTemp 'win003-electron-installed-probe.json'
-$probe = Start-Process -FilePath $installedHost.FullName -ArgumentList @('--win003-probe-output', "`"$probePath`"") -PassThru -WindowStyle Hidden
+$probeStdout = Join-Path $outputPath 'installed-probe.stdout.log'
+$probeStderr = Join-Path $outputPath 'installed-probe.stderr.log'
+$probeArguments = "--win003-probe-output `"$probePath`""
+$probe = Start-Process -FilePath $installedHost.FullName -ArgumentList $probeArguments -WorkingDirectory $appDirectory.FullName -PassThru -WindowStyle Hidden -RedirectStandardOutput $probeStdout -RedirectStandardError $probeStderr
 if (-not $probe.WaitForExit(15000)) {
     Stop-Process -Id $probe.Id -Force -ErrorAction SilentlyContinue
     throw 'Installed Electron sqlite probe exceeded 15 seconds'
 }
-if ($probe.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $probePath)) { throw 'Installed Electron sqlite probe failed' }
+$probeSucceeded = $probe.ExitCode -eq 0 -and (Test-Path -LiteralPath $probePath)
+if (-not $probeSucceeded) {
+    $diagnostic = [ordered]@{
+        measuredAtUtc = [DateTimeOffset]::UtcNow.ToString('o')
+        installedHost = $installedHost.FullName
+        appDirectory = $appDirectory.FullName
+        arguments = $probeArguments
+        exitCode = $probe.ExitCode
+        probeFileExists = Test-Path -LiteralPath $probePath
+        stdout = if (Test-Path -LiteralPath $probeStdout) { Get-Content -Raw -LiteralPath $probeStdout } else { $null }
+        stderr = if (Test-Path -LiteralPath $probeStderr) { Get-Content -Raw -LiteralPath $probeStderr } else { $null }
+        installedFiles = @(Get-ChildItem -LiteralPath $installDirectory -Recurse -File | ForEach-Object {
+            $_.FullName.Substring($installDirectory.Length).TrimStart('\\')
+        })
+    }
+    $diagnostic | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $outputPath 'probe-failure.json') -Encoding utf8NoBOM
+    throw "Installed Electron sqlite probe failed (exit $($probe.ExitCode), output file: $(Test-Path -LiteralPath $probePath))"
+}
 $probeResult = Get-Content -Raw -LiteralPath $probePath | ConvertFrom-Json
 if ($probeResult.sqlite -ne 'electron-node-sqlite-ok') { throw 'Installed Electron node:sqlite probe returned the wrong result' }
 
