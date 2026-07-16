@@ -172,15 +172,19 @@ and deployment support rather than treating them as later cleanup.
 
 ## Immediate Work Queue
 
-1. Convert the Public Preview owner-feedback backlog into scoped implementation
-   slices, starting with automatic online/reconnect synchronization, installed-PWA
-   offline-launch regression coverage, update notification, member administration,
-   and backup/restore discoverability.
-2. Prove pending inspection/media work survives the released PWA/server update and
+1. Execute the Windows-first/Scout research program and accept the host, embedded
+   service, native authentication, migration, shared-client, and update ADRs before
+   framework-dependent implementation.
+2. Create the separate Scout Bee repository and independently versioned release
+   pipeline without allowing core workflows to deploy user environments.
+3. Convert the Public Preview owner-feedback backlog into shared-client slices,
+   starting with automatic online/reconnect synchronization, installed-client
+   offline launch, update notification, member administration, and backup/restore.
+4. Prove pending inspection/media work survives the released PWA/server update and
    synchronizes exactly once on the required MVP profiles.
-3. Complete the intelligent-field and queen-identifier terminology discovery before
+5. Complete the intelligent-field and queen-identifier terminology discovery before
    changing stored values or UI controls.
-4. Track AWS, extended physical-device sessions, assistive-technology review, and
+6. Track AWS, extended physical-device sessions, assistive-technology review, and
    formal support operations in the Version 1.1 backlog.
-5. Record project-owner acceptance only after the remaining GA gates close; do not
+7. Record project-owner acceptance only after the remaining GA gates close; do not
    promote Preview 1 directly to stable merely because the preview is available.

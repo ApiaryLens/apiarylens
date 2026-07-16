@@ -57,7 +57,8 @@ experience heavier.
 - Secret, dependency, static-analysis, and container scanning
 - Release SBOM, checksums, signing, and provenance
 - One semantic product release version, exact build identity, and machine-readable
-  release manifest across PWA, API, backend profiles, Scout Bee, and documentation
+  release manifest across product clients, API, backend profiles, and documentation;
+  Scout Bee moves to its own compatible release lifecycle under ADR 0014
 - Independently versioned API, synchronization, migration, deployment-plan, and
   portable-export contracts with a published compatibility policy
 - Organizations
@@ -106,8 +107,8 @@ core accepted for the MVP release.
 
 - AWS EC2 Compose compatibility evidence and provider-specific operating guidance
 - Optional AWS/GCP Scout Bee adapters and disposable-provider lifecycle automation
-- Windows-first Scout Bee local deployment: guided Hyper-V/WSL setup, prerequisite
-  checks, and a no-Linux-CLI path for family operators deploying from Windows
+- Windows-to-Linux Scout deployment remains provider-neutral and requires no typed
+  Linux commands; it is now part of the larger Windows-first platform program below
 - Extended field-device acceptance on physical iPhone and iPad hardware, including
   invitation, offline media, interrupted-update, and multi-device synchronization
   sessions beyond the required MVP profile evidence
@@ -147,6 +148,48 @@ the completed Preview 1 artifact.
   provider-assisted weather context in Phase 4
 - Cross-device authentication/session explanations and session-management UX without
   weakening secure-cookie or server-side authorization boundaries
+
+## Active Preview 2 Direction: Windows-First Client and Scout Bee
+
+This strategic program takes precedence over Phase 2 and later feature expansion.
+It makes a packaged Windows client the default family starting point while keeping
+the backend and optional web frontend as the portable connected core.
+
+### Now — research, decisions, and foundations
+
+- Move Scout Bee to a separate public repository, independent version, signing, and
+  release channel while the core repository publishes product artifacts only
+- Restructure product client ownership as `apps/web`, `apps/windows`, `apps/ios`,
+  and `apps/android` beside the portable API and Cloudflare Worker
+- Run measured Windows host, packaging, embedded service, authentication, migration,
+  shared UI, update, and Scout orchestration research spikes
+- Accept follow-on ADRs and produce detailed security, UX, lifecycle, and data designs
+- Create authoritative Lucidchart diagrams and accessible exports for standalone,
+  connected, migration, update, backup, and repository/artifact flows
+- Continue framework-neutral standalone/connected connection contracts and tests
+
+### Next — Windows standalone and connected family
+
+- Ship a signed Windows application that runs completely standalone with embedded
+  loopback service, SQLite, local media, offline use, updates, and backup/restore
+- Let the current Windows installation add family access through Scout Bee without
+  starting over or losing local records/media
+- Let Scout install/update Windows, deploy backend only or backend plus web to
+  Cloudflare or Linux over SSH, and configure a secret-free connection profile
+- Implement automatic connected synchronization, native-client authentication,
+  migration/conflict/resume/rollback, diagnostics, repair, and safe uninstall
+- Incorporate all Preview owner-feedback fixes into shared client behavior
+- Publish complete user, Scout, operator, developer, troubleshooting, and recovery
+  how-to guides through `.org` and `.dev`
+
+### Later — additional clients and orchestration
+
+- iPhone/iPad and Android product clients using the same public connection and sync
+  contracts
+- Research a mobile Scout companion for safe provider orchestration and connection
+  handoff; do not bypass App Store/Play distribution or phone security constraints
+- Extract an individual product client to a separate repository only if a later ADR
+  demonstrates that independent ownership/release/toolchain needs outweigh drift
 
 ## Phase 2: Hive Record Expansion — Post-MVP
 
