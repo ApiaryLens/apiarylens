@@ -1,0 +1,77 @@
+{
+  "product": "ApiaryLens",
+  "date": "2026-07-16",
+  "result": "pass",
+  "scope": "Provider-hosted GCP Ubuntu compatibility, exact public Scout installation, complete P0 product journey, backup and restore, keep-data uninstall and reinstall, diagnostics, resource baseline, corrective full uninstall, and provider cleanup.",
+  "environment": {
+    "provider": "Google Cloud Compute Engine",
+    "machineClass": "e2-medium (2 vCPU, 4 GiB)",
+    "os": "Ubuntu 24.04",
+    "architecture": "x86_64",
+    "disk": "32 GB balanced persistent disk",
+    "dockerEngine": "29.6.1",
+    "dockerCompose": "5.3.1",
+    "serviceAccountAttached": false,
+    "publicAddress": "temporary sslip.io test address; resource deleted"
+  },
+  "releasedInstall": {
+    "version": "0.1.0-rc.4",
+    "sourceCommit": "df853cd4204cc9b1a47424460ae895e228d7ebbf",
+    "databaseMigration": "0004",
+    "scoutSha256": "c3e436a3e7d8ab12f44fee7a3897a276ac173c4439ec92d0ec4b83982ab75c2c",
+    "preflightPassed": true,
+    "installPhasesPassed": 13,
+    "publicHttpsHealthPassed": true
+  },
+  "productJourney": {
+    "evidence": "gcp-compose-product-uat-2026-07-16.json",
+    "automatedChecksPassed": 11,
+    "ownersUsers": 3,
+    "memberships": 3,
+    "p0Resources": 13,
+    "syncChanges": 16,
+    "invitations": 2,
+    "privateMediaPassed": true,
+    "viewerNegativeAuthorizationPassed": true,
+    "portableExportPassed": true
+  },
+  "lifecycle": {
+    "backupPhasesPassed": 8,
+    "restorePhasesPassed": 8,
+    "postBackupMutationRolledBack": true,
+    "sessionsAfterRestore": 0,
+    "keepDataUninstallPhasesPassed": 8,
+    "publicExposureRemoved": true,
+    "retainedDataAndAuthRootPresent": true,
+    "reinstallPhasesPassed": 13,
+    "retainedP0ResourcesAfterReinstall": 13,
+    "diagnosticsCredentialFieldHits": 0
+  },
+  "resourceBaseline": {
+    "quietCpu": "web 0.00%; API 0.02%",
+    "quietMemoryMiB": "web 10.22; API 34.78; combined 45.00",
+    "dataBytes": 188488,
+    "backupBytes": 12840
+  },
+  "correctiveAcceptance": {
+    "finding": "rc.4 removed the live volume and secrets but retained backup archives; rc.5 and rc.6 exact-byte tests exposed partial-state and privileged-parent edge cases before GA.",
+    "correctedVersion": "0.1.0-rc.7",
+    "correctedSourceCommit": "f21a1e371fe9565a628702b4d8cd5b39ab9f229b",
+    "scoutArtifact": "apiarylens-scout-bee-0.1.0-rc.7-windows-amd64.exe",
+    "scoutSha256": "5dae328f6d173343021b4ef002bbe6994b0e900addbe2221d84387b823f659b8",
+    "exactPublicByteVerified": true,
+    "fullUninstallPhasesPassed": 8,
+    "targetDirectoryRemoved": true,
+    "containersRemaining": 0,
+    "volumesRemaining": 0,
+    "privilegedRecursiveDeleteUsed": false,
+    "verificationRun": 29513466293,
+    "signingRun": 29513476765
+  },
+  "providerCleanup": {
+    "instanceRemaining": 0,
+    "firewallRulesRemaining": 0,
+    "temporaryApplicationDnsRemaining": false
+  },
+  "privacy": "No project identifier, billing identifier, account identifier, credentials, bootstrap values, authentication roots, private keys, public IP address, or synthetic user secrets are recorded."
+}

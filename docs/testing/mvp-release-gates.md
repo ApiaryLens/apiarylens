@@ -88,6 +88,12 @@ gates.
       Cloudflare install and a 13-phase clean Ubuntu Compose install at
       `/opt/apiarylens`; both profiles report rc.4, source `df853cd`, and migration
       `0004`, and all disposable resources are removed.
+- [x] A disposable GCP Ubuntu 24.04 x86-64 host passes exact released Scout
+      installation, all 11 automated P0 product checks, backup/restore with session
+      revocation, keep-data uninstall/reinstall, sanitized diagnostics, and quiet
+      resource measurement. Exact public rc.7 then passes corrected full uninstall
+      8/8; the target, VM, and firewall rules are all removed. Public verification
+      run `29513466293` and signing run `29513476765` pass.
 
 ## Deploy
 
@@ -152,8 +158,13 @@ Cloudflare install, 13-phase clean Ubuntu `/opt/apiarylens` install, exact runti
 identity, 8-phase Compose uninstall, and complete disposable-resource cleanup are
 recorded in
 [`rc4-exact-public-deployment-smoke-2026-07-16.json`](rc4-exact-public-deployment-smoke-2026-07-16.json).
+GCP provider compatibility, the complete product journey, recovery, keep-data
+reinstall, diagnostics, resource baseline, the remove-data defects found during
+acceptance, exact public rc.7 correction, and complete provider cleanup are recorded
+in
+[`scout-bee-gcp-compose-lifecycle-2026-07-16.json`](scout-bee-gcp-compose-lifecycle-2026-07-16.json).
 The remaining combined gates require physical-device offline/update evidence, manual
-assistive-technology and security review, and project-owner acceptance.
+assistive-technology review, AWS compatibility, and project-owner acceptance.
 
 ## Rollback Triggers
 
