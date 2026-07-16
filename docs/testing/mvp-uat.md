@@ -9,7 +9,8 @@ not satisfy it.
 
 ## Build Under Test
 
-- Product: ApiaryLens 0.1.0-rc.1
+- Acceptance candidate: ApiaryLens 0.1.0-rc.2
+- Lifecycle predecessor evidence: ApiaryLens 0.1.0-rc.1
 - Release channel: release-candidate
 - API: 1.0
 - Sync: 1

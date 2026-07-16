@@ -1,8 +1,16 @@
 # MVP Release Gate Checklist
 
-**Release:** 0.1.0-rc.1  
-**Date:** 2026-07-15  
+**Release:** 0.1.0-rc.2
+
+**Date:** 2026-07-16
+
 **Status:** Not yet releasable
+
+`rc.2` supersedes `rc.1` for final acceptance because the authorization audit closed
+Cloudflare route, permission, negative-test, and OpenAPI declaration gaps. The
+server lifecycle evidence below was completed with the immutable `rc.1` artifacts
+and remains predecessor/contract evidence; the explicitly open deployment check
+requires signed `rc.2` profile smoke tests before final acceptance.
 
 ## Pre-Deploy
 

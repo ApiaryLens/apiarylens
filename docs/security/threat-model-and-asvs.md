@@ -1,7 +1,9 @@
 # MVP Threat Model and ASVS Verification Map
 
-**Release scope:** ApiaryLens 0.1.0-rc.1  
-**Review date:** 2026-07-15  
+**Release scope:** ApiaryLens 0.1.0-rc.2
+
+**Review date:** 2026-07-16
+
 **Standard:** OWASP Application Security Verification Standard 5.0.0  
 **Status:** Engineering verification complete; independent/manual release review pending
 
