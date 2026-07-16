@@ -5,8 +5,9 @@
 `WIN-003` is in progress. The owner authorized research and follow-on ADR work on
 2026-07-16. This record does not select a framework or authorize product code.
 
-Official-source review and the first Electron measurement baseline are complete.
-Equivalent Tauri/WebView2 and clean-profile measurements remain required before the
+Official-source review plus Electron and Tauri/WebView2 packaging baselines and the
+Tauri clean-install lifecycle are complete. Accessibility, authenticated local-
+service supervision, and final comparable measurements remain required before the
 spike can close.
 
 ## Question
@@ -203,6 +204,68 @@ on a clean profile. Compression format, locale pruning, symbols, installer forma
 code signing, antivirus scanning, the local Node service, SQLite, media, and real
 data will change the final numbers.
 
+## Tauri and packaged Node sidecar baseline
+
+GitHub Actions run
+[`29541496537`](https://github.com/ApiaryLens/apiarylens/actions/runs/29541496537)
+built the challenger on a fresh `windows-2025-vs2026` hosted runner. The workflow
+generated the Tauri lab only under the runner temporary directory; no Tauri product
+scaffold entered the repository. It used Tauri CLI 2.11.4, Rust 1.97.0, the same
+production React bundle, the Node 24.18.0 executable as a packaged external binary,
+and the normal WebView2 Evergreen bootstrapper installer mode.
+
+| Metric | Result |
+|---|---:|
+| NSIS installer | 24.3 MiB |
+| Loose release files | 102.9 MiB, 7 files |
+| Tauri host executable | 8.4 MiB |
+| Packaged Node sidecar | 88.2 MiB |
+| Packaged-sidecar `node:sqlite` probe | Passed |
+| WebView process-ready proxy, runs | 903, 172, 171, 168, 151 ms |
+| Proxy mean / median | 313 / 171 ms |
+| Peak process count | 8–9 |
+| Mean peak combined working set | 310.9 MiB |
+| Mean peak combined private memory | 122.7 MiB |
+
+The startup value is time to detection of a descendant WebView2 process, not DOM
+ready, so it cannot be compared directly with Electron's renderer-ready event. The
+memory measurements were also taken on a different Windows host and include the
+shared WebView2 process tree attributable to the application. The unsigned installer
+was built but not installed in this pass.
+
+Lifecycle run
+[`29542529439`](https://github.com/ApiaryLens/apiarylens/actions/runs/29542529439)
+downloaded the exact artifact produced by run `29541868968` into a second fresh
+Windows runner. Before launching the installer it restricted `PATH` to Windows
+system directories and confirmed that external Node, Rust, and .NET executables were
+unavailable.
+
+| Clean-profile lifecycle check | Result |
+|---|---:|
+| Artifact SHA-256 verification | Passed |
+| Silent current-user install | Exit 0 |
+| Installed footprint | 96.7 MiB, 3 files |
+| Installed Tauri host | 8.4 MiB |
+| Installed packaged Node sidecar | 88.2 MiB |
+| Installed-sidecar `node:sqlite` probe | Passed |
+| Three-second installed-host smoke | Passed; WebView2 descendant observed |
+| Smoke process count / working set / private memory | 8 / 305.5 MiB / 112.4 MiB |
+| Silent uninstall | Exit 0 |
+| Install directory after uninstall | Absent |
+| Uninstall registration after uninstall | Absent |
+
+This is stronger than a build-only prerequisite claim: the released shape installed,
+ran its packaged runtime, and uninstalled without finding a developer runtime on
+`PATH`. It remains a hosted Windows Server runner with WebView2 already installed,
+not a retail Windows image or physical family computer, and the artifact is unsigned.
+
+The result establishes a material footprint difference: the Tauri installer is
+about one-sixth the size of the unoptimized Electron ZIP baseline, while its loose
+application files are about 29% of Electron's loose directory. That advantage
+depends on the separately serviced shared WebView2 runtime. An offline Tauri package
+that embeds the current WebView2 installer would add roughly the amount documented
+by Tauri and must be measured separately.
+
 ## Security and lifecycle requirements common to finalists
 
 Regardless of framework:
@@ -241,11 +304,12 @@ challenge. They are not an ADR decision.
 | Update/rollback integration | 10 | 4 | 4 | 2 | 3 |
 | Accessibility evidence path | 10 | 4 | 4 | 3 | 5 |
 | Maintainer/build complexity | 5 | 5 | 3 | 1 | 2 |
-| Weighted score out of 500 | 100 | 405 | 380 | 290 | 300 |
+| Weighted score out of 500 | 100 | 405 | 390 | 290 | 300 |
 
-Electron currently leads on delivery and backend reuse, while Tauri is the required
-challenger for footprint and capability-scoped IPC. The small preliminary score gap
-is not sufficient to decide without equivalent measurements.
+Electron currently leads on delivery and direct backend reuse, while Tauri's measured
+package footprint and capability-scoped IPC narrow the gap. The preliminary score
+difference is not sufficient to decide without lifecycle, accessibility, and
+authenticated-sidecar evidence.
 
 ## Preliminary recommendation
 
@@ -271,23 +335,19 @@ prototype and clean-profile testing.
 
 `WIN-003` closes only after the following evidence is attached here:
 
-1. Build an equivalent Tauri 2 prototype in an isolated Windows CI job or disposable
-   research environment, with the current React build and a packaged Node 24
-   `node:sqlite` sidecar. Do not install Rust on the maintainer workstation merely
-   to satisfy the spike.
-2. Measure signed or test-signed installer download size, installed size, cold/warm
+1. Measure signed or test-signed installer download size, installed size, cold/warm
    launch, idle/active memory, process count, first-run runtime remediation, and
    complete uninstall for Electron and Tauri.
-3. Exercise local-service startup, crash, restart, duplicate-instance prevention,
+2. Exercise local-service startup, crash, restart, duplicate-instance prevention,
    clean shutdown, data lock, and orphan cleanup.
-4. Verify Windows 11 and the chosen Windows 10 baseline in clean user profiles with
+3. Verify Windows 11 and the chosen Windows 10 baseline in clean user profiles with
    no developer tools. Include a profile where WebView2 is absent or its updater is
    policy-disabled.
-5. Run keyboard, high contrast, 200%/400% zoom, reduced motion, and NVDA smoke tests
+4. Run keyboard, high contrast, 200%/400% zoom, reduced motion, and NVDA smoke tests
    on both candidates. Record failures by shared UI versus host integration.
-6. Produce SBOM/license/provenance output and compare signing, update, downgrade,
+5. Produce SBOM/license/provenance output and compare signing, update, downgrade,
    interrupted-update, health-failure, and rollback behavior.
-7. Replace preliminary matrix scores with evidence, record rejected alternatives,
+6. Replace preliminary matrix scores with evidence, record rejected alternatives,
    and propose the Windows host/package ADR for `WIN-008`.
 
 The resulting ADR must state the selected host, package formats, runtime acquisition
