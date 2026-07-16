@@ -1,0 +1,47 @@
+name: WIN-003 Windows host research
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tauri-node-sidecar:
+    name: Tauri and packaged Node sidecar evidence
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build current React client
+        run: pnpm --filter @apiarylens/web build
+
+      - name: Run isolated Tauri research build and measurements
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003TauriSpike.ps1
+          -WebDist ./apps/web/dist
+          -IconPath ./apps/web/public/icons/apiarylens-512.png
+          -OutputDirectory "$env:RUNNER_TEMP/win003-evidence"
+
+      - name: Upload measurement evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: win003-tauri-node-sidecar-evidence
+          path: ${{ runner.temp }}/win003-evidence
+          if-no-files-found: error
+          retention-days: 14
