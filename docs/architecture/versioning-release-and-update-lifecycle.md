@@ -2,11 +2,12 @@
 
 ## Status
 
-Proposed MVP architecture direction. The required user outcomes and release gates
-are part of the proposed
-[MVP Definition and UAT Contract](../product/mvp-definition.md). Exact release
-automation, migration tooling, artifact signing, and Scout Bee implementation
-require research and ADRs before dependent implementation.
+Accepted and implemented MVP architecture. The required user outcomes and release
+gates are part of the accepted
+[MVP Definition and UAT Contract](../product/mvp-definition.md). Release manifests,
+content-addressed bundles, contract and migration identity, keyless attestations,
+backup-before-update, recovery tooling, and Scout Bee lifecycle execution are
+implemented and exercised by the release-candidate evidence.
 
 ## Purpose
 
@@ -54,7 +55,7 @@ media, configuration, or credentials.
 
 ApiaryLens uses one solution release version for the PWA, API, supported backend
 profiles, Compose bundle, Cloudflare profile, Scout Bee compatibility data, and
-release documentation. Semantic Versioning is the proposed public format:
+release documentation. Semantic Versioning is the accepted public format:
 
 - Stable release: `MAJOR.MINOR.PATCH`, tagged as `vMAJOR.MINOR.PATCH`
 - Prerelease: `MAJOR.MINOR.PATCH-alpha.N`, `-beta.N`, or `-rc.N`
@@ -96,7 +97,7 @@ configuration.
 The following contracts evolve independently from the product version because each
 has different compatibility rules:
 
-| Contract | Proposed identifier | Compatibility rule |
+| Contract | Identifier | Compatibility rule |
 |---|---|---|
 | Public API | `/api/v1` | Breaking HTTP contract changes require a new API major |
 | Synchronization protocol | Integer or semantic contract version | Client and server declare a tested compatibility range |
@@ -109,7 +110,7 @@ release and artifacts.
 
 ## Release Channels and Promotion
 
-The proposed channels are:
+The release channels are:
 
 | Channel | Purpose | Promotion rule |
 |---|---|---|

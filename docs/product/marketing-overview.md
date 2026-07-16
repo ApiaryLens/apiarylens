@@ -1,13 +1,14 @@
 # ApiaryLens Marketing Overview
 
-- **Status:** Pre-release messaging draft
-- **Last reviewed:** 2026-07-15
+- **Status:** Release-candidate product messaging
+- **Last reviewed:** 2026-07-16
 
-> **Working tagline:** Know every hive. Empower every beekeeper.
+> **Tagline:** Know every hive. Empower every beekeeper.
 
-ApiaryLens is a planned apiary intelligence and hive-management application for
+ApiaryLens is an open-source apiary intelligence and hive-management application for
 people who keep bees and want an easier way to remember what is happening in every
-hive.
+hive. It begins with a family or hobbyist and keeps the same portable history as the
+apiary grows toward mentors, clubs, education, research, and professional work.
 
 It is being designed to help answer practical questions:
 
@@ -20,20 +21,22 @@ It is being designed to help answer practical questions:
 - What may be blooming nearby?
 - Should we ask a mentor to review this frame or inspection?
 
-ApiaryLens is currently in discovery, research, and design. There is no released
-application yet. This overview describes the intended product experience, not
-features available for download today.
+ApiaryLens `0.1.0-rc.4` is a published, signed MVP acceptance candidate—not a stable
+release. The safe synthetic demo, installable PWA, Cloudflare family profile, Docker
+Compose profile, Scout Bee, documentation, and verifiable artifacts are available
+for controlled evaluation. Physical-device, assistive-technology, AWS/GCP, and final
+owner acceptance gates remain open.
 
-## What ApiaryLens Is Planned to Help You Do
+## What ApiaryLens Helps You Do
 
 - Keep hive notes and history together.
-- Track apiaries, hives, queens, inspections, equipment, feeding, treatments,
-  media, weather, blooms, and harvests as those capabilities are delivered.
-- Build a visual history of each hive with photos and videos.
+- Track apiaries, hives, queens, inspections, equipment, mite counts, feeding,
+  treatments, harvests, follow-ups, and manual weather observations.
+- Build a private visual history of each hive with original photos and thumbnails.
 - Work from a phone or tablet in the bee yard without dependable internet access,
   then synchronize later when using a connected deployment.
-- Share selected records with family members, mentors, or bee clubs without
-  exposing unrelated private information.
+- Share authorized family history through owner, beekeeper, and viewer roles without
+  exposing another organization.
 - Export and retain control of hive data and media.
 - Grow from one hive toward family, club, research, or commercial use without
   moving to an incompatible product.
@@ -44,38 +47,41 @@ The first target is a family or hobbyist beekeeper using phones, tablets, and
 computers. ApiaryLens begins with an offline-first Progressive Web App so field
 records remain usable when service is poor or absent.
 
-The product is intended to support three approachable operating profiles:
+The current release candidate supports two approachable server profiles:
 
-- **Personal:** device-only use with no required server or account
-- **Family:** synchronized records across trusted family devices
-- **Organization:** later club, commercial, education, extension, and research use
+- **Family Cloud:** synchronized records in the beekeeper's own Cloudflare account
+- **My Own Hardware or VM:** the complete Docker Compose server on an ordinary Linux
+  machine the beekeeper controls
 
-The same portable core should support all three. A self-hoster should not be forced
-into a paid cloud, AI provider, or proprietary data format.
+Device-only personal use and expanded club, commercial, education, extension, and
+research workflows are post-MVP roadmap tracks. The portable core and export format
+keep those paths open without forcing a paid cloud, AI provider, or proprietary data
+format.
 
-## Planned Capability Areas
+## Current MVP Capability Areas
 
 - Apiaries, hive locations, and hive history
 - Boxes, frames, and other hive equipment
 - Queens and queen history
 - Inspections, notes, reminders, and follow-up work
-- Photos and videos
+- Private original photos and thumbnails
 - Varroa counts, health observations, and treatments
 - Feeding and consumption notes
-- Weather and regional bloom context
+- Manual weather snapshots; regional weather and bloom intelligence remain later
 - Honey and wax harvests
 - Sharing, reports, exports, and trends
 
-These capabilities will arrive in phases; they are not all launch requirements.
-See the [Product Capability Overview](product-capability-overview.md) for the full
-product narrative and the [Roadmap](../roadmap/roadmap.md) for current sequencing.
+The accepted [MVP definition](mvp-definition.md) is the binding boundary. The
+[Product Capability Overview](product-capability-overview.md) and
+[Roadmap](../roadmap/roadmap.md) distinguish implemented MVP capabilities from the
+broader product direction.
 
 ## Open-Source and Self-Hosted Direction
 
-ApiaryLens is being designed as an open-source, self-hosted-first product with an
-offline-capable PWA and portable data. The public product uses the OSI-approved
-Apache License 2.0. Pre-release marketing must still distinguish released
-capabilities from planned capabilities.
+ApiaryLens is an open-source, self-hosted-first product with an offline-capable PWA
+and portable data. The public product uses the OSI-approved Apache License 2.0.
+Release-candidate messaging distinguishes implemented capabilities from later
+roadmap direction.
 
 The intended outcome is:
 
@@ -118,8 +124,8 @@ needed.
 
 ## Shareable Handout
 
-The following 4:5 pre-release handout is designed for social posts, messaging, and
-email. It uses exact project language and links people to the public GitHub source
-while `apiarylens.org` is being prepared.
+The following 4:5 release-candidate handout is designed for social posts, messaging,
+and email. It uses reviewed project language and directs people to the live public
+project and documentation home.
 
-![ApiaryLens pre-release marketing handout with family apiary photography and six planned capability areas](../../assets/graphics/ApiaryLens_Marketing_Handout_Social_2026-07.png)
+![ApiaryLens release-candidate marketing handout with family apiary photography and six capability areas](../../assets/graphics/ApiaryLens_Marketing_Handout_Social_2026-07.png)

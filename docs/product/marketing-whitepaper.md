@@ -1,14 +1,15 @@
 # ApiaryLens Product Overview and Capability Whitepaper
 
-**Status:** Pre-release product narrative. For the concise audience-facing version,
-see the [Marketing Overview](marketing-overview.md).
+**Status:** Release-candidate product narrative. For the concise audience-facing
+version, see the [Marketing Overview](marketing-overview.md).
 
 ## What is ApiaryLens?
 
-ApiaryLens is a planned open-source apiary intelligence platform for beekeepers. It
-is being designed to track hives, queens, inspections, hive health, photos, weather,
-blooms, honey production, and long-term colony history. No application has been
-released yet. The public product is licensed under Apache License 2.0.
+ApiaryLens is an open-source apiary intelligence platform for beekeepers. The
+published `0.1.0-rc.4` acceptance candidate tracks apiaries, hives, queens,
+equipment, inspections, health observations, photos, mite counts, feeding,
+treatments, harvests, follow-ups, and long-term hive history. It is licensed under
+Apache License 2.0 and is not yet a stable release.
 
 ApiaryLens is designed to be simple enough for a family getting its first hive and powerful enough to grow into bee club, research, and commercial use.
 
@@ -29,14 +30,14 @@ ApiaryLens turns hive records into a living history.
 - Educators
 - Researchers
 
-## Initial Product Direction
+## Current Product
 
 The first usable release focuses on practical family and hobbyist hive management.
 The accepted [MVP Definition and UAT Contract](mvp-definition.md) establishes the
 exact release boundary; the broader capabilities below include post-MVP roadmap
 direction and are not all launch requirements.
 
-Current capability direction:
+Current MVP capability surface:
 
 - Multi-apiary tracking
 - Multi-hive tracking
@@ -44,15 +45,13 @@ Current capability direction:
 - Box and frame records
 - Queen tracking
 - Inspection logging
-- Photos and videos
+- Private original photos and thumbnails
 - Hive health observations
 - Varroa mite tracking
 - Feeding records
 - Treatment records
 - Honey harvest records
-- Weather history
-- Bloom calendar foundation
-- QR codes
+- Manual weather snapshots
 - Sharing with family or mentors
 - PWA support
 - Offline-first design
@@ -60,7 +59,10 @@ Current capability direction:
 - REST API
 - Guided installation, backup, restore, updates, and data export
 - Authenticated family synchronization across phones, tablets, and computers
-- Safe public demo
+- Safe public synthetic demo
+
+Weather history, regional bloom intelligence, video, QR workflows, and native mobile
+clients remain in the broader roadmap rather than the MVP acceptance boundary.
 
 ## Future Capabilities
 

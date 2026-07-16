@@ -17,16 +17,24 @@ address.
 
 ## Scope
 
-ApiaryLens is early-stage and currently contains no application code — there is no
-running software to have a vulnerability yet. This policy is in place ahead of time
-so the reporting process is established before the first release. Once the platform
-has deployable components (self-hosted server, PWA client, API), this section will
-be updated with specific scope guidance (e.g. which deployment configurations are
-supported, which versions receive security fixes).
+Security reports are welcome for the official PWA, Node/SQLite/filesystem server,
+Cloudflare Worker/D1/R2 backend, synchronization and authorization contracts,
+Docker Compose deployment, Scout Bee, release artifacts and attestations, and the
+`.org`, `.app`, and `.dev` public properties.
+
+Include the affected release, deployment profile, prerequisites, reproduction steps,
+and impact. Remove credentials, private hive records, location data, and unrelated
+personal information. Problems caused only by unsupported source modifications,
+provider account policy, or infrastructure outside ApiaryLens may be redirected,
+but a report that could affect the portable product should still be submitted
+privately for triage.
 
 ## Supported versions
 
-Not applicable yet — no releases exist.
+The current `0.1.0-rc.4` acceptance candidate receives security fixes while it is
+the active pre-release. Superseded release candidates are retained for audit and
+recovery evidence but are not supported for deployment. Stable-version support
+windows will be published with the first stable release.
 
 ## Our commitment
 

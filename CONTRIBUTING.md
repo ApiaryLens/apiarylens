@@ -1,35 +1,62 @@
 # Contributing to ApiaryLens
 
-Thanks for your interest in ApiaryLens. The project is in its earliest scaffold
-stage — there is no application code yet, so most contributions right now will be
-about **direction**, not feature code.
+Thanks for helping build ApiaryLens. The public monorepo contains the PWA, Node and
+Cloudflare backends, shared contracts and database code, Docker Compose deployment,
+Scout Bee, tests, release tooling, and authoritative documentation.
 
-## Current stage
+## Before you start
 
-This repo currently contains only foundation files and folder structure. Before
-opening a PR with code, check [`docs/`](docs/) and [`tasks/`](tasks/) for whether the
-relevant app or package has actually been scaffolded — if it hasn't, start a
-discussion or issue instead of a PR.
+- Read [AGENTS.md](AGENTS.md) for the project's non-negotiable open-source,
+  self-hosted, offline-capable, privacy, security, and licensing direction.
+- Check the accepted [MVP definition](docs/product/mvp-definition.md), relevant ADRs,
+  and open GitHub issues before proposing a durable architecture or scope change.
+- Open an issue first for a substantial feature, compatibility change, new
+  dependency, or new deployment component. Small fixes and documentation corrections
+  can go directly to a focused pull request.
+- Never include secrets, real hive/location records, credentials, private media, or
+  maintainer-specific infrastructure.
 
-## How to contribute right now
+## Development setup
 
-- **Discuss direction.** Open an issue if you have thoughts on the project's
-  direction (see README.md's Principles and Project direction sections), the data
-  model, sync strategy, or tech stack.
-- **Propose an ADR.** Non-trivial technical decisions belong in `docs/` as an
-  Architecture Decision Record before implementation begins.
-- **File issues for gaps.** If something in the scaffold is missing or inconsistent,
-  open an issue.
+Prerequisites are Node.js 24, Corepack, pnpm 11, and Go as selected by
+[`apps/scout-bee/go.mod`](apps/scout-bee/go.mod). Cloudflare or Docker accounts are
+not required for ordinary unit and build work.
 
-## Ground rules
+```bash
+corepack enable
+pnpm install --frozen-lockfile
+pnpm verify
+pnpm docs:check
+pnpm security:secrets
+```
 
-- Read [AGENTS.md](AGENTS.md) — it documents the project's non-negotiable direction
-  (open source, self-hosted first, offline-first, privacy-first, AI-assisted not
-  AI-required). Contributions that conflict with these will be asked to change
-  direction, human or AI-authored alike.
-- Be respectful. See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
-- Contributions are licensed under [Apache License 2.0](LICENSE) and require DCO
-  1.1 sign-off as described below.
+Useful development commands:
+
+```bash
+pnpm dev         # Node API
+pnpm dev:web     # React PWA
+pnpm dev:worker  # Cloudflare Worker development target
+pnpm test        # TypeScript test suites
+pnpm build       # All buildable workspace projects
+```
+
+The complete `pnpm verify` gate includes formatting, linting, type checking,
+TypeScript tests, Scout Bee Go tests, production builds, and backup/restore
+verification. Container-image and vulnerability checks run in GitHub Actions.
+
+## Contribution expectations
+
+- Keep pull requests scoped to one coherent change.
+- Add or update tests for changed behavior, including negative authorization and
+  organization-isolation cases where applicable.
+- Update authoritative documentation and an ADR when a durable technical decision
+  changes.
+- Preserve equivalent release-scope behavior across Cloudflare and Compose.
+- Keep the PWA useful without network access and preserve pending local work across
+  compatible updates.
+- Use approved assets from `assets/`; do not introduce a private build dependency.
+- Run `pnpm verify`, `pnpm docs:check`, and `pnpm security:secrets` before submitting.
+- Fill out the pull-request template and describe verification and remaining risk.
 
 ## Developer Certificate of Origin
 
@@ -41,30 +68,20 @@ than a separate Contributor License Agreement. Add a sign-off to every commit:
 Signed-off-by: Your Name <your-email@example.com>
 ```
 
-Git can add it automatically to a commit with:
+Git can add it automatically:
 
-```text
+```bash
 git commit -s
 ```
 
 The sign-off certifies that you have the right to submit the contribution under the
-project license. Use your real name and an email address associated with your Git
-identity. Contributions without a valid sign-off must be corrected before merge.
+project's [Apache License 2.0](LICENSE). Use your real name and an email address
+associated with your Git identity.
 
-## Pull requests
+## Bugs and security reports
 
-Once application code exists:
+Open regular bugs in the public issue tracker with a minimal reproduction and safe
+diagnostics. Do not post vulnerabilities publicly; follow [SECURITY.md](SECURITY.md)
+and use GitHub private vulnerability reporting.
 
-1. Open an issue first for anything beyond a small fix, so direction can be agreed
-   before work starts.
-2. Keep PRs scoped to one change.
-3. Fill out the PR template.
-4. Expect CI, style, and test requirements to be documented here once they exist —
-   they don't yet.
-
-## Reporting bugs vs. reporting vulnerabilities
-
-Regular bugs: open a GitHub issue using the bug report template.
-
-Security vulnerabilities: **do not** open a public issue — see
-[SECURITY.md](SECURITY.md).
+All contributors must follow the [Code of Conduct](CODE_OF_CONDUCT.md).

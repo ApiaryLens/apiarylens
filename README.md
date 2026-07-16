@@ -38,8 +38,11 @@ every decision made in this repo:
 
 ## Status
 
-MVP implementation in progress. There is no public MVP release yet; completion is
-measured against the accepted UAT contract, not the presence of scaffolding.
+ApiaryLens `0.1.0-rc.4` is the published, signed MVP acceptance candidate. The PWA,
+Node and Cloudflare backends, Docker Compose profile, Scout Bee, release artifacts,
+and public documentation are implemented. It is not a stable release: physical
+iPhone/iPad, assistive-technology, AWS/GCP compatibility, and final project-owner
+acceptance remain open in the [MVP UAT record](docs/testing/mvp-uat.md).
 
 ## Project direction
 
