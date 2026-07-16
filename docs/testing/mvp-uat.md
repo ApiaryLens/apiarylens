@@ -99,6 +99,11 @@ their acceptance wording requires separate human-operated device evidence. AWS
 provider compatibility and the extended manual assistive-technology matrix are
 tracked in the Version 1.1 backlog rather than treated as MVP profile blockers.
 
+The remaining owner-operated gates are sequenced in the
+[MVP Owner Acceptance Runbook](owner-acceptance-runbook.md). It is intentionally
+limited to physical-device, update-with-pending-work, manual accessibility, and
+owner-signoff evidence that cannot be established by the automated release suite.
+
 ## Acceptance
 
 Release acceptance requires every critical checkbox, zero unresolved critical or
