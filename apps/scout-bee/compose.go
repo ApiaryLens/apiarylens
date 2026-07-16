@@ -321,14 +321,18 @@ case "$operation" in
     tar xzf "$bundle" -C "$release_dir"
     rm -f "$bundle"
     mkdir -p "$secrets_dir"
+    chmod 700 "$target" "$secrets_dir"
     if [ "$operation" = install ]; then
       test -s "$bootstrap_file"
       test -s "$auth_root_file"
       mv "$bootstrap_file" "$secrets_dir/bootstrap-token"
       if [ -f "$secrets_dir/auth-root" ]; then rm -f "$auth_root_file"
       else mv "$auth_root_file" "$secrets_dir/auth-root"; fi
-      chmod 600 "$secrets_dir/bootstrap-token"
-      chmod 600 "$secrets_dir/auth-root"
+      # Compose implements local file-backed secrets as bind mounts. The
+      # unprivileged container user therefore needs read permission on the
+      # files, while the mode-0700 parent keeps them private on the host.
+      chmod 644 "$secrets_dir/bootstrap-token"
+      chmod 644 "$secrets_dir/auth-root"
     fi
     printf 'APIARYLENS_VERSION=%s\nAPIARYLENS_SITE_ADDRESS=%s\nAPIARYLENS_BOOTSTRAP_SECRET_FILE=%s\nAPIARYLENS_AUTH_ROOT_SECRET_FILE=%s\nAPIARYLENS_SOURCE_COMMIT=%s\nAPIARYLENS_BUILD_TIME=%s\nAPIARYLENS_ARTIFACT_IDENTITY=%s\n' "$version" "${public_url#https://}" "$secrets_dir/bootstrap-token" "$secrets_dir/auth-root" "$source_commit" "$build_time" "$artifact_identity" > "$release_dir/docker/.env"
     chmod 600 "$release_dir/docker/.env"

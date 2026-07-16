@@ -208,6 +208,18 @@ func TestComposeSecretsStreamIntoProtectedRemoteFiles(t *testing.T) {
 		t.Fatalf("secret transfer was not a protected SSH stream: executable=%s args=%s", command.Executable, joined)
 	}
 }
+
+func TestComposeFileBackedSecretsAreReadableOnlyThroughProtectedDirectory(t *testing.T) {
+	for _, required := range []string{
+		`chmod 700 "$target" "$secrets_dir"`,
+		`chmod 644 "$secrets_dir/bootstrap-token"`,
+		`chmod 644 "$secrets_dir/auth-root"`,
+	} {
+		if !strings.Contains(composeRemoteScript, required) {
+			t.Fatalf("Compose secret installation is missing %q", required)
+		}
+	}
+}
 func TestRejectsSecretLookingPlan(t *testing.T) {
 	p := validPlan()
 	p.Cloudflare.AccountReference = "my-secret-token"

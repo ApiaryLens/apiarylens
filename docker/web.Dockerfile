@@ -32,7 +32,7 @@ ENV XDG_CONFIG_HOME=/config \
     XDG_DATA_HOME=/data
 COPY --from=caddy-build /out/caddy /usr/bin/caddy
 COPY --from=caddy-build /runtime/ /
-COPY docker/Caddyfile /etc/caddy/Caddyfile
+COPY --chown=10001:10001 --chmod=0444 docker/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build --chown=10001:10001 /workspace/apps/web/dist /srv
 USER 10001:10001
 EXPOSE 80 443

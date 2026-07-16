@@ -58,7 +58,6 @@ services:
         condition: service_healthy
     environment:
       APIARYLENS_SITE_ADDRESS: ${APIARYLENS_SITE_ADDRESS:-localhost}
-      ACME_EMAIL: ${ACME_EMAIL:-}
     ports:
       - '${APIARYLENS_HTTP_PORT:-80}:80'
       - '${APIARYLENS_HTTPS_PORT:-443}:443'
@@ -77,6 +76,21 @@ services:
       - ALL
     cap_add:
       - NET_BIND_SERVICE
+    healthcheck:
+      test:
+        [
+          'CMD',
+          '/usr/bin/caddy',
+          'validate',
+          '--config',
+          '/etc/caddy/Caddyfile',
+          '--adapter',
+          'caddyfile',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
 
 volumes:
   apiarylens_data:

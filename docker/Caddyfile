@@ -1,6 +1,5 @@
 {
 	admin off
-	email {$ACME_EMAIL:}
 }
 
 {$APIARYLENS_SITE_ADDRESS:localhost} {
