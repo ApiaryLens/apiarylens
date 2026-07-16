@@ -1,10 +1,10 @@
 {
   "$schema": "./release-manifest.schema.json",
   "product": "ApiaryLens",
-  "productVersion": "0.1.0-rc.3",
+  "productVersion": "0.1.0-rc.4",
   "channel": "release-candidate",
-  "sourceCommit": "1ebb668b4a5cc73069d7cb73c02dffa624235d6b",
-  "buildTime": "2026-07-16T05:55:00.0000000Z",
+  "sourceCommit": "df853cd4204cc9b1a47424460ae895e228d7ebbf",
+  "buildTime": "2026-07-16T12:24:50.0323563Z",
   "contracts": {
     "api": "1.0",
     "sync": 1,
@@ -16,52 +16,52 @@
   "profiles": ["cloudflare", "compose"],
   "artifacts": [
     {
-      "name": "apiarylens-0.1.0-rc.3-cloudflare-3f51a44705ea.tar.gz",
+      "name": "apiarylens-0.1.0-rc.4-cloudflare-b7e712aed9fe.tar.gz",
       "kind": "deployment-bundle",
       "target": "cloudflare",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.3/artifacts/apiarylens-0.1.0-rc.3-cloudflare-3f51a44705ea.tar.gz",
-      "sha256": "3f51a44705eaf84267317d760facbda4901b6978c4e833887c734f1eeadb762a",
-      "bytes": 607551
+      "url": "https://apiarylens.org/releases/0.1.0-rc.4/artifacts/apiarylens-0.1.0-rc.4-cloudflare-b7e712aed9fe.tar.gz",
+      "sha256": "b7e712aed9fe31c21fa3d7b24c5c2b49742b4d61aab662c6b30f2b8256c0bfa1",
+      "bytes": 607801
     },
     {
-      "name": "apiarylens-0.1.0-rc.3-compose-9acc6555399d.tar.gz",
+      "name": "apiarylens-0.1.0-rc.4-compose-29d6fa128b45.tar.gz",
       "kind": "deployment-bundle",
       "target": "compose",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.3/artifacts/apiarylens-0.1.0-rc.3-compose-9acc6555399d.tar.gz",
-      "sha256": "9acc6555399d48c1b5e43daab3b66be0fd7f89a5f4bbb2ad16fb7f1cdf590fe6",
-      "bytes": 106169
+      "url": "https://apiarylens.org/releases/0.1.0-rc.4/artifacts/apiarylens-0.1.0-rc.4-compose-29d6fa128b45.tar.gz",
+      "sha256": "29d6fa128b454a2a54c17f983e2af5630e5f77491f64794695aa3b3d325d3c97",
+      "bytes": 106173
     },
     {
-      "name": "apiarylens-scout-bee-0.1.0-rc.3-windows-amd64.exe",
+      "name": "apiarylens-scout-bee-0.1.0-rc.4-windows-amd64.exe",
       "kind": "deployment-tool",
       "target": "windows-amd64",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.3/artifacts/apiarylens-scout-bee-0.1.0-rc.3-windows-amd64.exe",
-      "sha256": "7c40d7de105f75c9d5c4a1e41a57caa44199309723ccb784c9d19901552f391b",
-      "bytes": 7815680
+      "url": "https://apiarylens.org/releases/0.1.0-rc.4/artifacts/apiarylens-scout-bee-0.1.0-rc.4-windows-amd64.exe",
+      "sha256": "c3e436a3e7d8ab12f44fee7a3897a276ac173c4439ec92d0ec4b83982ab75c2c",
+      "bytes": 7818752
     },
     {
       "name": "apiarylens-sbom.cdx.json",
       "kind": "sbom",
       "target": "release",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.3/apiarylens-sbom.cdx.json",
-      "sha256": "edb50b992ad3356e6b6e63e8946af59e8e59e466442dff32f830d30d1fa1917a",
+      "url": "https://apiarylens.org/releases/0.1.0-rc.4/apiarylens-sbom.cdx.json",
+      "sha256": "aef642f3ab6a31d6180256ba6b48586f4635759dce11340911b32d57fa1f45d7",
       "bytes": 38511
     },
     {
       "name": "apiarylens-license-report.md",
       "kind": "license-report",
       "target": "release",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.3/apiarylens-license-report.md",
-      "sha256": "ffd2738aefe46cdecf10a382ae16a77a6482808bd65c55c2841f1208e715b082",
+      "url": "https://apiarylens.org/releases/0.1.0-rc.4/apiarylens-license-report.md",
+      "sha256": "803c0d78d43b2e8d9706a086d1e5d1d06fcc63e72a65ed01e1ce35b2d38accda",
       "bytes": 820
     },
     {
       "name": "apiarylens-provenance.intoto.jsonl",
       "kind": "provenance",
       "target": "release",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.3/apiarylens-provenance.intoto.jsonl",
-      "sha256": "ca7fe87191afcd7c2c2cc5c7308e0a6d552485e5c1c92ce66c983fe89569e942",
-      "bytes": 1134
+      "url": "https://apiarylens.org/releases/0.1.0-rc.4/apiarylens-provenance.intoto.jsonl",
+      "sha256": "77d7a60008ccc681511bbdbef60596d09ce36c34781b2ef143f177f1903fd237",
+      "bytes": 1133
     }
   ],
   "knownLimitations": [
