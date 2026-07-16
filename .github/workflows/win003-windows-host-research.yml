@@ -14,10 +14,10 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Node 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 24
 
@@ -28,7 +28,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build current React client
-        run: pnpm --filter @apiarylens/web build
+        run: pnpm --filter @apiarylens/web... build
 
       - name: Run isolated Tauri research build and measurements
         shell: pwsh
