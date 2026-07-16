@@ -45,8 +45,16 @@ func (a *composeAdapter) preflight(ctx context.Context, input request) ([]phase,
 		err = errors.New("the remote host does not report Docker Compose v2")
 		return append(phases, failed("Verify Linux and Docker prerequisites", err)), err
 	}
+	phases = append(phases, pass("Verify Linux and Docker prerequisites", "The host is reachable and reports Docker Engine, Compose v2, disk, architecture, and UTC time."))
+	target := base64.RawURLEncoding.EncodeToString([]byte(input.Plan.Compose.TargetDirectory))
+	if _, err = a.executor.runner.Run(ctx, command{
+		Executable: "ssh", Args: sshArgs(compose, knownHosts, "sh", "-s", "--", target), Stdin: []byte(composeTargetPreflightScript),
+	}, input.Secrets); err != nil {
+		err = errors.New("the install folder is not writable and the Linux user cannot create it with passwordless sudo")
+		return append(phases, failed("Verify install folder access", err)), err
+	}
 	phases = append(phases,
-		pass("Verify Linux and Docker prerequisites", "The host is reachable and reports Docker Engine, Compose v2, disk, architecture, and UTC time."),
+		pass("Verify install folder access", "The chosen folder is writable or can be created with passwordless administrative access."),
 		pass("Verify HTTPS deployment policy", "The plan exposes ApiaryLens only at an HTTPS address and never enables default credentials."),
 	)
 	return phases, nil
@@ -283,6 +291,26 @@ source_commit=$(decode "${10}")
 build_time=$(decode "${11}")
 artifact_identity=$(decode "${12}")
 backup_retention=${13}
+prepare_target() {
+  if [ -e "$target" ] || [ -L "$target" ]; then
+    [ ! -L "$target" ] && [ -d "$target" ] && [ -w "$target" ] || return 73
+    [ "$(stat -c '%u' "$target")" = "$(id -u)" ] || return 73
+  else
+    parent=$(dirname "$target")
+    while [ ! -e "$parent" ] && [ "$parent" != "/" ]; do
+      parent=$(dirname "$parent")
+    done
+    if [ -d "$parent" ] && [ -w "$parent" ]; then
+      mkdir -p "$target"
+    elif command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
+      sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" "$target"
+    else
+      return 73
+    fi
+  fi
+  chmod 700 "$target"
+}
+prepare_target
 release_dir="$target/releases/$version"
 current="$target/current"
 backups="$target/backups"
@@ -368,4 +396,28 @@ case "$operation" in
     ;;
   *) printf 'Unsupported operation\n' >&2; exit 64 ;;
 esac
+`
+
+const composeTargetPreflightScript = `set -eu
+decode() {
+  encoded=$(printf '%s' "$1" | tr '_-' '/+')
+  case $((${#encoded} % 4)) in
+    0) ;;
+    2) encoded="${encoded}==" ;;
+    3) encoded="${encoded}=" ;;
+    *) return 65 ;;
+  esac
+  printf '%s' "$encoded" | base64 -d
+}
+target=$(decode "$1")
+if [ -e "$target" ] || [ -L "$target" ]; then
+  [ ! -L "$target" ] && [ -d "$target" ] && [ -w "$target" ]
+  [ "$(stat -c '%u' "$target")" = "$(id -u)" ]
+else
+  parent=$(dirname "$target")
+  while [ ! -e "$parent" ] && [ "$parent" != "/" ]; do
+    parent=$(dirname "$parent")
+  done
+  { [ -d "$parent" ] && [ -w "$parent" ]; } || { command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; }
+fi
 `

@@ -33,6 +33,12 @@ type keyscanFallbackRunner struct {
 	keyLine  string
 }
 
+type composePreflightRunner struct {
+	commands       []command
+	keyLine        string
+	failFolderTest bool
+}
+
 func (f *keyscanFallbackRunner) Find(string) error { return nil }
 func (f *keyscanFallbackRunner) Run(_ context.Context, spec command, _ map[string]string) (string, error) {
 	f.commands = append(f.commands, spec)
@@ -75,6 +81,24 @@ func (f *fakeRunner) Run(_ context.Context, spec command, _ map[string]string) (
 		return spec.Environment["TEST_HEALTH_URL"], nil
 	default:
 		return `{}`, nil
+	}
+}
+
+func (f *composePreflightRunner) Find(string) error { return nil }
+func (f *composePreflightRunner) Run(_ context.Context, spec command, _ map[string]string) (string, error) {
+	f.commands = append(f.commands, spec)
+	switch {
+	case spec.Executable == "ssh-keyscan":
+		return f.keyLine, nil
+	case bytes.Contains(spec.Stdin, []byte("docker compose version")):
+		return "x86_64\nDocker Compose version v2.40.3\n", nil
+	case bytes.Equal(spec.Stdin, []byte(composeTargetPreflightScript)):
+		if f.failFolderTest {
+			return "", errors.New("exit status 1")
+		}
+		return "", nil
+	default:
+		return "", nil
 	}
 }
 
@@ -123,6 +147,21 @@ func TestRejectsRawIPComposeHTTPS(t *testing.T) {
 		t.Fatalf("expected raw-IP HTTPS to be rejected, got %v", err)
 	}
 }
+func TestRejectsUnsafeComposeTargetDirectories(t *testing.T) {
+	for _, target := range []string{"/", "/opt/apiarylens/", "/opt//apiarylens"} {
+		p := validPlan()
+		p.Target = "compose-ssh"
+		p.Cloudflare = nil
+		p.Compose = &compose{
+			Host: "hives.example", Port: 22, User: "apiarylens",
+			PublicURL: "https://hives.example", TargetDirectory: target,
+			ProjectName: "apiarylens-family", SSHHostKeySha256: "SHA256:abc", BackupRetention: 14,
+		}
+		if err := validate(p); err == nil || !strings.Contains(err.Error(), "install folder is unsafe") {
+			t.Fatalf("expected target directory %q to be rejected, got %v", target, err)
+		}
+	}
+}
 func TestRecognizesNativeWorkersDevAddress(t *testing.T) {
 	if !isWorkersDevAddress("https://apiarylens-family-uat.example.workers.dev") {
 		t.Fatal("expected native workers.dev address")
@@ -153,6 +192,62 @@ func TestComposeInstallRequiresProtectedBootstrap(t *testing.T) {
 	phases, err := adapter.preflight(context.Background(), request{Plan: p, Secrets: map[string]string{}})
 	if err == nil || len(phases) != 1 || phases[0].State != "failed" {
 		t.Fatalf("expected protected bootstrap preflight failure, err=%v phases=%+v", err, phases)
+	}
+}
+
+func composePreflightFixture(t *testing.T, failFolderTest bool) (*composePreflightRunner, plan) {
+	t.Helper()
+	key := []byte("clean-ubuntu-host-key")
+	digest := sha256.Sum256(key)
+	runner := &composePreflightRunner{
+		keyLine:        "hives.example ssh-ed25519 " + base64.StdEncoding.EncodeToString(key) + "\n",
+		failFolderTest: failFolderTest,
+	}
+	p := validPlan()
+	p.Target = "compose-ssh"
+	p.Cloudflare = nil
+	p.Compose = &compose{
+		Host: "hives.example", Port: 22, User: "beekeeper", PublicURL: "https://hives.example",
+		TargetDirectory: "/opt/apiarylens", ProjectName: "apiarylens-family",
+		SSHHostKeySha256: "SHA256:" + base64.RawStdEncoding.EncodeToString(digest[:]), BackupRetention: 14,
+	}
+	return runner, p
+}
+
+func TestComposePreflightVerifiesInstallFolderAccess(t *testing.T) {
+	runner, p := composePreflightFixture(t, false)
+	adapter := &composeAdapter{executor: &executor{runner: runner}}
+	phases, err := adapter.preflight(context.Background(), request{
+		Plan: p, Secrets: map[string]string{"bootstrapToken": "owner-setup-code-long-enough"},
+	})
+	if err != nil || len(phases) != 5 {
+		t.Fatalf("expected five passing Compose phases, err=%v phases=%+v", err, phases)
+	}
+	for _, current := range phases {
+		if current.State != "passed" {
+			t.Fatalf("expected passing phase, got %+v", current)
+		}
+	}
+	found := false
+	for _, current := range runner.commands {
+		if bytes.Equal(current.Stdin, []byte(composeTargetPreflightScript)) {
+			found = strings.Contains(strings.Join(current.Args, " "), base64.RawURLEncoding.EncodeToString([]byte("/opt/apiarylens")))
+		}
+	}
+	if !found {
+		t.Fatal("install-folder preflight script or encoded target was not sent over SSH")
+	}
+}
+
+func TestComposePreflightReportsInstallFolderAccessFailure(t *testing.T) {
+	runner, p := composePreflightFixture(t, true)
+	adapter := &composeAdapter{executor: &executor{runner: runner}}
+	phases, err := adapter.preflight(context.Background(), request{
+		Plan: p, Secrets: map[string]string{"bootstrapToken": "owner-setup-code-long-enough"},
+	})
+	if err == nil || len(phases) != 4 || phases[3].State != "failed" ||
+		phases[3].Name != "Verify install folder access" || !strings.Contains(err.Error(), "passwordless sudo") {
+		t.Fatalf("expected actionable install-folder failure, err=%v phases=%+v", err, phases)
 	}
 }
 
@@ -192,6 +287,9 @@ func TestComposeLifecycleEnforcesRetentionAndRevokesRestoredSessions(t *testing.
 		"sessions were revoked",
 		`up -d --wait api`,
 		`chmod 644 "$secrets_dir/auth-root"`,
+		`[ ! -L "$target" ]`,
+		`stat -c '%u' "$target"`,
+		`sudo install -d -m 0700`,
 	} {
 		if !strings.Contains(composeRemoteScript, required) {
 			t.Fatalf("Compose lifecycle script is missing %q", required)

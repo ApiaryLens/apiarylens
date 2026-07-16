@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net"
 	"net/url"
+	"path"
 	"regexp"
 	"strings"
 	"time"
@@ -147,7 +148,9 @@ func validate(p plan) error {
 		if !sshName.MatchString(p.Compose.Host) || !sshName.MatchString(p.Compose.User) || !resourceName.MatchString(p.Compose.ProjectName) {
 			return errors.New("the SSH host, user, or project name contains unsupported characters")
 		}
-		if p.Compose.Port < 1 || p.Compose.Port > 65535 || !remotePath.MatchString(p.Compose.TargetDirectory) || strings.Contains(p.Compose.TargetDirectory, "..") {
+		if p.Compose.Port < 1 || p.Compose.Port > 65535 ||
+			!remotePath.MatchString(p.Compose.TargetDirectory) || strings.Contains(p.Compose.TargetDirectory, "..") ||
+			p.Compose.TargetDirectory == "/" || path.Clean(p.Compose.TargetDirectory) != p.Compose.TargetDirectory {
 			return errors.New("the remote port or install folder is unsafe")
 		}
 		if !composeHTTPSURL(p.Compose.PublicURL) {
