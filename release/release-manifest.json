@@ -24,19 +24,19 @@
       "bytes": 607022
     },
     {
-      "name": "apiarylens-0.1.0-rc.1-compose-36b697c72823.tar.gz",
+      "name": "apiarylens-0.1.0-rc.1-compose-114c417b2d52.tar.gz",
       "kind": "deployment-bundle",
       "target": "compose",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-0.1.0-rc.1-compose-36b697c72823.tar.gz",
-      "sha256": "36b697c72823dd506c350a507a4be9dcf0fd59c4d09ff8f3b4ff21a82bd3f355",
-      "bytes": 105738
+      "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-0.1.0-rc.1-compose-114c417b2d52.tar.gz",
+      "sha256": "114c417b2d521a6943fb4cdba34cdbbb95ef128985c464b8cf52223b0be3b187",
+      "bytes": 105767
     },
     {
       "name": "apiarylens-scout-bee-0.1.0-rc.1-windows-amd64.exe",
       "kind": "deployment-tool",
       "target": "windows-amd64",
       "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-scout-bee-0.1.0-rc.1-windows-amd64.exe",
-      "sha256": "012cb29c292c584ed326b5412c123a7b34075e22c274c727eb75097a3507a21e",
+      "sha256": "c1ff4f5a74ee6f6048cd4d6da6af9141efa106cd743fd45da7ff19e224f35b1d",
       "bytes": 7815168
     },
     {
@@ -44,7 +44,7 @@
       "kind": "sbom",
       "target": "release",
       "url": "https://apiarylens.org/releases/0.1.0-rc.1/apiarylens-sbom.cdx.json",
-      "sha256": "cf2e6a3315bfd3bda2d068e49079e34c6207c17b3e5865d9e9ab63bad5b4d9ab",
+      "sha256": "4e3bbb360bff6a9772bc29cfc62515680354482c9373d98b19c19821209eec01",
       "bytes": 38511
     },
     {
@@ -60,8 +60,8 @@
       "kind": "provenance",
       "target": "release",
       "url": "https://apiarylens.org/releases/0.1.0-rc.1/apiarylens-provenance.intoto.jsonl",
-      "sha256": "887e7bfaca9107d1d6879b7bc0c5bd7bd16ec596428fa5ca3ab1ecd65d8b1107",
-      "bytes": 1134
+      "sha256": "6ddbccc74738c2604c685739279a8f9023133fea95fc1f690b2713a4e3b7a90a",
+      "bytes": 1133
     }
   ],
   "knownLimitations": [
