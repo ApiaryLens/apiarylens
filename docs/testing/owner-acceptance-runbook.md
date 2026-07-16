@@ -17,6 +17,18 @@ cannot be established from the build server.
 - The current board open locally at
   `D:\git\apiarylens\apiarylens-ops\pmo\boards\apiarylens-mvp-status.html`.
 
+## Test surfaces
+
+| Surface | Use | Data boundary |
+| --- | --- | --- |
+| [Public synthetic demo](https://demo.apiarylens.app/app/) | Safe UI, responsive, and basic PWA checks | Synthetic data only; no real family account |
+| [Isolated Cloudflare UAT](https://apiarylens-family-uat.hybridsolutionscloud.workers.dev/) | Real owner, family-member, Viewer, sync, media, backup, and authorization journey | Disposable UAT data only; never use production records or personal photos |
+| Approved Hyper-V Compose target | Required self-hosted profile acceptance | Requires the approved local Hyper-V VM and its operator access |
+
+The public `.app` entry is a demo and cannot prove multi-account or private-data
+behavior. Use the isolated Cloudflare UAT or the approved Compose target for the
+full acceptance journey.
+
 ## Required journey
 
 1. Install the PWA on the phone or tablet and open it once while online.
@@ -58,4 +70,3 @@ Mark `UAT-02`, `UAT-03`, `UAT-04`, `UAT-05`, `REL-05`, and `OPS-03` complete
 only when the evidence file exists and the owner has signed the result. If any
 step fails, leave the task open, record the failure and recovery action, and do
 not promote the release to stable.
-
