@@ -1,8 +1,22 @@
 const CACHE = 'apiarylens-shell-0.1.0-rc.7';
-const SHELL = ['/', '/manifest.webmanifest'];
+const BASE = new URL('./', self.registration.scope);
+const SHELL = [
+  BASE.pathname,
+  new URL('index.html', BASE).pathname,
+  new URL('manifest.webmanifest', BASE).pathname,
+];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
+  event.waitUntil(
+    caches.open(CACHE).then(async (cache) => {
+      const shellResponse = await fetch(BASE.pathname);
+      const shell = await shellResponse.clone().text();
+      const assets = [...shell.matchAll(/(?:src|href)=["']([^"']+)["']/g)]
+        .map((match) => new URL(match[1], BASE).pathname)
+        .filter((pathname) => pathname.startsWith(BASE.pathname));
+      await cache.addAll([...new Set([...SHELL, ...assets])]);
+    }),
+  );
 });
 
 self.addEventListener('message', (event) => {
@@ -29,6 +43,17 @@ self.addEventListener('fetch', (event) => {
         caches.open(CACHE).then((cache) => cache.put(event.request, copy));
         return response;
       })
-      .catch(() => caches.match(event.request).then((cached) => cached ?? caches.match('/'))),
+      .catch(() =>
+        caches.match(event.request).then(async (cached) => {
+          if (cached) return cached;
+          if (event.request.mode === 'navigate') {
+            return (
+              (await caches.match(BASE.pathname)) ??
+              caches.match(new URL('index.html', BASE).pathname)
+            );
+          }
+          return undefined;
+        }),
+      ),
   );
 });
