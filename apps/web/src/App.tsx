@@ -1396,11 +1396,12 @@ function MediaTile({
   }, [local]);
   const thumbnail = localUrls?.thumbnail ?? `/api/v1/media/${record.id}/content?variant=thumbnail`;
   const original = localUrls?.original ?? `/api/v1/media/${record.id}/content`;
+  const hasLocalPhoto = Boolean(local?.blob);
   const mediaReady = String(record.data.state) === 'ready' || local?.state === 'ready';
   const mediaSyncState = local?.state === 'failed' || !mediaReady ? 'failed' : record.syncState;
   return (
     <article className="media-card">
-      {mediaReady ? (
+      {hasLocalPhoto || mediaReady ? (
         <a href={original} target="_blank" rel="noreferrer">
           <img
             src={thumbnail}
