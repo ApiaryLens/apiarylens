@@ -2,7 +2,7 @@
 
 ## Status
 
-The MVP brand system is implemented and approved for the current release-candidate
+The MVP brand system is implemented and approved for the current Public Preview
 properties. The public source of truth includes the logo mark, browser/PWA icon
 sizes, family-to-professional hero, product graphics, Lucidchart exports, usage
 guidance, and safe provenance records under [`assets/`](../../assets/). New campaign

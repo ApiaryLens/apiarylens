@@ -101,7 +101,7 @@ const provenance = {
   predicateType: 'https://slsa.dev/provenance/v1',
   predicate: {
     buildDefinition: {
-      buildType: 'https://apiarylens.dev/build-types/local-release-candidate/v1',
+      buildType: `https://apiarylens.dev/build-types/local-${manifest.channel}/v1`,
       externalParameters: { productVersion: manifest.productVersion, channel: manifest.channel },
       internalParameters: { dirtyWorktree: Boolean(dirty.stdout.trim()) },
       resolvedDependencies: [

@@ -128,8 +128,8 @@ needed.
 
 ## Shareable Handout
 
-The following 4:5 release-candidate handout is designed for social posts, messaging,
+The following 4:5 Public Preview handout is designed for social posts, messaging,
 and email. It uses reviewed project language and directs people to the live public
 project and documentation home.
 
-![ApiaryLens release-candidate marketing handout with family apiary photography and six capability areas](../../assets/graphics/ApiaryLens_Marketing_Handout_Social_2026-07.png)
+![ApiaryLens Public Preview marketing handout with family apiary photography and six capability areas](../../assets/graphics/ApiaryLens_Marketing_Handout_Social_2026-07.png)

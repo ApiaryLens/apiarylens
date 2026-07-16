@@ -119,22 +119,8 @@ for (const definition of definitions) {
   });
 }
 
-const scoutName = `apiarylens-scout-bee-${version}-windows-amd64.exe`;
-const scoutContent = await readFile(join(artifactDirectory, scoutName));
-const deploymentTools = [
-  {
-    name: scoutName,
-    kind: 'deployment-tool',
-    target: 'windows-amd64',
-    url: `https://apiarylens.org/releases/${version}/artifacts/${scoutName}`,
-    sha256: createHash('sha256').update(scoutContent).digest('hex'),
-    bytes: scoutContent.length,
-  },
-];
-
 manifest.artifacts = [
   ...artifacts,
-  ...deploymentTools,
   ...manifest.artifacts.filter(
     (artifact) => !['deployment-bundle', 'deployment-tool'].includes(artifact.kind),
   ),
@@ -161,24 +147,6 @@ async function buildReleaseInputs() {
     },
   });
 
-  const scoutName = `apiarylens-scout-bee-${version}-windows-amd64.exe`;
-  const go = process.env.GO_BINARY || 'go';
-  await run(
-    go,
-    [
-      'build',
-      '-trimpath',
-      '-buildvcs=false',
-      '-ldflags=-s -w',
-      '-o',
-      join(artifactDirectory, scoutName),
-      '.',
-    ],
-    {
-      cwd: join(root, 'apps/scout-bee'),
-      env: { ...process.env, GOOS: 'windows', GOARCH: 'amd64', CGO_ENABLED: '0' },
-    },
-  );
 }
 
 async function readTreeText(source, include) {

@@ -8,8 +8,8 @@ stale or ambiguous.
 |---|---|---|
 | `ApiaryLens_Capability_Map_2026-07.png` | Lucidchart document `36e00bfd-6fd9-46ed-ad8b-1032b1a34108` | Current public export for the Product Capability Overview |
 | `ApiaryLens_Roadmap_2026-07.png` | Lucidchart document `755f46d8-c741-45f7-85e3-88f87a07aeca` | Current public export of the directional roadmap |
-| `ApiaryLens_Marketing_Hero_2026-07.png` | OpenAI built-in image generation; prompt recorded below | Approved reference image for the current release-candidate product narrative; new campaign reuse requires normal review |
-| `ApiaryLens_Marketing_Handout_Social_2026-07.png` | Deterministic HTML/CSS composition using the current marketing hero | Approved release-candidate 4:5 handout for social media, messaging, and email |
+| `ApiaryLens_Marketing_Hero_2026-07.png` | OpenAI built-in image generation; prompt recorded below | Approved reference image for the current Public Preview product narrative; new campaign reuse requires normal review |
+| `ApiaryLens_Marketing_Handout_Social_2026-07.png` | Deterministic HTML/CSS composition using the current marketing hero | Approved Public Preview 4:5 handout for social media, messaging, and email |
 | `ApiaryLens_Web_Hero_Family_to_Professional_2026-07.png` | OpenAI built-in image generation; prompt recorded below | Purpose-built `.org` hero showing the family-to-professional ApiaryLens journey without embedded copy or UI |
 | `architecture/components-network-trust.png` through `architecture/primary-user-journeys.png` | Lucidchart document `72787958-9344-4a71-af56-98a216b35aa1`, pages 1-7 | Current accessible exports for components/trust, authorization, media/backup, Scout Bee, CI/CD, recovery, and primary journeys |
 
@@ -36,7 +36,7 @@ stale or ambiguous.
   reviewing hive records on a rugged tablet beside a small family apiary, with
   correct protective clothing, realistic equipment, natural daylight, and no text,
   logos, application UI, or unsafe beekeeping behavior
-- **Review result:** Approved for the current release-candidate documentation after
+- **Review result:** Approved for the current Public Preview documentation after
   beekeeping, accessibility, provenance, and product-claim review; reassess before a
   distinct external campaign
 
