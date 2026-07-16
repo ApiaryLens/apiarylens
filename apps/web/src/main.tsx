@@ -5,7 +5,10 @@ import './styles.css';
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
-    void navigator.serviceWorker.register('/sw.js').then((registration) => {
+    const serviceWorkerPath = window.location.pathname.startsWith('/app/')
+      ? '/app/sw.js'
+      : '/sw.js';
+    void navigator.serviceWorker.register(serviceWorkerPath).then((registration) => {
       const announce = () =>
         window.dispatchEvent(new CustomEvent('apiarylens:update-ready', { detail: registration }));
       if (registration.waiting) announce();

@@ -16,8 +16,12 @@ which the portfolio moves from foundation through release.
   implemented in `0.1.0-rc.7`
 - Signed, content-addressed release candidate and complete server-profile lifecycle
   evidence: published
-- Final work: AWS/GCP compatibility, physical-device/manual accessibility journeys,
-  project-owner acceptance, and stable promotion
+- MVP core release: Cloudflare family profile, approved Hyper-V Compose profile,
+  Scout Bee, documentation, and release artifacts are complete.
+- Post-MVP Version 1.1 backlog: AWS/provider expansion, extended physical-device
+  field sessions, assistive-technology review, and formal support operations.
+- Remaining MVP release action: project-owner acceptance of the verified candidate
+  and stable promotion.
 
 ## Delivery Rule
 
@@ -164,13 +168,9 @@ and deployment support rather than treating them as later cleanup.
 
 ## Immediate Work Queue
 
-1. Run the exact released Compose acceptance suite on disposable AWS and GCP Ubuntu
-   VMs and clean up every resource.
-2. Complete the physical iPhone/iPad and separate-device invitation, offline,
-   media, synchronization, conflict, and follow-up journey.
-3. Prove pending inspection/media work survives the released PWA/server update and
-   synchronizes exactly once.
-4. Complete manual NVDA, VoiceOver, 200% zoom, forced-colors, and destructive-flow
-   keyboard acceptance.
-5. Record project-owner acceptance and promote the unchanged verified candidate to
+1. Record project-owner acceptance and promote the unchanged verified candidate to
    stable.
+2. Prove pending inspection/media work survives the released PWA/server update and
+   synchronizes exactly once on the required MVP profiles.
+3. Track AWS, extended physical-device sessions, assistive-technology review, and
+   formal support operations in the Version 1.1 backlog.

@@ -83,6 +83,22 @@ experience heavier.
 - Final logo family, PWA icons, UX designs, Lucidchart sources, accessible diagram
   exports, screenshots, and complete user/operator/developer documentation
 
+## Version 1.1 Backlog: Provider Expansion and Extended Acceptance
+
+These items are deliberately post-MVP backlog work. They do not change the required
+Cloudflare family profile, approved Hyper-V Compose profile, or the installable PWA
+core accepted for the MVP release.
+
+- AWS EC2 Compose compatibility evidence and provider-specific operating guidance
+- Optional AWS/GCP Scout Bee adapters and disposable-provider lifecycle automation
+- Extended field-device acceptance on physical iPhone and iPad hardware, including
+  invitation, offline media, interrupted-update, and multi-device synchronization
+  sessions beyond the required MVP profile evidence
+- Manual NVDA, VoiceOver, true 200% zoom, forced-colors, and destructive-flow
+  accessibility review with a maintained assistive-technology support matrix
+- A formal community support program, support-response targets, and expanded support
+  channels beyond the current public documentation and issue/discussion workflow
+
 ## Phase 2: Hive Record Expansion — Post-MVP
 
 Inspections, queens, boxes/equipment, photos, notes, and hive history are already in

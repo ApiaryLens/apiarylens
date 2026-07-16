@@ -57,6 +57,7 @@ not satisfy it.
 
 | Date | Profile/device | Step | Result | Evidence | Notes |
 |---|---|---|---|---|---|
+| 2026-07-16 | Local product workspace | Format, lint, typecheck, JavaScript unit suites (51 tests), production builds, documentation links, and backup/restore verification | Pass | `pnpm format:check`; `pnpm docs:check`; `pnpm build`; `pnpm test`; `node scripts/test-backup-restore.mjs` | Scout Bee Go tests remain an environment gate because the local Go toolchain is unavailable; this row does not substitute for physical-device UAT. |
 | 2026-07-15 | Public demo / mobile viewport | Offline draft and synchronization | Pass | Browser-controlled live journey | Synthetic demo only; not deployment UAT |
 | 2026-07-15 | Cloudflare production service | Protected backup endpoint | Pass | Temporary secret, 200 ZIP, manifest plus seven database files | Read-only backup proof; restore not run against production |
 | 2026-07-15 | Release CDN | Three release downloads | Pass | Remote byte counts and SHA-256 equal manifest | Cloudflare, Compose, Scout Bee Windows |
@@ -92,9 +93,10 @@ released Compose preflight, clean install, product, backup/restore, 14-backup
 retention, keep-data reinstall, seeded-predecessor interrupted update/same-plan
 resume, and a portable restore into a fresh application target with zero initial
 users and records. The conditional Azure Linux VM remains provider-neutral reference
-evidence. Physical-device invitation/offline PWA/update journeys and manual
-assistive-technology checks remain open because their acceptance wording requires
-separate human-operated device evidence.
+evidence. Physical-device invitation/offline PWA/update journeys remain open because
+their acceptance wording requires separate human-operated device evidence. AWS
+provider compatibility and the extended manual assistive-technology matrix are
+tracked in the Version 1.1 backlog rather than treated as MVP profile blockers.
 
 ## Acceptance
 

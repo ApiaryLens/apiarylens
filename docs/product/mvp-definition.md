@@ -53,7 +53,8 @@ A new family can:
 9. Understand where their data is stored and how to move it.
 10. Use the same MVP product capabilities whether the backend is the Cloudflare
     family profile, Docker Compose on personally controlled hardware, or Docker
-    Compose on a supported Azure, AWS, or GCP Linux VM.
+    Compose on the approved Hyper-V Linux VM. Azure remains a documented conditional
+    reference path; AWS provider-specific support is a Version 1.1 backlog item.
 
 If this journey is incomplete, the product is not MVP-ready.
 
@@ -202,9 +203,10 @@ The deployment order follows
 
 - Second cloud target and portable fallback
 - Same released Compose artifacts on an ordinary supported Linux VM
-- Provider-neutral instructions plus verified Azure, AWS, and GCP Linux VM
-  compatibility; provider-specific provisioning may differ, but product behavior
-  must not
+- Provider-neutral instructions plus the approved Hyper-V deployment and conditional
+  Azure/GCP reference evidence; provider-specific AWS provisioning and acceptance
+  are Version 1.1 backlog work, while the portable Compose artifact remains usable
+  on suitable Linux VMs.
 - Published resource envelope and expected cost components
 
 #### Cross-Profile Feature Parity
@@ -504,8 +506,10 @@ explicit UAT results, automated test evidence, and opt-in user research.
   manifest, source, artifacts, contracts, migrations, notes, and known limitations
 - Cloudflare and Compose backends pass the same release-scope domain,
   authorization, synchronization, and export conformance suite
-- Local Compose and the documented Azure, AWS, and GCP Compose environments pass the
-  supported installation and primary functional acceptance suite
+- Local Compose and the approved Hyper-V Compose environment pass the supported
+  installation and primary functional acceptance suite; Azure/GCP evidence remains
+  documented reference coverage, and AWS provider-specific acceptance is tracked in
+  Version 1.1.
 - Measured family-cloud usage and Compose resource requirements are published with
   their date and assumptions
 - All release-required brand, UX, diagram, flowchart, and documentation artifacts

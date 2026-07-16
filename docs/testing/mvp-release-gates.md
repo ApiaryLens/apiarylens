@@ -157,8 +157,9 @@ reinstall, diagnostics, resource baseline, the remove-data defects found during
 acceptance, exact public rc.7 correction, and complete provider cleanup are recorded
 in
 [`scout-bee-gcp-compose-lifecycle-2026-07-16.json`](scout-bee-gcp-compose-lifecycle-2026-07-16.json).
-The remaining combined gates require physical-device offline/update evidence, manual
-assistive-technology review, AWS compatibility, and project-owner acceptance.
+The remaining MVP gates require physical PWA offline/update evidence and
+project-owner acceptance. AWS provider compatibility and the extended
+assistive-technology support matrix are tracked in the Version 1.1 backlog.
 
 ## Rollback Triggers
 
