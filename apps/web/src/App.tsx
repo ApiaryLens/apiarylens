@@ -1399,7 +1399,8 @@ function MediaTile({
   const original = localUrls?.original ?? `/api/v1/media/${record.id}/content`;
   const hasLocalPhoto = Boolean(local?.blob);
   const mediaReady = String(record.data.state) === 'ready' || local?.state === 'ready';
-  const mediaSyncState = local?.state === 'failed' || !mediaReady ? 'failed' : record.syncState;
+  const mediaSyncState =
+    local?.state === 'failed' ? 'failed' : !mediaReady ? 'pending' : record.syncState;
   return (
     <article className="media-card">
       {hasLocalPhoto || mediaReady ? (
@@ -1421,7 +1422,7 @@ function MediaTile({
           {inspectionLabel ?? 'Inspection'} · {Math.round(Number(record.data.byteSize) / 1024)} KB
         </small>
         <SyncBadge state={mediaSyncState} />
-        {!mediaReady && (
+        {!mediaReady && !hasLocalPhoto && (
           <small>Return to the device that captured this photo, reconnect, and tap Sync now.</small>
         )}
         {canWrite && (
@@ -2000,7 +2001,7 @@ function recordSummary(record: LocalResource): string | undefined {
 }
 
 function SyncBadge({ state }: { state: LocalResource['syncState'] }) {
-  return <span className={`sync-badge ${state}`}>{state}</span>;
+  return <span className={`sync-badge ${state}`}>{state === 'pending' ? 'not synced' : state}</span>;
 }
 function Empty({ text }: { text: string }) {
   return <p className="empty">{text}</p>;
