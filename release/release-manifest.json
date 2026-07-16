@@ -36,7 +36,7 @@
       "kind": "deployment-tool",
       "target": "windows-amd64",
       "url": "https://apiarylens.org/releases/0.1.0-rc.1/artifacts/apiarylens-scout-bee-0.1.0-rc.1-windows-amd64.exe",
-      "sha256": "c1ff4f5a74ee6f6048cd4d6da6af9141efa106cd743fd45da7ff19e224f35b1d",
+      "sha256": "d25bc8bd7793f42794f7a21a3d8d067135e3ea90c14da0eee4bc6609ac325e5b",
       "bytes": 7815168
     },
     {
@@ -44,7 +44,7 @@
       "kind": "sbom",
       "target": "release",
       "url": "https://apiarylens.org/releases/0.1.0-rc.1/apiarylens-sbom.cdx.json",
-      "sha256": "4e3bbb360bff6a9772bc29cfc62515680354482c9373d98b19c19821209eec01",
+      "sha256": "bbce9a21c2c7b6cc8d6bbc75fe52bf6a4a25e8def5a86a3e0920d9497e1a21a5",
       "bytes": 38511
     },
     {
@@ -60,8 +60,8 @@
       "kind": "provenance",
       "target": "release",
       "url": "https://apiarylens.org/releases/0.1.0-rc.1/apiarylens-provenance.intoto.jsonl",
-      "sha256": "599681d7e024fc7469394334b96271ca892e57c0576ffe49f17fb22d3f47d2db",
-      "bytes": 1134
+      "sha256": "2a556126198f389d878de40183b1807cecf4a3e4165c24f14eeee7c0b1cb40df",
+      "bytes": 1133
     }
   ],
   "knownLimitations": [
