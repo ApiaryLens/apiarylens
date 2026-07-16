@@ -23,15 +23,16 @@
 - [x] Compose and Cloudflare report the same immutable migration head (`0004`), the
       ordered Compose migration test passes, a production pre-migration snapshot was
       captured, and Cloudflare applied `0004` successfully.
-- [ ] Complete the seeded-predecessor update, interruption, rollback, and restore
-      scenarios on the isolated Cloudflare and Compose UAT deployments.
+- [x] Complete seeded-predecessor update, interruption/resume, and full-restore
+      recovery scenarios on isolated Cloudflare and Azure Compose UAT deployments;
+      the separate required Hyper-V target gate remains open below.
 - [x] Automated axe checks report no violations on `.org`, documentation, `.app`, the
       isolated demo, and both `.dev` entry points; dependency audit reports no known
       high-severity vulnerabilities.
 - [x] The release-scope threat model and OWASP ASVS 5.0.0 chapter map document
       implemented, partial, and non-applicable controls without claiming certification.
-- [x] Public MVP verification run `29459306695` passes for release-evidence revision
-      `b3094bc1ae944db48aad8d6555581194acbb3a0b`, whose manifest pins product-source
+- [x] Public MVP verification run `29463976744` passes for release-evidence revision
+      `449a7d5510c97be6fd9ffb32cde44874e8d01704`, whose manifest pins product-source
       revision `037d54881f79a9381212b94d4d382dc716bbdffc`, including the secret scan,
       complete workspace verification, clean Compose image builds, and release checks.
 - [x] The SHA-256-pinned Grype 0.115.0 CI scan reports no unresolved high or critical
@@ -65,6 +66,11 @@
       authorization, portable export, destructive restore, session rotation and
       revocation, atomic bootstrap claiming, and record/media recovery at migration
       `0004` and runtime revision `037d548`.
+- [x] The released provider-neutral Compose profile passes signed fresh install on a
+      disposable Azure Linux VM, protected bootstrap, release-scope records, private
+      media, sync/conflict/idempotency, viewer denial, complete export, backup/restore
+      with session revocation, 14-backup retention, keep-data reinstall, and a seeded
+      migration-0003 interrupted update resumed with the same plan.
 
 ## Deploy
 
@@ -113,6 +119,11 @@ evidence for verification revision `b3094bc1ae944db48aad8d6555581194acbb3a0b` is
 [`release-signing-evidence-2026-07-15.json`](release-signing-evidence-2026-07-15.json).
 The production observation and provider-allowance baseline is recorded in
 [`cloudflare-family-cost-and-observation-2026-07-15.md`](cloudflare-family-cost-and-observation-2026-07-15.md).
+The conditional provider-neutral Azure Compose install, product, recovery, reinstall,
+update, signing, resource, and cost evidence is recorded in
+[`scout-bee-azure-compose-lifecycle-2026-07-16.json`](scout-bee-azure-compose-lifecycle-2026-07-16.json).
+It advances the Compose implementation gates but does not replace the required
+approved Hyper-V target, clean-environment restore, or physical-device gates.
 
 ## Rollback Triggers
 

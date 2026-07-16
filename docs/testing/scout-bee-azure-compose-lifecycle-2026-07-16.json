@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-07-16T01:41:00Z",
+  "scope": "Released Scout Bee fresh install, release-scope product journey, backup/restore, retention, keep-data uninstall/reinstall, seeded-predecessor interrupted update/resume, diagnostics, and resource baseline on a disposable provider-neutral Azure Linux Compose host.",
+  "profile": {
+    "kind": "provider-neutral-compose-on-cloud-vm",
+    "os": "Ubuntu 24.04 LTS",
+    "region": "eastus",
+    "vmSize": "Standard_B2s",
+    "vcpus": 2,
+    "memoryGiB": 4,
+    "docker": "29.6.1",
+    "compose": "5.3.1"
+  },
+  "release": {
+    "version": "0.1.0-rc.1",
+    "finalEvidenceRevision": "449a7d5510c97be6fd9ffb32cde44874e8d01704",
+    "composeSha256": "114c417b2d521a6943fb4cdba34cdbbb95ef128985c464b8cf52223b0be3b187",
+    "finalScoutSha256": "006b258cae06c7f3ee7f47a88c7a68c6f8b00ded56166fd10152f510e5c6e2f1",
+    "manifestSha256": "e4d048333d16f770516be0884c5506b1d2373223c68db4a1eb6eec60c1910e84",
+    "mvpVerificationRun": 29463976744,
+    "releaseSigningRun": 29464083985,
+    "orgDeploymentVersion": "5329e7ef-4c79-4269-93b1-92de6ef47566",
+    "publicDigestsMatched": true,
+    "independentAttestationVerification": true
+  },
+  "install": {
+    "result": "pass",
+    "elapsedSeconds": 15,
+    "scoutPhasesPassed": 12,
+    "pinnedSshHostKey": true,
+    "secureRuntimeSecretStreaming": true,
+    "publicHttpsHealth": true,
+    "invalidBootstrapRejected": true,
+    "protectedOwnerCreated": true,
+    "recoveryCodesIssued": 8,
+    "initialSyncAccepted": true
+  },
+  "productJourney": {
+    "result": "pass",
+    "ownerPasswordSignIn": true,
+    "allReleaseScopeResourceTypes": true,
+    "duplicateSyncIdempotent": true,
+    "staleWriteConflictReturned": true,
+    "incrementalPull": true,
+    "privateOriginalAndThumbnailRoundTrip": true,
+    "anonymousMediaRejected": true,
+    "viewerInvited": true,
+    "viewerWriteAndExportDenied": true,
+    "completeExportVerified": true
+  },
+  "recovery": {
+    "result": "pass",
+    "verifiedBackupCreated": true,
+    "postBackupMutationConfirmed": true,
+    "restoreCompleted": true,
+    "postBackupMutationRemoved": true,
+    "priorSessionsRevoked": true,
+    "freshPasswordSignInSucceeded": true,
+    "retentionBackupsExecuted": 15,
+    "retainedBackups": 14,
+    "diagnosticsRedacted": true
+  },
+  "keepDataReinstall": {
+    "result": "pass",
+    "publicExposureRemoved": true,
+    "containersRemoved": true,
+    "dataVolumeAndRuntimeSecretsRetained": true,
+    "reinstallPhasesPassed": 12,
+    "originalPasswordRecordsAndMediaRetained": true,
+    "ownerBootstrapRemainedClosed": true
+  },
+  "update": {
+    "result": "pass",
+    "seededMigration0003Predecessor": true,
+    "clientInterruptedDuringUpdate": true,
+    "interruptionRecordedAsCanceled": true,
+    "samePlanResumed": true,
+    "backupBeforeUpdateRetained": true,
+    "migration0004Applied": true,
+    "bothServicesAndPublicHttpsHealthy": true,
+    "passwordRecordsAndPrivateMediaRetained": true
+  },
+  "resourceBaseline": {
+    "observedUptime": "3 hours 34 minutes",
+    "quietApiMemoryMiB": 37.16,
+    "quietWebMemoryMiB": 17.58,
+    "combinedQuietCpuPercent": 0.0,
+    "dataBytes": 286762,
+    "fourteenBackupsBytes": 380134,
+    "apiImageBytes": 58853399,
+    "webImageBytes": 19804060,
+    "rootDiskUsedPercent": 19,
+    "estimatedComputeUsdPerHour": 0.04,
+    "estimateExcludes": ["managed disk", "public IPv4", "network egress", "taxes"]
+  },
+  "defectsFoundAndClosed": [
+    "Modern Ubuntu SSH host-key capture fallback without authentication",
+    "Raw URL-safe Base64 padding restoration",
+    "Mode-0600 streamed bootstrap and authentication-root transfer",
+    "Compose file-backed secret permissions under a mode-0700 host directory",
+    "Explicit unprivileged Caddyfile ownership and mode",
+    "Caddy startup health gate and empty optional ACME-email removal",
+    "API health wait after backup",
+    "Restored authentication-root runtime permissions"
+  ],
+  "privacy": {
+    "credentialsPersisted": false,
+    "accountIdentifiersPresent": false,
+    "subscriptionIdentifiersPresent": false,
+    "userIdentifiersPresent": false,
+    "privateMediaPubliclyReadable": false
+  },
+  "limits": [
+    "This conditional Azure Compose proof does not replace the required approved Hyper-V Compose UAT target.",
+    "Physical iPhone, iPad, computer, offline-PWA, and manual assistive-technology checks remain separate release gates.",
+    "The restore proof used the isolated deployment's retained verified backups; a separate clean-environment restore remains required by the final acceptance wording."
+  ]
+}

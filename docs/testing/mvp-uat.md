@@ -17,7 +17,7 @@ not satisfy it.
 - Deployment plan: 1
 - Export/local store: 1
 - Required profiles: Cloudflare family; Hyper-V Linux Docker Compose
-- Conditional profile: existing Azure Linux VM Docker Compose
+- Conditional/reference profile: disposable Azure Linux VM Docker Compose
 
 ## Critical Journey
 
@@ -42,7 +42,7 @@ not satisfy it.
       migration, health verification, PWA pending-work preservation, and resume or
       rollback proof.
 - [x] Export redacted Scout diagnostics and confirm secrets and user data are absent.
-- [ ] Uninstall with keep-data, reinstall, and prove retained data recovery.
+- [x] Uninstall with keep-data, reinstall, and prove retained data recovery.
 - [ ] Run keyboard, screen-reader landmark, contrast, zoom, and target-size checks on
       onboarding, dashboard, inspect, conflict, family, export, and update views.
 - [ ] Record elapsed install time, active family cost, failures, mitigations, tester,
@@ -65,6 +65,8 @@ not satisfy it.
 | 2026-07-15 | Current released Scout Bee / isolated Cloudflare UAT | Guarded update apply and redacted diagnostics | Pass | [`scout-bee-cloudflare-update-2026-07-15.json`](scout-bee-cloudflare-update-2026-07-15.json) | All 17 phases passed, including verified backup before migration, resource reuse, migration, deployment, exact release identity, retained records/media, secret cleanup, and sanitized diagnostics |
 | 2026-07-15 | Current released Scout Bee / isolated Cloudflare lifecycle UAT | Seeded predecessor, interrupted update/resume, retained state, and full restore | Pass | [`scout-bee-cloudflare-lifecycle-2026-07-15.json`](scout-bee-cloudflare-lifecycle-2026-07-15.json) | Migration-0003 predecessor seeded; update canceled before the real migration command; same plan resumed after bounded edge-identity polling; exact released executable passed 17 phases; migration-0003 restore rejected safely; migration-0004 restore passed 9 phases with records/media retained and sessions revoked |
 | 2026-07-15 | Exact released Scout Bee / isolated Cloudflare install UAT | Fresh install, protected owner setup, keep-data uninstall, and reinstall | Pass | [`scout-bee-cloudflare-install-reinstall-2026-07-15.json`](scout-bee-cloudflare-install-reinstall-2026-07-15.json) | Exact `a0db8b48…` executable passed both 14-phase installs; invalid setup code rejected; public route removed; retained apiary, original session, and password sign-in survived; isolated resources deleted after verification |
+| 2026-07-16 | Released Scout Bee / disposable Azure Linux Compose UAT | Fresh install through full product and lifecycle journey | Pass | [`scout-bee-azure-compose-lifecycle-2026-07-16.json`](scout-bee-azure-compose-lifecycle-2026-07-16.json) | Signed public Compose and Scout artifacts; 15-second install; protected bootstrap; all resource types; sync/conflict; private media; viewer denial; complete export; restore/session revocation; 14-backup retention; keep-data reinstall; seeded-0003 interrupted update/same-plan resume; redacted diagnostics |
+| 2026-07-16 | Azure Linux Compose family baseline | Quiet resource use and planning cost | Pass | [`scout-bee-azure-compose-lifecycle-2026-07-16.json`](scout-bee-azure-compose-lifecycle-2026-07-16.json) | 54.74 MiB combined quiet container memory, 0.00% sampled CPU, 286,762 data bytes, 380,134 bytes across 14 backups, and estimated compute at USD 0.04/hour before disk, IPv4, egress, and taxes |
 
 The current isolated Cloudflare run additionally exercised invitations with three
 independent sessions, all 13 P0 resource types, original and thumbnail media, sync
@@ -75,9 +77,11 @@ the durable `AUTH_ROOT_SECRET` remained configured. A separate isolated lifecycl
 target now proves the Cloudflare seeded-predecessor update, interruption/resume, and
 compatible full-restore path. A second isolated target proves fresh installation and
 the Cloudflare half of keep-data uninstall/reinstall, including retained identity and
-data. Those results still do not check the physical-device, offline PWA, Compose
-lifecycle/install/reinstall, or manual accessibility steps whose wording requires
-separate evidence.
+data. The conditional Azure Linux VM now proves the released provider-neutral Compose
+install, product, backup/restore, retention, keep-data reinstall, and interrupted
+seeded-predecessor update/resume journeys. It does not replace the required approved
+Hyper-V run, a clean-environment restore, or the physical-device, offline PWA, and
+manual accessibility steps whose wording requires separate evidence.
 
 ## Acceptance
 
