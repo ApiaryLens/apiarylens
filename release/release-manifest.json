@@ -60,8 +60,8 @@
       "kind": "provenance",
       "target": "release",
       "url": "https://apiarylens.org/releases/0.1.0-rc.1/apiarylens-provenance.intoto.jsonl",
-      "sha256": "2a556126198f389d878de40183b1807cecf4a3e4165c24f14eeee7c0b1cb40df",
-      "bytes": 1133
+      "sha256": "732af8dd8ce4f67ea3860edf8b11ac9201aceb606010b375b97b930311bc0c7c",
+      "bytes": 1134
     }
   ],
   "knownLimitations": [
