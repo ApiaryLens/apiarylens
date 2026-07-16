@@ -1373,21 +1373,32 @@ function MediaTile({
   }, [local]);
   const thumbnail = localUrls?.thumbnail ?? `/api/v1/media/${record.id}/content?variant=thumbnail`;
   const original = localUrls?.original ?? `/api/v1/media/${record.id}/content`;
+  const mediaReady = String(record.data.state) === 'ready' || local?.state === 'ready';
+  const mediaSyncState = local?.state === 'failed' || !mediaReady ? 'failed' : record.syncState;
   return (
     <article className="media-card">
-      <a href={original} target="_blank" rel="noreferrer">
-        <img
-          src={thumbnail}
-          alt={String(record.data.caption || `Inspection photo ${record.data.fileName}`)}
-          loading="lazy"
-        />
-      </a>
+      {mediaReady ? (
+        <a href={original} target="_blank" rel="noreferrer">
+          <img
+            src={thumbnail}
+            alt={String(record.data.caption || `Inspection photo ${record.data.fileName}`)}
+            loading="lazy"
+          />
+        </a>
+      ) : (
+        <div className="media-missing" role="img" aria-label="Photo upload pending">
+          Photo upload pending
+        </div>
+      )}
       <div>
         <strong>{String(record.data.caption || record.data.fileName)}</strong>
         <small>
           {inspectionLabel ?? 'Inspection'} · {Math.round(Number(record.data.byteSize) / 1024)} KB
         </small>
-        <SyncBadge state={local?.state === 'failed' ? 'failed' : record.syncState} />
+        <SyncBadge state={mediaSyncState} />
+        {!mediaReady && (
+          <small>Return to the device that captured this photo, reconnect, and tap Sync now.</small>
+        )}
         {canWrite && (
           <div className="record-actions">
             <button
