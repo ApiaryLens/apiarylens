@@ -1,4 +1,4 @@
-const CACHE = 'apiarylens-shell-0.1.0-rc.3';
+const CACHE = 'apiarylens-shell-0.1.0-rc.4';
 const SHELL = ['/', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {

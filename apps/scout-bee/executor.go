@@ -32,7 +32,7 @@ type commandRunner interface {
 
 type systemRunner struct{}
 
-const officialReleaseManifestURL = "https://apiarylens.org/releases/0.1.0-rc.3/manifest.json"
+const officialReleaseManifestURL = "https://apiarylens.org/releases/0.1.0-rc.4/manifest.json"
 
 var allowedExecutables = map[string]bool{
 	"wrangler": true, "ssh": true, "scp": true, "ssh-keyscan": true,

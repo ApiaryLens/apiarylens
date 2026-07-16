@@ -1,18 +1,12 @@
 # MVP Release Gate Checklist
 
-**Release:** 0.1.0-rc.3
+**Release:** 0.1.0-rc.4
 
 **Date:** 2026-07-16
 
 **Status:** Not yet releasable
 
-`rc.3` supersedes `rc.2` because exact-artifact Cloudflare smoke testing found that
-the published `rc.2` Worker had linked a stale compiled contracts package and
-reported `rc.1` at runtime. Scout Bee rejected the inconsistent health identity and
-the isolated resources were removed. Release assembly now rebuilds shared contracts,
-injects the Cloudflare frontend identity, and rejects mismatched runtime bytes before
-packaging. The complete immutable `rc.1` server lifecycle remains predecessor and
-contract evidence; final acceptance requires signed `rc.3` profile smoke tests.
+rc.4 supersedes rc.3 because exact published-byte Compose smoke testing found that Scout Bee could not create its documented /opt/apiarylens target on a clean Ubuntu host. The corrected installer now performs an explicit writable-directory preflight, safely creates a missing target only with passwordless sudo, rejects unsafe or foreign-owned targets, and has passed a clean-host source-build deployment. Final acceptance requires immutable rc.4 verification, signing, publication, both exact profile smoke tests, and the remaining hands-on gates.
 
 ## Pre-Deploy
 
