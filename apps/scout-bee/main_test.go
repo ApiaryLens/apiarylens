@@ -172,6 +172,7 @@ func TestComposeHostKeyProbeFallsBackWithoutAuthentication(t *testing.T) {
 
 func TestComposeLifecycleEnforcesRetentionAndRevokesRestoredSessions(t *testing.T) {
 	for _, required := range []string{
+		`encoded="${encoded}=="`,
 		"backup_retention=${13}",
 		"tail -n \"+$((backup_retention + 1))\"",
 		"DELETE FROM sessions",
@@ -180,6 +181,31 @@ func TestComposeLifecycleEnforcesRetentionAndRevokesRestoredSessions(t *testing.
 		if !strings.Contains(composeRemoteScript, required) {
 			t.Fatalf("Compose lifecycle script is missing %q", required)
 		}
+	}
+}
+
+func TestComposeSecretsStreamIntoProtectedRemoteFiles(t *testing.T) {
+	runner := &fakeRunner{}
+	p := validPlan()
+	p.Target = "compose-ssh"
+	p.Cloudflare = nil
+	p.Compose = &compose{Host: "hives.example", Port: 22, User: "beekeeper"}
+	adapter := &composeAdapter{executor: &executor{runner: runner}}
+	secret := "runtime-only-secret-value"
+	if err := adapter.transferRemoteSecret(context.Background(), request{
+		Plan: p, Secrets: map[string]string{"bootstrapToken": secret},
+	}, "known-hosts", "/tmp/apiarylens-bootstrap-plan", secret); err != nil {
+		t.Fatal(err)
+	}
+	if len(runner.commands) != 1 {
+		t.Fatalf("expected one protected SSH stream, got %d commands", len(runner.commands))
+	}
+	command := runner.commands[0]
+	joined := strings.Join(command.Args, " ")
+	if command.Executable != "ssh" || string(command.Stdin) != secret ||
+		!strings.Contains(joined, "umask 077") || !strings.Contains(joined, "chmod 600") ||
+		strings.Contains(joined, secret) || strings.Contains(joined, "scp") {
+		t.Fatalf("secret transfer was not a protected SSH stream: executable=%s args=%s", command.Executable, joined)
 	}
 }
 func TestRejectsSecretLookingPlan(t *testing.T) {

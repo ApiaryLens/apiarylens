@@ -91,22 +91,15 @@ func (a *composeAdapter) apply(ctx context.Context, input request, manifest rele
 			}
 			input.Secrets["authRootSecret"] = base64.RawURLEncoding.EncodeToString(authRootBytes)
 			for _, runtimeSecret := range []struct {
-				name, value, remote, phase string
+				value, remote, phase string
 			}{
-				{"bootstrap", input.Secrets["bootstrapToken"], remoteBootstrap, "one-time owner setup protection"},
-				{"auth-root", input.Secrets["authRootSecret"], remoteAuthRoot, "authentication root secret"},
+				{input.Secrets["bootstrapToken"], remoteBootstrap, "one-time owner setup protection"},
+				{input.Secrets["authRootSecret"], remoteAuthRoot, "authentication root secret"},
 			} {
-				secretPath, secretErr := protectedTempFile(runtimeSecret.name, runtimeSecret.value)
-				if secretErr != nil {
-					return append(phases, failed("Prepare "+runtimeSecret.phase, secretErr)), secretErr
-				}
-				defer os.Remove(secretPath)
-				secretDestination := fmt.Sprintf("%s@%s:%s", compose.User, compose.Host, runtimeSecret.remote)
-				secretArgs := []string{"-P", strconv.Itoa(compose.Port), "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "UserKnownHostsFile=" + knownHosts, "--", secretPath, secretDestination}
-				if _, secretErr = a.executor.runner.Run(ctx, command{Executable: "scp", Args: secretArgs}, input.Secrets); secretErr != nil {
+				if secretErr := a.transferRemoteSecret(ctx, input, knownHosts, runtimeSecret.remote, runtimeSecret.value); secretErr != nil {
 					return append(phases, failed("Transfer "+runtimeSecret.phase, secretErr)), secretErr
 				}
-				phases = append(phases, pass("Transfer "+runtimeSecret.phase, "The runtime-only secret was transferred separately from the release and was not logged."))
+				phases = append(phases, pass("Transfer "+runtimeSecret.phase, "The runtime-only secret was streamed into a mode-0600 remote file separately from the release and was not logged."))
 			}
 		}
 	}
@@ -256,26 +249,27 @@ func sshArgs(target *compose, knownHosts string, remote ...string) []string {
 	return append(args, remote...)
 }
 
-func protectedTempFile(name, value string) (string, error) {
-	secret, err := os.CreateTemp("", "apiarylens-"+name+"-")
-	if err != nil {
-		return "", err
-	}
-	path := secret.Name()
-	if err = secret.Chmod(0o600); err == nil {
-		_, err = secret.WriteString(value)
-	}
-	err = errors.Join(err, secret.Close())
-	if err != nil {
-		_ = os.Remove(path)
-		return "", err
-	}
-	return path, nil
+func (a *composeAdapter) transferRemoteSecret(ctx context.Context, input request, knownHosts, remote, value string) error {
+	compose := input.Plan.Compose
+	args := sshArgs(compose, knownHosts,
+		"sh", "-c", "'umask 077; cat > \"$1\"; chmod 600 \"$1\"'", "sh", remote,
+	)
+	_, err := a.executor.runner.Run(ctx, command{Executable: "ssh", Args: args, Stdin: []byte(value)}, input.Secrets)
+	return err
 }
 
 const composeRemoteScript = `set -eu
 umask 077
-decode() { printf '%s' "$1" | tr '_-' '/+' | base64 -d; }
+decode() {
+  encoded=$(printf '%s' "$1" | tr '_-' '/+')
+  case $((${#encoded} % 4)) in
+    0) ;;
+    2) encoded="${encoded}==" ;;
+    3) encoded="${encoded}=" ;;
+    *) return 65 ;;
+  esac
+  printf '%s' "$encoded" | base64 -d
+}
 operation=$1
 target=$(decode "$2")
 project=$(decode "$3")
