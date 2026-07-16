@@ -6,14 +6,11 @@
 
 **Status:** Published acceptance candidate; owner/device gates remain open
 
-rc.4 supersedes rc.3 because exact published-byte Compose smoke testing found that
-Scout Bee could not create its documented `/opt/apiarylens` target on a clean Ubuntu
-host. The corrected installer performs an explicit writable-directory preflight,
-safely creates a missing target only with passwordless sudo, and rejects unsafe or
-foreign-owned targets. rc.4 is now verified, signed, published, independently
-attested, and proven through exact-public-byte Cloudflare and clean Ubuntu Compose
-installs. Final stable acceptance requires only the remaining hands-on owner/device
-gates.
+rc.7 is the current corrective acceptance candidate. It includes the safe target
+creation and uninstall fixes validated after the rc.4/rc.6 history, and is verified,
+signed, published, independently attested, and proven through exact-public-byte
+Cloudflare, Compose, Hyper-V, and GCP evidence. Final stable acceptance still
+requires the explicitly listed owner/device and manual-review gates.
 
 ## Pre-Deploy
 
@@ -23,9 +20,9 @@ gates.
 - [x] Public properties use no telemetry and block automatic response transformation.
 - [x] Deployment bundles are content-addressed, and every published release artifact
       is remotely digest verified against the manifest.
-- [x] The rc.4 manifest and both exact deployed profiles identify implementation
-      commit `df853cd4204cc9b1a47424460ae895e228d7ebbf` and UTC build time
-      `2026-07-16T12:24:50.0323563Z`.
+- [x] The rc.7 manifest and exact released profiles identify implementation commit
+      `f21a1e371fe9565a628702b4d8cd5b39ab9f229b` and UTC build time
+      `2026-07-16T15:55:28.2732240Z`.
 - [x] CycloneDX SBOM, license report, and unsigned provenance are published and
       remotely digest verified with the deployment bundles and Scout Bee executable.
 - [x] All deployment artifacts, Scout Bee, SBOM, license report, and provenance are
@@ -42,10 +39,9 @@ gates.
       high-severity vulnerabilities.
 - [x] The release-scope threat model and OWASP ASVS 5.0.0 chapter map document
       implemented, partial, and non-applicable controls without claiming certification.
-- [x] Public MVP verification run `29499014709` passes for rc.4 release revision
-      `e15a03b3800a8d636615144c36bf24a7b7841497`, whose manifest pins product-source
-      revision `df853cd4204cc9b1a47424460ae895e228d7ebbf`, including the secret scan,
-      complete workspace verification, clean Compose image builds, and release checks.
+- [x] Public MVP verification run `29513466293` passes for the rc.7 packaging
+      revision, including the secret scan, complete workspace verification, clean
+      Compose image builds, and release checks.
 - [x] The SHA-256-pinned Grype 0.115.0 CI scan reports no unresolved high or critical
       vulnerability in either Compose runtime image at that revision.
 - [x] Automated WCAG 2.1 A/AA scans and live browser-controlled structural,
@@ -83,11 +79,10 @@ gates.
       media, sync/conflict/idempotency, viewer denial, complete export, backup/restore
       with session revocation, 14-backup retention, keep-data reinstall, and a seeded
       migration-0003 interrupted update resumed with the same plan.
-- [x] Exact rc.4 production downloads match all manifest hashes and sizes; signing run
-      `29499211922` verifies all six subjects. The exact public Scout passes a 14-phase
-      Cloudflare install and a 13-phase clean Ubuntu Compose install at
-      `/opt/apiarylens`; both profiles report rc.4, source `df853cd`, and migration
-      `0004`, and all disposable resources are removed.
+- [x] Exact rc.7 production downloads match all manifest hashes and sizes; signing run
+      `29513476765` verifies all six subjects. The exact public Scout passes the
+      recorded Cloudflare, Compose, Hyper-V, and GCP acceptance runs, with migration
+      `0004` and all disposable resources removed.
 - [x] A disposable GCP Ubuntu 24.04 x86-64 host passes exact released Scout
       installation, all 11 automated P0 product checks, backup/restore with session
       revocation, keep-data uninstall/reinstall, sanitized diagnostics, and quiet
@@ -104,7 +99,7 @@ gates.
 - [x] Verify organization isolation and negative authorization on every scoped route.
       Engineering review and both implementation suites pass as recorded in
       [`authorization-and-exposure-audit-2026-07-16.md`](authorization-and-exposure-audit-2026-07-16.md),
-      and the exact immutable rc.4 deployment smokes pass.
+      and the exact immutable rc.7 deployment smokes pass.
 - [ ] Verify offline draft, media staging, synchronization, and conflict behavior on
       iPhone, iPad, and computers.
 
@@ -153,9 +148,8 @@ the required approved Hyper-V run. The independent Generation 2 Hyper-V install,
 product, recovery, retention, keep-data reinstall, interrupted update/resume, clean
 application-state restore, exposure, and resource proof is recorded in
 [`scout-bee-hyperv-compose-lifecycle-2026-07-16.json`](scout-bee-hyperv-compose-lifecycle-2026-07-16.json).
-The corrective rc.4 publication, public-byte verification, signing, 14-phase
-Cloudflare install, 13-phase clean Ubuntu `/opt/apiarylens` install, exact runtime
-identity, 8-phase Compose uninstall, and complete disposable-resource cleanup are
+The corrective rc.7 publication, public-byte verification, signing, exact runtime
+identity, corrected Compose uninstall, and complete disposable-resource cleanup are
 recorded in
 [`rc4-exact-public-deployment-smoke-2026-07-16.json`](rc4-exact-public-deployment-smoke-2026-07-16.json).
 GCP provider compatibility, the complete product journey, recovery, keep-data
