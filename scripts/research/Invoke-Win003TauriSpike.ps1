@@ -255,5 +255,6 @@ $measurement = [ordered]@{
 $measurement | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $outputPath 'measurement.json') -Encoding utf8NoBOM
 Copy-Item -LiteralPath (Join-Path $labPath 'src-tauri/Cargo.lock') -Destination (Join-Path $outputPath 'Cargo.lock')
 Copy-Item -LiteralPath (Join-Path $labPath 'pnpm-lock.yaml') -Destination (Join-Path $outputPath 'pnpm-lock.yaml')
+Copy-Item -LiteralPath $installer.FullName -Destination (Join-Path $outputPath 'tauri-research-setup.exe')
 
 $measurement | ConvertTo-Json -Depth 8
