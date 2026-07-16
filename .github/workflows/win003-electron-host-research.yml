@@ -1,0 +1,79 @@
+name: WIN-003 Electron host research
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-electron-installer:
+    name: Electron installer evidence
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build current React client and dependencies
+        run: pnpm --filter @apiarylens/web... build
+
+      - name: Build and measure isolated Electron installer
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003ElectronSpike.ps1
+          -WebDist ./apps/web/dist
+          -OutputDirectory "$env:RUNNER_TEMP/win003-electron-evidence"
+
+      - name: Upload exact Electron evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: win003-electron-installer-evidence
+          path: ${{ runner.temp }}/win003-electron-evidence
+          if-no-files-found: error
+          retention-days: 14
+
+  clean-install-lifecycle:
+    name: Electron clean install and uninstall
+    needs: build-electron-installer
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out research automation
+        uses: actions/checkout@v5
+
+      - name: Download exact Electron artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: win003-electron-installer-evidence
+          path: ${{ runner.temp }}/win003-electron-input
+
+      - name: Run clean-profile Electron lifecycle probe
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003ElectronInstallProbe.ps1
+          -EvidenceDirectory "$env:RUNNER_TEMP/win003-electron-input"
+          -OutputDirectory "$env:RUNNER_TEMP/win003-electron-lifecycle"
+
+      - name: Upload Electron lifecycle evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: win003-electron-clean-install-evidence
+          path: ${{ runner.temp }}/win003-electron-lifecycle
+          if-no-files-found: error
+          retention-days: 14
+
