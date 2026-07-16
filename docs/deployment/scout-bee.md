@@ -54,6 +54,9 @@ responses use restrictive CSP, no external assets, and no telemetry.
 The adapter is provider-neutral. Hyper-V, Azure, AWS, GCP, a home server, and a
 hosted Linux VM differ only in provisioning and connection inputs.
 
+The exact Azure, AWS, and GCP prerequisites and compatibility acceptance record are
+maintained in [Cloud VM Docker Compose](cloud-vm-compose.md).
+
 ## Cloudflare Adapter
 
 - Uses a user-owned API token with the minimum documented permissions.

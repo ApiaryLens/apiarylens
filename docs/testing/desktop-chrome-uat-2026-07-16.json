@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-07-16T14:15:00Z",
+  "release": "0.1.0-rc.4",
+  "surface": "https://apiarylens.app/demo",
+  "browser": "Chrome desktop",
+  "dataClassification": "synthetic public demo only",
+  "result": "pass-with-open-manual-gates",
+  "checks": {
+    "keyboardTraversal": {
+      "result": "pass",
+      "observedOrder": [
+        "Leave demo",
+        "Turner Family Apiary - Demo",
+        "Sync now",
+        "Overview",
+        "Apiaries",
+        "Hives",
+        "Inspect",
+        "Care"
+      ],
+      "focus": "Every traversed interactive control exposed a visible browser or three-pixel application outline; traversal returned to the document and did not trap focus."
+    },
+    "targetSize": {
+      "result": "pass",
+      "minimumObservedHeightCssPixels": 44,
+      "primaryNavigationHeightCssPixels": 48
+    },
+    "responsiveReflow": {
+      "result": "pass",
+      "viewports": [
+        {
+          "width": 390,
+          "height": 844,
+          "horizontalOverflow": false,
+          "namedMain": 1,
+          "namedPrimaryNavigation": 1
+        },
+        {
+          "width": 820,
+          "height": 1180,
+          "horizontalOverflow": false,
+          "namedMain": 1,
+          "namedPrimaryNavigation": 1
+        }
+      ]
+    },
+    "inspectionPersistence": {
+      "result": "pass",
+      "journey": "Created a complete synthetic Hive 01 inspection in the live Chrome demo, observed the offline-saved pending state, reloaded the tab, and observed the same timestamped inspection synchronized exactly once."
+    }
+  },
+  "notProvenByThisRecord": [
+    "physical iPhone or iPad behavior",
+    "installed-PWA offline launch",
+    "photo capture on a physical device",
+    "NVDA or VoiceOver announcements",
+    "200 percent browser zoom",
+    "forced-colors or operating-system high-contrast mode",
+    "two-device invitations or conflict resolution",
+    "pending work across a released client and server update"
+  ]
+}

@@ -37,6 +37,18 @@ or page-level horizontal overflow on the six inspected public entry surfaces. Th
 structural and responsive evidence only; it is not recorded as a substitute for the
 manual keyboard and assistive-technology steps below.
 
+On 2026-07-16, the live rc.4 synthetic demo received an additional desktop Chrome
+pass. Sequential Tab traversal reached the exit, organization, synchronization, and
+all five primary-navigation controls without a focus trap. Every control exposed a
+visible focus outline and measured at least 44 CSS pixels high. The same rendered
+journey retained its landmarks and had no horizontal overflow at 390-by-844 and
+820-by-1180 CSS-pixel viewports. A newly completed synthetic inspection was saved
+locally, survived a tab reload, and appeared synchronized exactly once. The bounded
+record is [`desktop-chrome-uat-2026-07-16.json`](desktop-chrome-uat-2026-07-16.json).
+This closes the Chrome desktop structural, keyboard-navigation, target-size, and
+synthetic reload checks only; it does not close the manual screen-reader, 200% zoom,
+forced-colors, physical-device, photo, or release-update gates.
+
 ## Automated Scan Evidence
 
 | Page | Passed rules | Total violations | Serious/critical |

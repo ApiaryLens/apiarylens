@@ -103,6 +103,10 @@ For cloud deployment, the priority is:
    services
 2. Docker Compose on a provider-neutral Linux VM, including Azure, AWS, GCP, or
    another suitable provider
+
+The supported host envelope, provider prerequisites, common preflight, and verified
+compatibility status are published in
+[Cloud VM Docker Compose](cloud-vm-compose.md).
 3. Later provider-specific managed-container or infrastructure templates
 4. Future optional managed ApiaryLens service
 
