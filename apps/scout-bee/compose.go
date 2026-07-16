@@ -399,7 +399,10 @@ case "$operation" in
         docker compose -p "$project" -f "$current/docker/compose.yaml" down -v
       fi
     fi
-    if [ "$keep_data" = false ]; then rm -rf "$target"; fi
+    if [ "$keep_data" = false ]; then
+      rm -rf "$target"/* "$target"/.[!.]* "$target"/..?* 2>/dev/null || true
+      if ! rmdir "$target" 2>/dev/null; then sudo -n rmdir "$target"; fi
+    fi
     printf 'ApiaryLens services were removed; keep-data=%s.\n' "$keep_data"
     ;;
   *) printf 'Unsupported operation\n' >&2; exit 64 ;;
