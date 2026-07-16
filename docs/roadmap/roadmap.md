@@ -83,6 +83,12 @@ experience heavier.
 - Final logo family, PWA icons, UX designs, Lucidchart sources, accessible diagram
   exports, screenshots, and complete user/operator/developer documentation
 
+### Corrective MVP UAT Backlog
+
+- Re-test installed PWA launch on a real iPhone with cellular/Wi-Fi disabled after
+  the service-worker precache fix; confirm the dashboard, local inspection, and
+  staged media remain available before closing the MVP release gate.
+
 ## Version 1.1 Backlog: Provider Expansion and Extended Acceptance
 
 These items are deliberately post-MVP backlog work. They do not change the required
