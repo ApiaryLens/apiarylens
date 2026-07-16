@@ -23,7 +23,7 @@ not satisfy it.
 
 - [x] Verify manifest, signatures, SBOM, provenance, and content-addressed artifacts.
 - [x] Deploy Cloudflare family profile with Scout Bee into an isolated UAT target.
-- [ ] Deploy the same Compose release to the approved Hyper-V Linux VM with Scout Bee.
+- [x] Deploy the same Compose release to the approved Hyper-V Linux VM with Scout Bee.
 - [x] Confirm public HTTPS, secure headers, private storage, health, and build identity.
 - [x] Create the first owner and family using the one-time protected setup flow.
 - [ ] Invite a beekeeper and viewer; accept each invitation on another device.
@@ -36,7 +36,7 @@ not satisfy it.
 - [ ] Create mite counts, feeding, treatment, harvest, and verify hive history/trend.
 - [ ] Create a same-record conflict on two offline devices and resolve it explicitly.
 - [x] Export owned data and validate manifest, JSON, CSV, and original media.
-- [ ] Back up both profiles, restore into isolated targets, and repeat authenticated
+- [x] Back up both profiles, restore into isolated targets, and repeat authenticated
       record/media checks.
 - [ ] Update both profiles from a seeded predecessor with backup-before-update,
       migration, health verification, PWA pending-work preservation, and resume or
@@ -67,6 +67,7 @@ not satisfy it.
 | 2026-07-15 | Exact released Scout Bee / isolated Cloudflare install UAT | Fresh install, protected owner setup, keep-data uninstall, and reinstall | Pass | [`scout-bee-cloudflare-install-reinstall-2026-07-15.json`](scout-bee-cloudflare-install-reinstall-2026-07-15.json) | Exact `a0db8b48…` executable passed both 14-phase installs; invalid setup code rejected; public route removed; retained apiary, original session, and password sign-in survived; isolated resources deleted after verification |
 | 2026-07-16 | Released Scout Bee / disposable Azure Linux Compose UAT | Fresh install through full product and lifecycle journey | Pass | [`scout-bee-azure-compose-lifecycle-2026-07-16.json`](scout-bee-azure-compose-lifecycle-2026-07-16.json) | Signed public Compose and Scout artifacts; 15-second install; protected bootstrap; all resource types; sync/conflict; private media; viewer denial; complete export; restore/session revocation; 14-backup retention; keep-data reinstall; seeded-0003 interrupted update/same-plan resume; redacted diagnostics |
 | 2026-07-16 | Azure Linux Compose family baseline | Quiet resource use and planning cost | Pass | [`scout-bee-azure-compose-lifecycle-2026-07-16.json`](scout-bee-azure-compose-lifecycle-2026-07-16.json) | 54.74 MiB combined quiet container memory, 0.00% sampled CPU, 286,762 data bytes, 380,134 bytes across 14 backups, and estimated compute at USD 0.04/hour before disk, IPv4, egress, and taxes |
+| 2026-07-16 | Approved Generation 2 Hyper-V Ubuntu Compose target | Exact released Scout Bee and full server lifecycle | Pass | [`scout-bee-hyperv-compose-lifecycle-2026-07-16.json`](scout-bee-hyperv-compose-lifecycle-2026-07-16.json) | Six-phase preflight; 12-phase clean install; all P0 records, roles, sync/conflict, private media and export; destructive and clean-state restore; 14-backup retention; keep-data reinstall; seeded-0003 interrupted update/same-plan resume; redacted diagnostics; 48.03 MiB sampled quiet container memory |
 
 The current isolated Cloudflare run additionally exercised invitations with three
 independent sessions, all 13 P0 resource types, original and thumbnail media, sync
@@ -77,11 +78,14 @@ the durable `AUTH_ROOT_SECRET` remained configured. A separate isolated lifecycl
 target now proves the Cloudflare seeded-predecessor update, interruption/resume, and
 compatible full-restore path. A second isolated target proves fresh installation and
 the Cloudflare half of keep-data uninstall/reinstall, including retained identity and
-data. The conditional Azure Linux VM now proves the released provider-neutral Compose
-install, product, backup/restore, retention, keep-data reinstall, and interrupted
-seeded-predecessor update/resume journeys. It does not replace the required approved
-Hyper-V run, a clean-environment restore, or the physical-device, offline PWA, and
-manual accessibility steps whose wording requires separate evidence.
+data. The approved Generation 2 Hyper-V target now independently proves the exact
+released Compose preflight, clean install, product, backup/restore, 14-backup
+retention, keep-data reinstall, seeded-predecessor interrupted update/same-plan
+resume, and a portable restore into a fresh application target with zero initial
+users and records. The conditional Azure Linux VM remains provider-neutral reference
+evidence. Physical-device invitation/offline PWA/update journeys and manual
+assistive-technology checks remain open because their acceptance wording requires
+separate human-operated device evidence.
 
 ## Acceptance
 

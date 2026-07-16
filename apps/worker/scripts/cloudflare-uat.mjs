@@ -8,8 +8,10 @@ const operatorToken = process.env.APIARYLENS_UAT_OPERATOR_TOKEN;
 const bootstrapToken = process.env.APIARYLENS_UAT_BOOTSTRAP_TOKEN;
 const evidencePath = process.env.APIARYLENS_UAT_EVIDENCE;
 const expectedSourceCommit = process.env.APIARYLENS_UAT_SOURCE_COMMIT;
+const deploymentProfile = process.env.APIARYLENS_UAT_PROFILE ?? 'cloudflare';
 if (!baseUrl) throw new Error('APIARYLENS_UAT_URL is required');
-if (!operatorToken) throw new Error('APIARYLENS_UAT_OPERATOR_TOKEN is required');
+if (deploymentProfile === 'cloudflare' && !operatorToken)
+  throw new Error('APIARYLENS_UAT_OPERATOR_TOKEN is required for Cloudflare recovery UAT');
 if (!bootstrapToken) throw new Error('APIARYLENS_UAT_BOOTSTRAP_TOKEN is required');
 
 class Client {
@@ -29,7 +31,7 @@ class Client {
 const report = {
   product: 'ApiaryLens',
   release: '0.1.0-rc.1',
-  profile: 'cloudflare-uat',
+  profile: `${deploymentProfile}-uat`,
   target: baseUrl,
   startedAt: new Date().toISOString(),
   sourceCommit: null,
@@ -136,7 +138,11 @@ for (let attempt = 0; attempt < 120; attempt += 1) {
   if (attempt < 119) await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
 }
 assert(healthResponse && health, 'expected deployment did not become available');
-assert(health.status === 'ok' && health.profile === 'cloudflare', 'health identity is invalid');
+assert(
+  health.status === 'ok' &&
+    (health.profile ?? health.build?.deploymentProfile) === deploymentProfile,
+  'health identity is invalid',
+);
 assert(health.build.databaseMigration === '0004', 'migration head is not 0004');
 assert(
   !expectedSourceCommit || health.build.sourceCommit === expectedSourceCommit,
@@ -660,111 +666,118 @@ record(
   `Validated manifest, JSON, three CSV files, and original media in a ${exported.length}-byte ZIP`,
 );
 
-await expect(await anonymous.fetch('/api/v1/operator/backup'), 404, 'hidden operator route');
-const backup = Buffer.from(
-  await (
-    await expect(
-      await operatorFetch('/api/v1/operator/backup', {
-        headers: { authorization: `Bearer ${operatorToken}` },
-      }),
-      200,
-      'operator backup',
-    )
-  ).arrayBuffer(),
-);
-const backupFiles = unzipSync(backup);
-for (const name of [
-  'manifest.json',
-  'database/bootstrap_claims.json',
-  'database/organizations.json',
-  'database/users.json',
-  'database/memberships.json',
-  'database/resources.json',
-  'database/changes.json',
-  'database/idempotency.json',
-  'database/invitations.json',
-  'database/sign_in_attempts.json',
-  'database/audit_events.json',
-])
-  assert(backupFiles[name], `backup is missing ${name}`);
-assert(
-  backupFiles[`media/${ownerSession.organization.id}/${ids.mediaAsset}`],
-  'backup is missing original media',
-);
+if (operatorToken) {
+  await expect(await anonymous.fetch('/api/v1/operator/backup'), 404, 'hidden operator route');
+  const backup = Buffer.from(
+    await (
+      await expect(
+        await operatorFetch('/api/v1/operator/backup', {
+          headers: { authorization: `Bearer ${operatorToken}` },
+        }),
+        200,
+        'operator backup',
+      )
+    ).arrayBuffer(),
+  );
+  const backupFiles = unzipSync(backup);
+  for (const name of [
+    'manifest.json',
+    'database/bootstrap_claims.json',
+    'database/organizations.json',
+    'database/users.json',
+    'database/memberships.json',
+    'database/resources.json',
+    'database/changes.json',
+    'database/idempotency.json',
+    'database/invitations.json',
+    'database/sign_in_attempts.json',
+    'database/audit_events.json',
+  ])
+    assert(backupFiles[name], `backup is missing ${name}`);
+  assert(
+    backupFiles[`media/${ownerSession.organization.id}/${ids.mediaAsset}`],
+    'backup is missing original media',
+  );
 
-const mutationId = randomUUID();
-const mutation = operation(ownerClientId, 'apiary', mutationId, 'create', 0, {
-  name: 'Must disappear after restore',
-  location: null,
-  accessNotes: null,
-  notes: null,
-  archivedAt: null,
-});
-const mutationResult = await push(
-  owner,
-  ownerSession.csrfToken,
-  [mutation],
-  'post-backup mutation',
-);
-assert(mutationResult.results[0].status === 'accepted', 'post-backup mutation failed');
-const restore = await json(
-  { fetch: (path, init) => operatorFetch(path, init) },
-  '/api/v1/operator/restore',
-  {
-    method: 'POST',
-    headers: { authorization: `Bearer ${operatorToken}`, 'content-type': 'application/zip' },
-    body: backup,
-  },
-  200,
-  'operator restore',
-);
-assert(
-  restore.status === 'ok' && restore.sessionsRevoked === true,
-  'restore did not revoke sessions',
-);
-await expect(await owner.fetch('/api/v1/session'), 401, 'restored session revocation');
-const restoredOwner = new Client();
-const restoredSession = await json(
-  restoredOwner,
-  '/api/v1/auth/sign-in',
-  {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ identifier: ownerIdentifier, password: ownerPassword }),
-  },
-  200,
-  'post-restore sign-in',
-);
-assert(restoredSession.membership.role === 'owner', 'restored owner role is invalid');
-const restoredApiaries = await json(
-  restoredOwner,
-  '/api/v1/resources/apiary',
-  {},
-  200,
-  'post-restore records',
-);
-assert(
-  restoredApiaries.items.some((item) => item.id === ids.apiary),
-  'pre-backup apiary was not restored',
-);
-assert(
-  !restoredApiaries.items.some((item) => item.id === mutationId),
-  'post-backup mutation survived restore',
-);
-const restoredMedia = Buffer.from(
-  await (
-    await expect(
-      await restoredOwner.fetch(`/api/v1/media/${ids.mediaAsset}/content`),
-      200,
-      'post-restore media',
-    )
-  ).arrayBuffer(),
-);
-assert(restoredMedia.equals(png), 'restored media differs from backup');
-record(
-  'backup-and-restore',
-  `Validated protected ${backup.length}-byte backup, destructive restore, session revocation, record rollback, and media recovery`,
-);
+  const mutationId = randomUUID();
+  const mutation = operation(ownerClientId, 'apiary', mutationId, 'create', 0, {
+    name: 'Must disappear after restore',
+    location: null,
+    accessNotes: null,
+    notes: null,
+    archivedAt: null,
+  });
+  const mutationResult = await push(
+    owner,
+    ownerSession.csrfToken,
+    [mutation],
+    'post-backup mutation',
+  );
+  assert(mutationResult.results[0].status === 'accepted', 'post-backup mutation failed');
+  const restore = await json(
+    { fetch: (path, init) => operatorFetch(path, init) },
+    '/api/v1/operator/restore',
+    {
+      method: 'POST',
+      headers: { authorization: `Bearer ${operatorToken}`, 'content-type': 'application/zip' },
+      body: backup,
+    },
+    200,
+    'operator restore',
+  );
+  assert(
+    restore.status === 'ok' && restore.sessionsRevoked === true,
+    'restore did not revoke sessions',
+  );
+  await expect(await owner.fetch('/api/v1/session'), 401, 'restored session revocation');
+  const restoredOwner = new Client();
+  const restoredSession = await json(
+    restoredOwner,
+    '/api/v1/auth/sign-in',
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ identifier: ownerIdentifier, password: ownerPassword }),
+    },
+    200,
+    'post-restore sign-in',
+  );
+  assert(restoredSession.membership.role === 'owner', 'restored owner role is invalid');
+  const restoredApiaries = await json(
+    restoredOwner,
+    '/api/v1/resources/apiary',
+    {},
+    200,
+    'post-restore records',
+  );
+  assert(
+    restoredApiaries.items.some((item) => item.id === ids.apiary),
+    'pre-backup apiary was not restored',
+  );
+  assert(
+    !restoredApiaries.items.some((item) => item.id === mutationId),
+    'post-backup mutation survived restore',
+  );
+  const restoredMedia = Buffer.from(
+    await (
+      await expect(
+        await restoredOwner.fetch(`/api/v1/media/${ids.mediaAsset}/content`),
+        200,
+        'post-restore media',
+      )
+    ).arrayBuffer(),
+  );
+  assert(restoredMedia.equals(png), 'restored media differs from backup');
+  record(
+    'backup-and-restore',
+    `Validated protected ${backup.length}-byte backup, destructive restore, session revocation, record rollback, and media recovery`,
+  );
+} else {
+  record(
+    'recovery-handoff',
+    'Product state is ready for the Compose profile backup and restore lifecycle through Scout Bee',
+  );
+}
 
 report.completedAt = new Date().toISOString();
 report.result = 'pass';

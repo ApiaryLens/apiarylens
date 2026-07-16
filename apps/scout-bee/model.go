@@ -150,8 +150,8 @@ func validate(p plan) error {
 		if p.Compose.Port < 1 || p.Compose.Port > 65535 || !remotePath.MatchString(p.Compose.TargetDirectory) || strings.Contains(p.Compose.TargetDirectory, "..") {
 			return errors.New("the remote port or install folder is unsafe")
 		}
-		if !safeHTTPSURL(p.Compose.PublicURL) {
-			return errors.New("a network Compose deployment requires public HTTPS")
+		if !composeHTTPSURL(p.Compose.PublicURL) {
+			return errors.New("a network Compose deployment requires HTTPS on a resolvable hostname, not a raw IP address")
 		}
 		if !strings.HasPrefix(p.Compose.SSHHostKeySha256, "SHA256:") {
 			return errors.New("a verified SSH host key is required")
@@ -165,6 +165,11 @@ func validate(p plan) error {
 func safeHTTPSURL(value string) bool {
 	u, err := url.Parse(value)
 	return err == nil && u.Scheme == "https" && u.Host != "" && u.User == nil
+}
+
+func composeHTTPSURL(value string) bool {
+	u, err := url.Parse(value)
+	return err == nil && safeHTTPSURL(value) && net.ParseIP(u.Hostname()) == nil
 }
 
 func validSha256(value string) bool {

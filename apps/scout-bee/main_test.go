@@ -110,6 +110,19 @@ func TestRejectsHTTPCompose(t *testing.T) {
 		t.Fatal("expected HTTP to be rejected")
 	}
 }
+func TestRejectsRawIPComposeHTTPS(t *testing.T) {
+	p := validPlan()
+	p.Target = "compose-ssh"
+	p.Cloudflare = nil
+	p.Compose = &compose{
+		Host: "10.10.10.20", Port: 22, User: "apiarylens",
+		PublicURL: "https://10.10.10.20", TargetDirectory: "/opt/apiarylens",
+		ProjectName: "apiarylens-family", SSHHostKeySha256: "SHA256:abc", BackupRetention: 14,
+	}
+	if err := validate(p); err == nil || !strings.Contains(err.Error(), "resolvable hostname") {
+		t.Fatalf("expected raw-IP HTTPS to be rejected, got %v", err)
+	}
+}
 func TestRecognizesNativeWorkersDevAddress(t *testing.T) {
 	if !isWorkersDevAddress("https://apiarylens-family-uat.example.workers.dev") {
 		t.Fatal("expected native workers.dev address")

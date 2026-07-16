@@ -59,8 +59,9 @@
       install, protected first-owner claim, invalid-code rejection, keep-data
       uninstall, public-route removal, and reinstall while preserving the original
       session, password sign-in, retained apiary, and durable authentication root.
-- [ ] The Hyper-V UAT target passes Scout Bee preflight; the combined target gate
-      remains open until that independent run succeeds.
+- [x] The approved Generation 2 Hyper-V Ubuntu target passes the exact released
+      Scout Bee preflight, clean install, product, recovery, retention, keep-data
+      reinstall, interrupted-update/resume, and clean-application restore journeys.
 - [x] The isolated Cloudflare family service passes protected bootstrap, roles, all
       P0 resource types, private media, sync, conflict/idempotency, negative viewer
       authorization, portable export, destructive restore, session rotation and
@@ -74,7 +75,7 @@
 
 ## Deploy
 
-- [ ] Deploy to isolated Cloudflare and Hyper-V UAT targets.
+- [x] Deploy to isolated Cloudflare and Hyper-V UAT targets.
 - [ ] Run the complete [MVP UAT record](mvp-uat.md) on both required profiles.
 - [ ] Exercise backup, restore, predecessor update, interrupted update/resume,
       compatible rollback, keep-data uninstall, and recovery.
@@ -122,8 +123,13 @@ The production observation and provider-allowance baseline is recorded in
 The conditional provider-neutral Azure Compose install, product, recovery, reinstall,
 update, signing, resource, and cost evidence is recorded in
 [`scout-bee-azure-compose-lifecycle-2026-07-16.json`](scout-bee-azure-compose-lifecycle-2026-07-16.json).
-It advances the Compose implementation gates but does not replace the required
-approved Hyper-V target, clean-environment restore, or physical-device gates.
+It remains useful provider-neutral reference evidence but no longer substitutes for
+the required approved Hyper-V run. The independent Generation 2 Hyper-V install,
+product, recovery, retention, keep-data reinstall, interrupted update/resume, clean
+application-state restore, exposure, and resource proof is recorded in
+[`scout-bee-hyperv-compose-lifecycle-2026-07-16.json`](scout-bee-hyperv-compose-lifecycle-2026-07-16.json).
+The remaining combined gates require physical-device offline/update evidence, manual
+assistive-technology and security review, and project-owner acceptance.
 
 ## Rollback Triggers
 

@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-07-16T04:18:00Z",
+  "scope": "Exact released Scout Bee preflight, clean install, release-scope product journey, backup and restore, retention, keep-data reinstall, seeded-predecessor interrupted update and same-plan resume, clean-application-state restore, diagnostics, exposure, and resource baseline on the approved local Hyper-V target.",
+  "profile": {
+    "kind": "personally-controlled-hyper-v-linux-compose",
+    "vmName": "apiarylens-mvp-uat",
+    "generation": 2,
+    "secureBoot": true,
+    "secureBootTemplate": "MicrosoftUEFICertificateAuthority",
+    "os": "Ubuntu 24.04.4 LTS",
+    "kernel": "6.8.0-134-generic",
+    "vcpus": 2,
+    "startupMemoryGiB": 4,
+    "dynamicMemoryGiB": [2, 8],
+    "diskGiB": 64,
+    "switch": "beacon-nat",
+    "address": "10.10.10.20",
+    "httpsName": "apiarylens-mvp-uat.local",
+    "docker": "29.1.3",
+    "compose": "2.40.3+ds1-0ubuntu1~24.04.1"
+  },
+  "release": {
+    "version": "0.1.0-rc.1",
+    "sourceCommit": "037d54881f79a9381212b94d4d382dc716bbdffc",
+    "composeSha256": "114c417b2d521a6943fb4cdba34cdbbb95ef128985c464b8cf52223b0be3b187",
+    "scoutSha256": "006b258cae06c7f3ee7f47a88c7a68c6f8b00ded56166fd10152f510e5c6e2f1",
+    "manifestSha256": "e4d048333d16f770516be0884c5506b1d2373223c68db4a1eb6eec60c1910e84",
+    "mvpVerificationRun": 29463976744,
+    "releaseSigningRun": 29464083985,
+    "publicDigestsMatched": true
+  },
+  "preflight": {
+    "result": "pass",
+    "phasesPassed": 6,
+    "phasesFailed": 0,
+    "pinnedSshHostKey": "SHA256:ZTFJ6fEEAIA2mq4OxOG3ZL6pqseZnZQYFtPLe+NiBKE",
+    "linuxDockerDiskTimeAndHttpsPolicyVerified": true
+  },
+  "install": {
+    "result": "pass",
+    "cleanApplicationState": true,
+    "elapsedSeconds": 21.0,
+    "scoutPhasesPassed": 12,
+    "scoutPhasesFailed": 0,
+    "secureRuntimeSecretStreaming": true,
+    "publicHttpsHealth": true,
+    "releaseIdentityMatched": true,
+    "coldBuildObservationSeconds": 866.95
+  },
+  "productJourney": {
+    "result": "pass",
+    "checksPassed": 11,
+    "invalidBootstrapRejected": true,
+    "protectedOwnerCreated": true,
+    "recoveryCodesIssued": 8,
+    "opaqueSessionRotated": true,
+    "priorSessionRejected": true,
+    "ownerBeekeeperViewerActivated": true,
+    "allReleaseScopeResourceTypes": true,
+    "resourceRecordsCreated": 13,
+    "incrementalSecondClientPull": true,
+    "followUpCompletedByBeekeeper": true,
+    "duplicateSyncIdempotent": true,
+    "staleWriteConflictReturned": true,
+    "privateOriginalAndThumbnailRoundTrip": true,
+    "anonymousMediaRejected": true,
+    "viewerWriteExportAndAdminDenied": true,
+    "completeExportVerified": true,
+    "exportBytes": 3612
+  },
+  "recovery": {
+    "result": "pass",
+    "scoutBackupPhasesPassed": 7,
+    "postBackupMutationConfirmed": true,
+    "scoutRestorePhasesPassed": 7,
+    "priorSessionRevoked": true,
+    "freshPasswordSignInSucceeded": true,
+    "preBackupApiaryRestored": true,
+    "postBackupMutationRemoved": true,
+    "privateMediaByteExact": true
+  },
+  "retention": {
+    "result": "pass",
+    "backupOperationsExecuted": 15,
+    "operationPhasesPassedEach": 7,
+    "operationFailures": 0,
+    "retainedBackups": 14,
+    "verifiedGzipArchives": 14,
+    "verifiedTarArchives": 14,
+    "retainedBytes": 179563
+  },
+  "keepDataReinstall": {
+    "result": "pass",
+    "uninstallPhasesPassed": 7,
+    "containersAndExposureRemoved": true,
+    "dataVolumeRetained": true,
+    "authenticationRootRetained": true,
+    "reinstallPhasesPassed": 12,
+    "reinstallElapsedSeconds": 22.06,
+    "ownerPasswordRecordsAndMediaRetained": true
+  },
+  "update": {
+    "result": "pass",
+    "seededMigration0003": true,
+    "resourcesPresentBeforeUpdate": 13,
+    "clientInterruptedDuringActivation": true,
+    "interruptionStatus": "canceled",
+    "interruptedPhasesPassed": 8,
+    "samePlanId": "b17e0ee4-e95b-4fbf-b16f-b97f4b77b46e",
+    "samePlanResumed": true,
+    "resumePhasesPassed": 10,
+    "resumeElapsedSeconds": 41.5,
+    "backupBeforeActivationRetained": true,
+    "migration0004Applied": true,
+    "bothServicesHealthy": true,
+    "ownerPasswordRecordsAndMediaRetained": true
+  },
+  "cleanEnvironmentRestore": {
+    "result": "pass",
+    "freshTargetDirectory": "/opt/apiarylens/restore-target",
+    "freshDataVolume": true,
+    "preRestoreUsers": 0,
+    "preRestoreResources": 0,
+    "preRestoreMigration": "0004",
+    "portableBackupIntegrityVerifiedBeforeImport": true,
+    "restorePhasesPassed": 7,
+    "priorSessionsRevoked": true,
+    "ownerPasswordSignInSucceeded": true,
+    "apiaryAndPrivateMediaRecovered": true,
+    "postBackupMutationAbsent": true
+  },
+  "resourceBaseline": {
+    "quietApiMemoryMiB": 35.7,
+    "quietWebMemoryMiB": 12.33,
+    "sampledApiCpuPercent": 0.0,
+    "sampledWebCpuPercent": 0.12,
+    "dataBytes": 188488,
+    "fourteenBackupsBytes": 179563,
+    "apiImageBytes": 58853435,
+    "webImageBytes": 19804070,
+    "rootDiskUsedPercent": 14
+  },
+  "exposure": {
+    "result": "pass",
+    "hostListeners": [22, 80, 443],
+    "apiPort3000Published": false,
+    "backendNetworkInternal": true,
+    "httpsCertificateAuthority": "isolated Caddy local authority trusted only for UAT",
+    "anonymousMediaRejected": true,
+    "viewerNegativeAuthorization": true
+  },
+  "diagnostics": {
+    "result": "pass",
+    "bundlesScanned": 22,
+    "exactRuntimeCredentialMatches": 0,
+    "privateKeyMatches": 0,
+    "userIdentifierMatches": 0
+  },
+  "defectsAndMitigations": [
+    {
+      "observation": "A raw private-IP HTTPS plan activated healthy containers but Go health verification could not supply an SNI hostname to Caddy.",
+      "mitigation": "The approved UAT plan uses the named local endpoint apiarylens-mvp-uat.local and trusts only its isolated Caddy root. Product validation and operator guidance must prevent or explicitly support raw-IP HTTPS before stable release."
+    },
+    {
+      "observation": "The first clean container build took 866.95 seconds on the two-vCPU VM.",
+      "mitigation": "The warm clean-state install completed in 21 seconds; cold-build time remains recorded for installation guidance and release packaging review."
+    }
+  ],
+  "privacy": {
+    "credentialsPersistedInEvidence": false,
+    "personalAccountIdentifiersPresent": false,
+    "privateMediaPubliclyReadable": false
+  },
+  "remainingGates": [
+    "Physical iPhone, iPad, and computer offline/relaunch/synchronization journey",
+    "Separate physical-device invitation acceptance and shared-family verification",
+    "Pending offline inspection and photos preserved across a PWA/server update",
+    "Manual keyboard, NVDA, VoiceOver, 200 percent zoom, and forced-colors review",
+    "Project-owner product, visual, and stable-release acceptance"
+  ]
+}

@@ -39,6 +39,10 @@ responses use restrictive CSP, no external assets, and no telemetry.
 - Uses OpenSSH argument arrays and host-key verification.
 - Accepts host, port, user, and target directory; credentials are never serialized
   into the plan.
+- The HTTPS address must use a resolvable hostname with a certificate authority
+  trusted by the operator device. The current release candidate does not accept a
+  raw private-IP address as a working HTTPS endpoint because certificate selection
+  requires a server name.
 - Verifies Linux architecture, Docker Engine, Compose v2, space, time, ports, and
   release requirements.
 - Transfers an immutable release bundle, verifies checksums, writes restrictive
