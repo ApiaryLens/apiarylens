@@ -390,8 +390,9 @@ case "$operation" in
   uninstall)
     if [ -f "$current/docker/compose.yaml" ]; then
       if [ "$keep_data" = true ]; then docker compose -p "$project" -f "$current/docker/compose.yaml" down
-      else docker compose -p "$project" -f "$current/docker/compose.yaml" down -v; rm -rf "$secrets_dir"; fi
+      else docker compose -p "$project" -f "$current/docker/compose.yaml" down -v; fi
     fi
+    if [ "$keep_data" = false ]; then rm -rf "$target"; fi
     printf 'ApiaryLens services were removed; keep-data=%s.\n' "$keep_data"
     ;;
   *) printf 'Unsupported operation\n' >&2; exit 64 ;;

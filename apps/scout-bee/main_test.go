@@ -283,6 +283,7 @@ func TestComposeLifecycleEnforcesRetentionAndRevokesRestoredSessions(t *testing.
 		`encoded="${encoded}=="`,
 		"backup_retention=${13}",
 		"tail -n \"+$((backup_retention + 1))\"",
+		"if [ \"$keep_data\" = false ]; then rm -rf \"$target\"; fi",
 		"DELETE FROM sessions",
 		"sessions were revoked",
 		`up -d --wait api`,
