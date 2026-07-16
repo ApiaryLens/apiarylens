@@ -1,6 +1,6 @@
 # ApiaryLens Dependency License Report
 
-Release: 0.1.0-rc.6
+Release: 0.1.0-rc.7
 
 Generated from the installed pnpm workspace. This inventory includes runtime,
 development, build, test, and platform-specific packages; release-bundle composition

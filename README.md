@@ -38,7 +38,7 @@ every decision made in this repo:
 
 ## Status
 
-ApiaryLens `0.1.0-rc.6` is the corrective MVP acceptance candidate. The PWA,
+ApiaryLens `0.1.0-rc.7` is the corrective MVP acceptance candidate. The PWA,
 Node and Cloudflare backends, Docker Compose profile, Scout Bee, release artifacts,
 and public documentation are implemented. It is not a stable release: physical
 iPhone/iPad, assistive-technology, AWS/GCP compatibility, and final project-owner

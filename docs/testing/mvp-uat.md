@@ -9,7 +9,7 @@ not satisfy it.
 
 ## Build Under Test
 
-- Acceptance candidate: ApiaryLens 0.1.0-rc.6
+- Acceptance candidate: ApiaryLens 0.1.0-rc.7
 - Superseded candidate: ApiaryLens 0.1.0-rc.3 (rejected by clean-Ubuntu default-target
   installation smoke test)
 - Superseded candidate: ApiaryLens 0.1.0-rc.2 (rejected by exact-artifact runtime

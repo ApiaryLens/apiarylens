@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.0-rc.7 — 2026-07-16
+
+Corrective safe-target-removal candidate. Exact GCP cleanup proved a normal
+administrator could clear the validated target but could not remove its empty
+directory from root-owned `/opt`. Scout Bee now deletes contents as the owner and
+uses passwordless `sudo rmdir` only for the empty directory, never privileged
+recursive deletion. See the [curated release notes](0.1.0-rc.7.md),
+[release gates](../testing/mvp-release-gates.md), and
+[UAT record](../testing/mvp-uat.md).
+
 ## 0.1.0-rc.6 — 2026-07-16
 
 Corrective partial-uninstall recovery candidate. Exact published-byte GCP cleanup
