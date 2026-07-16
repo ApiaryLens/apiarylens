@@ -117,51 +117,32 @@ function Get-DescendantProcessIds {
     return @($ids)
 }
 
-$runs = @()
-foreach ($run in 1..5) {
-    $started = [System.Diagnostics.Stopwatch]::StartNew()
-    $process = Start-Process -FilePath $installedHost.FullName -PassThru -WindowStyle Hidden
-    $webViewReadyMs = $null
-    $peakWorkingSet = 0L
-    $peakPrivate = 0L
-    $peakCount = 0
-    try {
-        $deadline = [DateTimeOffset]::UtcNow.AddSeconds(15)
-        while (-not $process.HasExited -and [DateTimeOffset]::UtcNow -lt $deadline) {
-            $ids = Get-DescendantProcessIds -RootId $process.Id
-            $processes = @(Get-Process -Id $ids -ErrorAction SilentlyContinue)
-            $workingSet = ($processes | Measure-Object WorkingSet64 -Sum).Sum
-            $private = ($processes | Measure-Object PrivateMemorySize64 -Sum).Sum
-            if ($workingSet -gt $peakWorkingSet) { $peakWorkingSet = $workingSet }
-            if ($private -gt $peakPrivate) { $peakPrivate = $private }
-            if ($processes.Count -gt $peakCount) { $peakCount = $processes.Count }
-            if ($null -eq $webViewReadyMs) {
-                $hasWebView = $processes | Where-Object { $_.ProcessName -eq 'msedgewebview2' }
-                if ($hasWebView) { $webViewReadyMs = $started.ElapsedMilliseconds }
-            }
-            if ($null -ne $webViewReadyMs -and $started.ElapsedMilliseconds -ge ($webViewReadyMs + 1500)) { break }
-            Start-Sleep -Milliseconds 50
-            $process.Refresh()
-        }
-    } finally {
-        $ids = Get-DescendantProcessIds -RootId $process.Id
-        Get-Process -Id ($ids | Sort-Object -Descending) -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-        $process.WaitForExit(5000) | Out-Null
-    }
-    $runs += [pscustomobject]@{
-        run = $run
-        webViewProcessReadyMs = $webViewReadyMs
-        peakProcessCount = $peakCount
-        peakWorkingSetMiB = [math]::Round($peakWorkingSet / 1MB, 1)
-        peakPrivateMiB = [math]::Round($peakPrivate / 1MB, 1)
-    }
+$process = Start-Process -FilePath $installedHost.FullName -PassThru -WindowStyle Hidden
+Start-Sleep -Seconds 3
+$process.Refresh()
+$hostStayedRunning = -not $process.HasExited
+$ids = Get-DescendantProcessIds -RootId $process.Id
+$processes = @(Get-Process -Id $ids -ErrorAction SilentlyContinue)
+$hostSmoke = [ordered]@{
+    stayedRunningForThreeSeconds = $hostStayedRunning
+    processCount = $processes.Count
+    workingSetMiB = [math]::Round((($processes | Measure-Object WorkingSet64 -Sum).Sum) / 1MB, 1)
+    privateMiB = [math]::Round((($processes | Measure-Object PrivateMemorySize64 -Sum).Sum) / 1MB, 1)
+    webViewDescendantObserved = $null -ne ($processes | Where-Object { $_.ProcessName -eq 'msedgewebview2' } | Select-Object -First 1)
 }
+Get-Process -Id ($ids | Sort-Object -Descending) -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+$process.WaitForExit(5000) | Out-Null
+if (-not $hostStayedRunning) { throw 'Installed Tauri host exited during the three-second smoke test' }
 
 $installedFiles = Get-ChildItem -LiteralPath $installDirectory -Recurse -File
 $installedBytes = ($installedFiles | Measure-Object Length -Sum).Sum
 $installedFileCount = $installedFiles.Count
 
-$uninstall = Start-Process -FilePath $uninstallExecutable -ArgumentList '/S' -PassThru -Wait -WindowStyle Hidden
+$uninstall = Start-Process -FilePath $uninstallExecutable -ArgumentList '/S' -PassThru -WindowStyle Hidden
+if (-not $uninstall.WaitForExit(60000)) {
+    Stop-Process -Id $uninstall.Id -Force -ErrorAction SilentlyContinue
+    throw 'Silent research uninstall exceeded the 60-second limit'
+}
 if ($uninstall.ExitCode -ne 0) { throw "Silent research uninstall failed with exit code $($uninstall.ExitCode)" }
 foreach ($attempt in 1..20) {
     if (-not (Test-Path -LiteralPath $installDirectory) -and -not (Get-UninstallEntry)) { break }
@@ -186,11 +167,7 @@ $result = [ordered]@{
     installedHostBytes = $installedHost.Length
     installedNodeSidecarBytes = $installedSidecar.Length
     installedNodeSqliteProbe = $sqliteProbe
-    runs = $runs
-    meanWebViewProcessReadyMs = [math]::Round(($runs.webViewProcessReadyMs | Measure-Object -Average).Average, 1)
-    medianWebViewProcessReadyMs = ($runs.webViewProcessReadyMs | Sort-Object)[2]
-    meanPeakWorkingSetMiB = [math]::Round(($runs.peakWorkingSetMiB | Measure-Object -Average).Average, 1)
-    meanPeakPrivateMiB = [math]::Round(($runs.peakPrivateMiB | Measure-Object -Average).Average, 1)
+    hostSmoke = $hostSmoke
     uninstallExitCode = $uninstall.ExitCode
     installDirectoryRemains = $installDirectoryRemains
     uninstallEntryRemains = $uninstallEntryRemains
@@ -199,7 +176,7 @@ $result = [ordered]@{
         'Unsigned research artifact',
         'WebView2 was already present on the runner',
         'No real ApiaryLens local service or user data was installed',
-        'WebView process creation is a startup proxy, not a DOM-ready event'
+        'Detailed startup and memory sampling comes from the build job; this job only verifies a three-second installed-host smoke test'
     )
 }
 
