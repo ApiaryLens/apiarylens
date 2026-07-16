@@ -49,7 +49,10 @@ function Get-UninstallEntry {
         'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
     )
     return Get-ItemProperty -Path $roots -ErrorAction SilentlyContinue |
-        Where-Object { $_.DisplayName -eq 'ApiaryLens WIN-003 Research' } |
+        Where-Object {
+            $_.PSObject.Properties.Name -contains 'DisplayName' -and
+            $_.DisplayName -eq 'ApiaryLens WIN-003 Research'
+        } |
         Select-Object -First 1
 }
 
