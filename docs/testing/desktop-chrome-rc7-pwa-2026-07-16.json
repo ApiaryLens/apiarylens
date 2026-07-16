@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-07-16T16:31:00Z",
+  "release": "0.1.0-rc.7",
+  "surface": "https://demo.apiarylens.app/app/",
+  "browser": "Chrome desktop (synthetic public demo)",
+  "dataClassification": "synthetic public demo only",
+  "result": "pass-with-open-manual-gates",
+  "checks": {
+    "mountedServiceWorker": {
+      "result": "pass",
+      "url": "https://demo.apiarylens.app/app/sw.js",
+      "status": 200,
+      "contentType": "text/javascript",
+      "note": "The installed PWA worker is scoped to the mounted /app/ path."
+    },
+    "responsiveReflow": {
+      "result": "pass",
+      "viewport": { "requestedWidth": 390, "requestedHeight": 844, "cssWidth": 375 },
+      "horizontalOverflow": false,
+      "namedMain": 1,
+      "namedPrimaryNavigation": 1,
+      "smallInteractiveTargets": 0
+    },
+    "syntheticDemoJourney": {
+      "result": "pass",
+      "observed": [
+        "synthetic-data banner",
+        "two active hives",
+        "one apiary",
+        "follow-up item",
+        "no pending synchronization"
+      ]
+    }
+  },
+  "notProvenByThisRecord": [
+    "physical iPhone or iPad behavior",
+    "offline launch and photo capture on a physical device",
+    "NVDA or VoiceOver announcements",
+    "200 percent browser zoom",
+    "forced-colors or operating-system high-contrast mode",
+    "two-device invitation and conflict resolution",
+    "pending work across a released client and server update"
+  ]
+}
