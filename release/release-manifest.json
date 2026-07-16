@@ -1,10 +1,10 @@
 {
   "$schema": "./release-manifest.schema.json",
   "product": "ApiaryLens",
-  "productVersion": "0.1.0-rc.7",
-  "channel": "release-candidate",
-  "sourceCommit": "f21a1e371fe9565a628702b4d8cd5b39ab9f229b",
-  "buildTime": "2026-07-16T15:55:28.2732240Z",
+  "productVersion": "0.1.0-preview.1",
+  "channel": "preview",
+  "sourceCommit": "6cf6b38fa29af0394b1f3c92ddbc24e6381e3043",
+  "buildTime": "2026-07-16T20:38:44.0022250Z",
   "contracts": {
     "api": "1.0",
     "sync": 1,
@@ -16,55 +16,50 @@
   "profiles": ["cloudflare", "compose"],
   "artifacts": [
     {
-      "name": "apiarylens-0.1.0-rc.7-cloudflare-ae3998dd2bfb.tar.gz",
+      "name": "apiarylens-0.1.0-preview.1-cloudflare-6e0dfa0453f1.tar.gz",
       "kind": "deployment-bundle",
       "target": "cloudflare",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.7/artifacts/apiarylens-0.1.0-rc.7-cloudflare-ae3998dd2bfb.tar.gz",
-      "sha256": "ae3998dd2bfb4f7e687739a89b03dd22d8c04938d1158e6065b359d4dcb51519",
-      "bytes": 607567
+      "url": "https://apiarylens.org/releases/0.1.0-preview.1/artifacts/apiarylens-0.1.0-preview.1-cloudflare-6e0dfa0453f1.tar.gz",
+      "sha256": "6e0dfa0453f11308aa095bb461f9caa053220879609e8ad382e6d299b26489aa",
+      "bytes": 610635
     },
     {
-      "name": "apiarylens-0.1.0-rc.7-compose-484246c6794d.tar.gz",
+      "name": "apiarylens-0.1.0-preview.1-compose-a21796d1cb07.tar.gz",
       "kind": "deployment-bundle",
       "target": "compose",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.7/artifacts/apiarylens-0.1.0-rc.7-compose-484246c6794d.tar.gz",
-      "sha256": "484246c6794d89531673ad5a9a92584da96cface8775e46f7797d4072ec77358",
-      "bytes": 107217
-    },
-    {
-      "name": "apiarylens-scout-bee-0.1.0-rc.7-windows-amd64.exe",
-      "kind": "deployment-tool",
-      "target": "windows-amd64",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.7/artifacts/apiarylens-scout-bee-0.1.0-rc.7-windows-amd64.exe",
-      "sha256": "5dae328f6d173343021b4ef002bbe6994b0e900addbe2221d84387b823f659b8",
-      "bytes": 7819264
+      "url": "https://apiarylens.org/releases/0.1.0-preview.1/artifacts/apiarylens-0.1.0-preview.1-compose-a21796d1cb07.tar.gz",
+      "sha256": "a21796d1cb0767e7fa023a309a04dbf1413fde5b93aa9e188f2f338723c24c82",
+      "bytes": 109160
     },
     {
       "name": "apiarylens-sbom.cdx.json",
       "kind": "sbom",
       "target": "release",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.7/apiarylens-sbom.cdx.json",
-      "sha256": "c337edcebf1fb23780f1094dd526f916980070420b213cc29e9d5467c7688e83",
-      "bytes": 38511
+      "url": "https://apiarylens.org/releases/0.1.0-preview.1/apiarylens-sbom.cdx.json",
+      "sha256": "295bf0b8a554cccb14e91d76f8e4de49f57527848746cff331d440d232ca487d",
+      "bytes": 38506
     },
     {
       "name": "apiarylens-license-report.md",
       "kind": "license-report",
       "target": "release",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.7/apiarylens-license-report.md",
-      "sha256": "6d88bf6faa825e6c7c659904942104eed72f0cab3fa44cb6beeed7270e2f5f71",
-      "bytes": 820
+      "url": "https://apiarylens.org/releases/0.1.0-preview.1/apiarylens-license-report.md",
+      "sha256": "0cea604b9a67f3f5f85e66d3e7f670a7e2727fd8a63f9ef647545eb100698615",
+      "bytes": 825
     },
     {
       "name": "apiarylens-provenance.intoto.jsonl",
       "kind": "provenance",
       "target": "release",
-      "url": "https://apiarylens.org/releases/0.1.0-rc.7/apiarylens-provenance.intoto.jsonl",
-      "sha256": "a8009b959c113ca750ef4182a4bbbe50bf93911996d9ffc8d84efd84d6df8602",
-      "bytes": 1133
+      "url": "https://apiarylens.org/releases/0.1.0-preview.1/apiarylens-provenance.intoto.jsonl",
+      "sha256": "f7454f696013a1583314356c44fa2d56b52c676679a82cdf9df2c2e37388b180",
+      "bytes": 980
     }
   ],
   "knownLimitations": [
+    "This is a Public Preview, not a generally available release; interfaces and workflows may change frequently.",
+    "Keep current backups and do not use the preview as the only copy of irreplaceable apiary records or media.",
+    "Scout Bee is independently versioned and is not included in the ApiaryLens product artifact set.",
     "Native iPhone and Android applications are post-MVP.",
     "AI, video, sensors, passkeys, and OIDC federation are post-MVP."
   ]
