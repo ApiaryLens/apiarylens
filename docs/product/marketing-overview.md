@@ -21,7 +21,7 @@ It is being designed to help answer practical questions:
 - What may be blooming nearby?
 - Should we ask a mentor to review this frame or inspection?
 
-ApiaryLens `0.1.0-rc.4` is a published, signed MVP acceptance candidate—not a stable
+ApiaryLens `0.1.0-rc.5` is the corrective MVP acceptance candidate—not a stable
 release. The safe synthetic demo, installable PWA, Cloudflare family profile, Docker
 Compose profile, Scout Bee, documentation, and verifiable artifacts are available
 for controlled evaluation. Physical-device, assistive-technology, AWS/GCP, and final

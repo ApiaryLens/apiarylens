@@ -31,7 +31,7 @@ privately for triage.
 
 ## Supported versions
 
-The current `0.1.0-rc.4` acceptance candidate receives security fixes while it is
+The current `0.1.0-rc.5` acceptance candidate receives security fixes while it is
 the active pre-release. Superseded release candidates are retained for audit and
 recovery evidence but are not supported for deployment. Stable-version support
 windows will be published with the first stable release.

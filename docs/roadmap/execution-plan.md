@@ -13,7 +13,7 @@ which the portfolio moves from foundation through release.
   2026-07-15
 - Six-repository portfolio and independently deployed public frontends: complete
 - PWA, Node and Cloudflare backends, shared SQLite contracts, Compose, and Scout Bee:
-  implemented in `0.1.0-rc.4`
+  implemented in `0.1.0-rc.5`
 - Signed, content-addressed release candidate and complete server-profile lifecycle
   evidence: published
 - Final work: AWS/GCP compatibility, physical-device/manual accessibility journeys,

@@ -1,6 +1,6 @@
 # MVP Release Gate Checklist
 
-**Release:** 0.1.0-rc.4
+**Release:** 0.1.0-rc.5
 
 **Date:** 2026-07-16
 
