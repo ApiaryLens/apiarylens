@@ -80,10 +80,12 @@ the current plan.
 
 ## Current Project State
 
-The product architecture and MVP contract are accepted and application scaffolding
-is now authorized. The repository is transitioning from foundation documentation to
-implementation; the release is not complete until the code, deployments, and UAT
-gates described by this plan pass.
+The product architecture and MVP contract are accepted. ApiaryLens `0.1.0-rc.4` is
+the published acceptance candidate: the PWA, both backends, shared contracts and
+schema, Compose profile, Scout Bee, public properties, signed artifacts, and
+documentation are implemented. Stable release remains gated by the open AWS/GCP,
+physical-device, manual accessibility, pending-work update, and project-owner UAT
+evidence.
 
 Accepted decisions:
 
@@ -158,9 +160,9 @@ and contribution model—not domain ownership alone.
 |---|---|---|---|
 | `apiarylens` | Public | Product monorepo: PWA, API, worker, packages, database, Compose, architecture, ADRs | Active |
 | `apiarylens-ops` | Private | Internal planning, dashboards, coordination, and operational procedures | Active |
-| `apiarylens.org` | Private | Marketing, public docs experience, tutorials, releases, roadmap, and community | Active foundation scaffold |
-| `apiarylens.app` | Private | Public demo deployment, safe seed data, and hosted-app configuration | Active foundation scaffold |
-| `apiarylens.dev` | Private | Developer portal, generated API reference, integrations, SDKs, plugins, contributor material | Active foundation scaffold |
+| `apiarylens.org` | Private | Marketing, public docs experience, tutorials, releases, roadmap, and community | Active and deployed |
+| `apiarylens.app` | Private | Public demo deployment, safe seed data, and hosted-app configuration | Active and deployed |
+| `apiarylens.dev` | Private | Developer portal, generated API reference, integrations, SDKs, plugins, contributor material | Active and deployed |
 | `.github` | Private | Internal organization configuration, reference templates, and private-repository workflow sources | Active |
 
 The main `apiarylens` repository remains authoritative for product behavior,
@@ -614,19 +616,20 @@ Every relevant design or ADR must address:
 - Gallery or registry impact when reusable/community assets are involved
 - Alternatives, consequences, migration, and rollback where applicable
 
-## Application Scaffolding Gate
+## Implementation and Release Gate
 
-The architecture gate is satisfied on 2026-07-15 by ADRs 0003 and 0008 through
+The architecture gate was satisfied on 2026-07-15 by ADRs 0003 and 0008 through
 0011, the two dated research spikes, the detailed data/sync/Scout designs, the
-versioning and update lifecycle, the accepted MVP contract, and the initial Lucid
-set. Application dependencies and infrastructure may now be introduced.
+versioning and update lifecycle, the accepted MVP contract, and the Lucid set.
 
-The following remain implementation and release gates rather than architecture
-blockers: measured Worker/Compose capacity, local-network TLS instructions,
-deployment-plan schema tests, threat-model/ASVS verification, supply-chain
-artifacts, public-site production proof, supported-device results, profile-to-profile
-restore proof, and complete UAT evidence. A failed gate changes or blocks the
-affected profile; it never silently weakens security, portability, or offline data.
+The release candidate now has measured Worker/Compose capacity, TLS and deployment
+instructions, deployment-plan schema tests, threat-model/ASVS verification,
+supply-chain artifacts, production public sites, cross-profile conformance, and
+portable restore evidence. The open release gates are AWS/GCP hosted-VM
+compatibility; physical iPhone/iPad offline, media, invitation, conflict, and update
+journeys; manual NVDA/VoiceOver/200% zoom/forced-colors review; and project-owner
+acceptance. A failed gate changes or blocks the affected profile; it never silently
+weakens security, portability, or offline data.
 
 ## Documentation and Source-of-Truth Map
 

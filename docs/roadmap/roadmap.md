@@ -6,7 +6,7 @@ The initial go-to-market user is a family or hobbyist beekeeper. The default jou
 must be easy to start, update, back up, restore, and understand without requiring
 container, database, DNS, TLS, identity-provider, or cloud-billing expertise.
 
-The proposed authoritative scope and release gates are in the
+The accepted authoritative scope and release gates are in the
 [MVP Definition and UAT Contract](../product/mvp-definition.md). Roadmap items outside
 that document's P0 section do not block the MVP.
 
@@ -14,7 +14,7 @@ ApiaryLens is designed in capability tiers: personal, family, and organization.
 Commercial and research scale remains on the roadmap, but it must not make the MVP
 experience heavier.
 
-## Phase 0: Project Foundation
+## Phase 0: Project Foundation — Complete
 
 - GitHub org setup
 - Activate and clone the six-repository portfolio
@@ -39,9 +39,9 @@ experience heavier.
 - Cloudflare Workers Static Assets convention for `.org`, `.app`, and `.dev`
 - Cloudflare custom-domain, TLS, preview, production, and rollback foundation
 
-## Phase 1: MVP Foundation
+## Phase 1: MVP Product and Release Candidate — Implemented; final UAT open
 
-- Device-only, networked, and internet-facing security profiles
+- Networked and internet-facing security profiles with secure defaults
 - Built-in family authentication, secure sessions, bootstrap, and recovery
 - Authorization and organization-isolation test foundation
 - Threat model and applicable OWASP ASVS verification matrix
@@ -62,7 +62,7 @@ experience heavier.
 - Guided family onboarding
 - Backup, restore, and export foundation
 - Backend API
-- PostgreSQL schema
+- Shared SQLite schema: D1 on Cloudflare and `node:sqlite` in Compose
 - Offline synchronization foundation
 - Basic family membership and multi-device access
 - Docker Compose as the first complete server target on personally controlled hardware
@@ -83,25 +83,22 @@ experience heavier.
 - Final logo family, PWA icons, UX designs, Lucidchart sources, accessible diagram
   exports, screenshots, and complete user/operator/developer documentation
 
-## Phase 2: Hive Records
+## Phase 2: Hive Record Expansion — Post-MVP
 
-- Inspections
-- Queen tracking
-- Box tracking
+Inspections, queens, boxes/equipment, photos, notes, and hive history are already in
+the MVP. The post-MVP expansion includes:
+
 - Frame tracking
-- Photos
 - Videos
-- Notes
 - Tags
 - QR codes
 
-## Phase 3: Health and Production
+## Phase 3: Health and Production Expansion — Post-MVP
 
-- Varroa mite counts
-- Disease/pest observations
-- Treatments
-- Feeding
-- Honey harvest
+Mite counts, treatments, feeding, health observations, and honey harvest records are
+already in the MVP. The post-MVP expansion includes:
+
+- Structured disease and pest catalogs
 - Wax harvest
 - Reports
 

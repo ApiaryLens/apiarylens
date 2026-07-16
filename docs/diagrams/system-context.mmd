@@ -1,7 +1,7 @@
 flowchart TD
     User[Beekeeper / Family / Club / Researcher] --> PWA[ApiaryLens PWA]
     PWA --> API[Backend API]
-    API --> DB[(PostgreSQL)]
+    API --> DB[(Shared SQLite: D1 / node:sqlite)]
     API --> Media[(Local or S3-Compatible Media Storage)]
     API --> Worker[Background Worker]
     Worker --> Weather[Weather Providers]

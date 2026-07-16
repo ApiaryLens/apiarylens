@@ -9,12 +9,15 @@ which the portfolio moves from foundation through release.
 
 ## Progress
 
-- Documentation reconciliation: completed 2026-07-15
-- Six-repository GitHub portfolio activation and local cloning: completed 2026-07-15
-- Responsibility-specific foundation scaffolds: completed 2026-07-15
-- ADR 0003, Apache-2.0 licensing, and the MVP/UAT contract: accepted 2026-07-15
-- Cloudflare frontend implementation foundation: next after the documentation change
-  is reviewed and the relevant framework/content research begins
+- Architecture, research, ADRs, security model, and MVP/UAT contract: accepted
+  2026-07-15
+- Six-repository portfolio and independently deployed public frontends: complete
+- PWA, Node and Cloudflare backends, shared SQLite contracts, Compose, and Scout Bee:
+  implemented in `0.1.0-rc.4`
+- Signed, content-addressed release candidate and complete server-profile lifecycle
+  evidence: published
+- Final work: AWS/GCP compatibility, physical-device/manual accessibility journeys,
+  project-owner acceptance, and stable promotion
 
 ## Delivery Rule
 
@@ -161,10 +164,13 @@ and deployment support rather than treating them as later cleanup.
 
 ## Immediate Work Queue
 
-1. Finish and validate the documentation reconciliation.
-2. Verify and maintain the completed
-   [Task 008 repository portfolio](../../tasks/008-bootstrap-repository-portfolio.md).
-3. Complete [Task 009: Establish the Cloudflare Frontend Foundation](../../tasks/009-establish-cloudflare-frontend-foundation.md).
-4. Execute the discovery and research program in dependency order.
-5. Convert research recommendations into ADRs and detailed designs.
-6. Produce the implementation-ready task plan with requirement-to-UAT traceability.
+1. Run the exact released Compose acceptance suite on disposable AWS and GCP Ubuntu
+   VMs and clean up every resource.
+2. Complete the physical iPhone/iPad and separate-device invitation, offline,
+   media, synchronization, conflict, and follow-up journey.
+3. Prove pending inspection/media work survives the released PWA/server update and
+   synchronizes exactly once.
+4. Complete manual NVDA, VoiceOver, 200% zoom, forced-colors, and destructive-flow
+   keyboard acceptance.
+5. Record project-owner acceptance and promote the unchanged verified candidate to
+   stable.

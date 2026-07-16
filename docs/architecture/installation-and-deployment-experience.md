@@ -163,7 +163,7 @@ later without changing product behavior.
 
 Cloudflare is the accepted host for the official public frontends. A
 Cloudflare-native backend uses a different runtime and database architecture from a
-conventional API plus PostgreSQL, so it is the first cloud profile to research and
+conventional Node API plus SQLite, so it is the first cloud profile to research and
 validate rather than a replacement for the portable core. Shared contracts,
 conformance tests, export, and migration prevent the profiles from becoming separate
 products.
@@ -187,23 +187,16 @@ and future managed deployments. Server discovery, QR or connection-file onboardi
 TLS trust, credential handling, and safe reconnection require dedicated security and
 usability design.
 
-## Remaining Implementation and Release Proof
+## Remaining Release Acceptance
 
-- Post-MVP device-only storage and account-migration research
-- Transition from personal identity to organization membership
-- Built-in authentication/session architecture, recovery, organization isolation,
-  and optional OIDC federation
-- Synchronization protocol conformance, conflict, and recovery test evidence
-- D1/Node SQLite migration and cross-profile conformance evidence
-- Local-network HTTPS and PWA installation from secondary devices
-- Scout Bee packaging, signing, update, and rollback test evidence
-- Product version source of truth, release manifest, channels, support window, PWA
-  activation, contract compatibility, migrations, and recovery behavior
-- Supported desktop and server operating systems
-- Deployment-plan JSON schema and secret-reference model
-- Remote-access options and their privacy/security consequences
-- Exposure-mode enforcement, HTTPS automation, secrets, and first-owner bootstrap
-- Minimum resource profiles and capacity testing
-- Cloud-template support and lifecycle policy
-- Dated family-cloud cost target and quota-exhaustion behavior
-- Supported iPhone, iPad, and desktop browser matrix
+- Provider-hosted AWS and GCP Ubuntu Compose compatibility evidence
+- Physical iPhone and iPad installation, offline relaunch, media capture,
+  synchronization, conflict, and recovery evidence
+- Separate-device beekeeper/viewer invitation and shared-history journey
+- Pending inspection and photos preserved across a released PWA/server update
+- Manual NVDA, VoiceOver, 200% zoom, and forced-colors acceptance
+- Final project-owner acceptance and unchanged-candidate stable promotion
+
+Device-only storage and account migration, optional OIDC, native App Store clients,
+provider-specific one-click templates, and expanded organization discovery remain
+post-MVP roadmap work rather than hidden release requirements.

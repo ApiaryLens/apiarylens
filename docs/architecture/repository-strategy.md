@@ -31,15 +31,16 @@ they do not exist solely because a domain name exists.
 |---|---|---|---|
 | `apiarylens` | Public | PWA, API, worker, packages, database, Compose, architecture, and ADRs | Active |
 | `apiarylens-ops` | Private | Internal planning, dashboards, coordination, and operations | Active |
-| `apiarylens.org` | Private | Marketing, public docs experience, tutorials, releases, roadmap, and community | Active foundation scaffold |
-| `apiarylens.app` | Private | Demo deployment, safe seed data, and hosted-app configuration | Active foundation scaffold |
-| `apiarylens.dev` | Private | Developer portal, API reference, integrations, SDKs, plugins, and contributor docs | Active foundation scaffold |
+| `apiarylens.org` | Private | Marketing, public docs experience, tutorials, releases, roadmap, and community | Active and deployed |
+| `apiarylens.app` | Private | Demo deployment, safe seed data, and hosted-app configuration | Active and deployed |
+| `apiarylens.dev` | Private | Developer portal, API reference, integrations, SDKs, plugins, and contributor docs | Active and deployed |
 | `.github` | Private | Internal organization configuration, reference templates, and private-repository workflow sources | Active |
 
-Bootstrap each activated repository with a responsibility-specific README, agent
-guidance, governance baseline, and structure. The scaffold establishes ownership;
-it must not select an unapproved framework or become a substitute for scoped design
-and implementation plans. See [ADR 0005](../adr/0005-initial-repository-portfolio.md).
+Each activated repository has responsibility-specific guidance, governance,
+independent build/deployment configuration, and a clear source-of-truth boundary.
+The original bootstrap decision is recorded in
+[ADR 0005](../adr/0005-initial-repository-portfolio.md); current implementation and
+deployment status is recorded in the master architecture and MVP evidence.
 
 ## Source-of-Truth Boundaries
 
