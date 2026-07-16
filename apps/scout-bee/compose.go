@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type composeAdapter struct{ executor *executor }
@@ -141,8 +142,18 @@ func (a *composeAdapter) apply(ctx context.Context, input request, manifest rele
 func (a *composeAdapter) verifiedKnownHosts(ctx context.Context, input request) (string, error) {
 	compose := input.Plan.Compose
 	output, err := a.executor.runner.Run(ctx, command{Executable: "ssh-keyscan", Args: []string{"-p", strconv.Itoa(compose.Port), "-T", "8", compose.Host}}, input.Secrets)
-	if err != nil {
-		return "", fmt.Errorf("could not read the server host key: %w", err)
+	var path string
+	if err != nil || !containsHostKey(output) {
+		path, err = a.captureKnownHostWithoutAuthentication(ctx, input)
+		if err != nil {
+			return "", fmt.Errorf("could not read the server host key: %w", err)
+		}
+		raw, readErr := os.ReadFile(path)
+		if readErr != nil {
+			_ = os.Remove(path)
+			return "", errors.New("could not read the captured server host key")
+		}
+		output = string(raw)
 	}
 	matched := false
 	for _, line := range strings.Split(output, "\n") {
@@ -165,13 +176,19 @@ func (a *composeAdapter) verifiedKnownHosts(ctx context.Context, input request) 
 		}
 	}
 	if !matched {
+		if path != "" {
+			_ = os.Remove(path)
+		}
 		return "", errors.New("the live SSH host key does not match the fingerprint in the deployment plan")
+	}
+	if path != "" {
+		return path, nil
 	}
 	file, err := os.CreateTemp("", "apiarylens-known-hosts-")
 	if err != nil {
 		return "", err
 	}
-	path := file.Name()
+	path = file.Name()
 	if err = file.Chmod(0o600); err == nil {
 		_, err = file.WriteString(output)
 	}
@@ -179,6 +196,56 @@ func (a *composeAdapter) verifiedKnownHosts(ctx context.Context, input request) 
 	if err != nil || closeErr != nil {
 		_ = os.Remove(path)
 		return "", errors.Join(err, closeErr)
+	}
+	return path, nil
+}
+
+func containsHostKey(output string) bool {
+	for _, line := range strings.Split(output, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 3 && !strings.HasPrefix(strings.TrimSpace(line), "#") {
+			if _, err := base64.StdEncoding.DecodeString(fields[2]); err == nil {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (a *composeAdapter) captureKnownHostWithoutAuthentication(ctx context.Context, input request) (string, error) {
+	file, err := os.CreateTemp("", "apiarylens-known-hosts-probe-")
+	if err != nil {
+		return "", err
+	}
+	path := file.Name()
+	if err = file.Chmod(0o600); err == nil {
+		err = file.Close()
+	} else {
+		_ = file.Close()
+	}
+	if err != nil {
+		_ = os.Remove(path)
+		return "", err
+	}
+	compose := input.Plan.Compose
+	probeCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
+	defer cancel()
+	_, _ = a.executor.runner.Run(probeCtx, command{Executable: "ssh", Args: []string{
+		"-p", strconv.Itoa(compose.Port),
+		"-o", "BatchMode=yes",
+		"-o", "ConnectTimeout=8",
+		"-o", "StrictHostKeyChecking=accept-new",
+		"-o", "UserKnownHostsFile=" + path,
+		"-o", "GlobalKnownHostsFile=" + os.DevNull,
+		"-o", "PreferredAuthentications=none",
+		"-o", "PubkeyAuthentication=no",
+		"-o", "PasswordAuthentication=no",
+		"-o", "KbdInteractiveAuthentication=no",
+		"-T", "-N", "--", "__apiarylens_host_key_probe__@" + compose.Host,
+	}}, input.Secrets)
+	if raw, readErr := os.ReadFile(path); readErr != nil || !containsHostKey(string(raw)) {
+		_ = os.Remove(path)
+		return "", errors.New("the server did not provide a usable host key")
 	}
 	return path, nil
 }

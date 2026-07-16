@@ -7,8 +7,10 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -24,6 +26,28 @@ type fakeRunner struct {
 	commands            []command
 	secretsPayload      []byte
 	existingSecretNames []string
+}
+
+type keyscanFallbackRunner struct {
+	commands []command
+	keyLine  string
+}
+
+func (f *keyscanFallbackRunner) Find(string) error { return nil }
+func (f *keyscanFallbackRunner) Run(_ context.Context, spec command, _ map[string]string) (string, error) {
+	f.commands = append(f.commands, spec)
+	if spec.Executable == "ssh-keyscan" {
+		return "choose_kex: unsupported KEX method", errors.New("exit status 1")
+	}
+	for _, argument := range spec.Args {
+		if strings.HasPrefix(argument, "UserKnownHostsFile=") {
+			path := strings.TrimPrefix(argument, "UserKnownHostsFile=")
+			if err := os.WriteFile(path, []byte(f.keyLine), 0o600); err != nil {
+				return "", err
+			}
+		}
+	}
+	return "Permission denied (publickey)", errors.New("exit status 255")
 }
 
 func (f *fakeRunner) Find(string) error { return nil }
@@ -116,6 +140,33 @@ func TestComposeInstallRequiresProtectedBootstrap(t *testing.T) {
 	phases, err := adapter.preflight(context.Background(), request{Plan: p, Secrets: map[string]string{}})
 	if err == nil || len(phases) != 1 || phases[0].State != "failed" {
 		t.Fatalf("expected protected bootstrap preflight failure, err=%v phases=%+v", err, phases)
+	}
+}
+
+func TestComposeHostKeyProbeFallsBackWithoutAuthentication(t *testing.T) {
+	key := []byte("modern-ubuntu-host-key")
+	digest := sha256.Sum256(key)
+	fingerprint := "SHA256:" + base64.RawStdEncoding.EncodeToString(digest[:])
+	runner := &keyscanFallbackRunner{keyLine: "hives.example ssh-ed25519 " + base64.StdEncoding.EncodeToString(key) + "\n"}
+	p := validPlan()
+	p.Target = "compose-ssh"
+	p.Cloudflare = nil
+	p.Compose = &compose{
+		Host: "hives.example", Port: 22, User: "beekeeper", PublicURL: "https://hives.example",
+		TargetDirectory: "/opt/apiarylens", SSHHostKeySha256: fingerprint,
+	}
+	adapter := &composeAdapter{executor: &executor{runner: runner}}
+	path, err := adapter.verifiedKnownHosts(context.Background(), request{Plan: p})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(path)
+	commands := strings.Join(commandArgs(runner.commands), "\n")
+	if !strings.Contains(commands, "PreferredAuthentications=none") ||
+		!strings.Contains(commands, "PubkeyAuthentication=no") ||
+		!strings.Contains(commands, "-T -N") ||
+		strings.Contains(commands, "beekeeper@hives.example") {
+		t.Fatalf("fallback must capture the host key without authenticating or executing a command: %s", commands)
 	}
 }
 func TestRejectsSecretLookingPlan(t *testing.T) {
