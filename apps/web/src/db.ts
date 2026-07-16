@@ -68,6 +68,15 @@ export class ApiaryLensDb extends Dexie {
       settings: '&key',
       media: '&id, organizationId, state',
     });
+    // Repair installs that reached a database version without materializing
+    // the media store (for example, an interrupted service-worker upgrade).
+    this.version(3).stores({
+      resources:
+        '&key, organizationId, entityType, syncState, updatedAt, [organizationId+entityType]',
+      outbox: '&key, operationId, entityId, queuedAt',
+      settings: '&key',
+      media: '&id, organizationId, state',
+    });
   }
 }
 
