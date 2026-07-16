@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const releaseSchema = z.object({
   version: z.string().regex(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/),
-  channel: z.enum(['release-candidate', 'stable']),
+  channel: z.enum(['preview', 'release-candidate', 'stable']),
   manifestUrl: z.string().url(),
   manifestSha256: z.string().regex(/^[a-f0-9]{64}$/),
 });

@@ -40,9 +40,10 @@ responses use restrictive CSP, no external assets, and no telemetry.
 - Accepts host, port, user, and target directory; credentials are never serialized
   into the plan.
 - The HTTPS address must use a resolvable hostname with a certificate authority
-  trusted by the operator device. The current release candidate does not accept a
+  trusted by the operator device. Public Preview does not accept a
   raw private-IP address as a working HTTPS endpoint because certificate selection
-  requires a server name.
+  requires a server name. Preview users should verify the endpoint and keep a
+  current backup before applying any change.
 - Verifies Linux architecture, Docker Engine, Compose v2, space, time, ports, and
   release requirements.
 - Transfers an immutable release bundle, verifies checksums, writes restrictive

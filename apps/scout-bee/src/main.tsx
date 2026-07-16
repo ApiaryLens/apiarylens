@@ -8,7 +8,7 @@ type Phase = { name: string; state: 'waiting' | 'running' | 'passed' | 'failed';
 
 type ReleaseIdentity = {
   version: string;
-  channel: 'release-candidate' | 'stable';
+  channel: 'preview' | 'release-candidate' | 'stable';
   manifestUrl: string;
   manifestSha256: string;
 };
@@ -74,7 +74,7 @@ function App() {
         release ??
         ({
           version: '',
-          channel: 'release-candidate',
+          channel: 'preview',
           manifestUrl: '',
           manifestSha256: '',
         } as const),

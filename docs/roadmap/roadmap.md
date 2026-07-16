@@ -1,5 +1,14 @@
 # ApiaryLens Roadmap
 
+## Current release: Public Preview 1
+
+ApiaryLens is in Public Preview 1, not GA. The core MVP implementation is available
+for real-world evaluation, while owner/device acceptance continues. Preview features
+and workflows may change, with updates sometimes arriving multiple times per day.
+Keep backups and exports current; Preview 1 must not be the sole copy of irreplaceable
+hive records or media. See the [Preview 1 release notes](../releases/0.1.0-preview.1.md)
+and [MVP UAT record](../testing/mvp-uat.md).
+
 ## MVP Target
 
 The initial go-to-market user is a family or hobbyist beekeeper. The default journey
@@ -39,7 +48,7 @@ experience heavier.
 - Cloudflare Workers Static Assets convention for `.org`, `.app`, and `.dev`
 - Cloudflare custom-domain, TLS, preview, production, and rollback foundation
 
-## Phase 1: MVP Product and Release Candidate — Implemented; final UAT open
+## Phase 1: MVP Product and Public Preview — Implemented; final UAT open
 
 - Networked and internet-facing security profiles with secure defaults
 - Built-in family authentication, secure sessions, bootstrap, and recovery

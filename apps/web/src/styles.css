@@ -257,6 +257,87 @@ p {
   object-fit: cover;
   background: #eeeae2;
 }
+.media-thumb-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+}
+.media-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+.media-viewer-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgb(15 23 42 / 0.82);
+}
+.media-viewer-panel {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  width: min(96vw, 1200px);
+  height: min(94vh, 900px);
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 1rem;
+  background: #111827;
+  color: white;
+  box-shadow: 0 2rem 5rem rgb(0 0 0 / 0.45);
+}
+.media-viewer-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+}
+.media-viewer-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.media-viewer-controls button {
+  min-width: 2.25rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid rgb(255 255 255 / 0.3);
+  border-radius: 0.4rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.media-viewer-scroll {
+  overflow: auto;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+.media-viewer-scroll img {
+  width: auto;
+  max-width: none;
+  height: auto;
+  object-fit: contain;
+  transform-origin: center;
+  transition: transform 120ms ease;
+}
+.preview-notice {
+  display: grid;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid #d89b16;
+  border-radius: 0.75rem;
+  background: #fff5d8;
+  color: #4d3500;
+}
 .media-card > div {
   padding: 0.8rem;
 }

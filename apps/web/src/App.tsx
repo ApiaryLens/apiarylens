@@ -1385,6 +1385,8 @@ function MediaTile({
 }) {
   const local = useLiveQuery(() => db.media.get(record.id), [record.id]);
   const [localUrls, setLocalUrls] = useState<{ original: string; thumbnail: string }>();
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [zoom, setZoom] = useState(1);
   useEffect(() => {
     if (!local?.blob) return;
     const original = URL.createObjectURL(local.blob);
@@ -1402,72 +1404,107 @@ function MediaTile({
   const mediaSyncState =
     local?.state === 'failed' ? 'failed' : !mediaReady ? 'pending' : record.syncState;
   return (
-    <article className="media-card">
-      {hasLocalPhoto || mediaReady ? (
-        <a href={original} target="_blank" rel="noreferrer">
-          <img
-            src={thumbnail}
-            alt={String(record.data.caption || `Inspection photo ${record.data.fileName}`)}
-            loading="lazy"
-          />
-        </a>
-      ) : (
-        <div className="media-missing" role="img" aria-label="Photo upload pending">
-          Photo upload pending
-        </div>
-      )}
-      <div>
-        <strong>{String(record.data.caption || record.data.fileName)}</strong>
-        <small>
-          {inspectionLabel ?? 'Inspection'} · {Math.round(Number(record.data.byteSize) / 1024)} KB
-        </small>
-        <SyncBadge state={mediaSyncState} />
-        {!mediaReady && !hasLocalPhoto && (
-          <small>Return to the device that captured this photo, reconnect, and tap Sync now.</small>
-        )}
-        {canWrite && (
-          <div className="record-actions">
-            <button
-              className="text-button"
-              onClick={() => {
-                const caption = prompt('Photo caption', String(record.data.caption ?? ''));
-                if (caption !== null)
-                  void queueUpdate(record, { caption }).then(() =>
-                    onNotice('Photo caption saved offline.'),
-                  );
-              }}
-            >
-              Caption
-            </button>
-            {local?.state === 'failed' && (
-              <button
-                className="text-button"
-                onClick={() =>
-                  void db.media
-                    .update(record.id, { state: 'staged', lastError: '' })
-                    .then(() => onNotice('Photo queued to retry.'))
-                }
-              >
-                Retry
-              </button>
-            )}
-            <button
-              className="text-button"
-              onClick={() => {
-                if (
-                  confirm(
-                    'Remove this inspection photo? It will be deleted from synchronized devices.',
-                  )
-                )
-                  void queueDelete(record).then(() => onNotice('Photo removal queued for sync.'));
-              }}
-            >
-              Remove
-            </button>
+    <>
+      <article className="media-card">
+        {hasLocalPhoto || mediaReady ? (
+          <button
+            className="media-thumb-button"
+            onClick={() => setViewerOpen(true)}
+            aria-label="Open photo viewer"
+          >
+            <img
+              src={thumbnail}
+              alt={String(record.data.caption || `Inspection photo ${record.data.fileName}`)}
+              loading="lazy"
+            />
+          </button>
+        ) : (
+          <div className="media-missing" role="img" aria-label="Photo upload pending">
+            Photo upload pending
           </div>
         )}
-      </div>
-    </article>
+        <div>
+          <strong>{String(record.data.caption || record.data.fileName)}</strong>
+          <small>
+            {inspectionLabel ?? 'Inspection'} · {Math.round(Number(record.data.byteSize) / 1024)} KB
+          </small>
+          <SyncBadge state={mediaSyncState} />
+          {!mediaReady && !hasLocalPhoto && (
+            <small>
+              Return to the device that captured this photo, reconnect, and tap Sync now.
+            </small>
+          )}
+          {canWrite && (
+            <div className="record-actions">
+              <button
+                className="text-button"
+                onClick={() => {
+                  const caption = prompt('Photo caption', String(record.data.caption ?? ''));
+                  if (caption !== null)
+                    void queueUpdate(record, { caption }).then(() =>
+                      onNotice('Photo caption saved offline.'),
+                    );
+                }}
+              >
+                Caption
+              </button>
+              {local?.state === 'failed' && (
+                <button
+                  className="text-button"
+                  onClick={() =>
+                    void db.media
+                      .update(record.id, { state: 'staged', lastError: '' })
+                      .then(() => onNotice('Photo queued to retry.'))
+                  }
+                >
+                  Retry
+                </button>
+              )}
+              <button
+                className="text-button"
+                onClick={() => {
+                  if (
+                    confirm(
+                      'Remove this inspection photo? It will be deleted from synchronized devices.',
+                    )
+                  )
+                    void queueDelete(record).then(() => onNotice('Photo removal queued for sync.'));
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          )}
+        </div>
+      </article>
+      {viewerOpen && (
+        <div className="media-viewer" role="dialog" aria-modal="true" aria-label="Photo viewer">
+          <button
+            className="media-viewer-backdrop"
+            aria-label="Close photo viewer"
+            onClick={() => setViewerOpen(false)}
+          />
+          <div className="media-viewer-panel">
+            <header>
+              <strong>{String(record.data.caption || record.data.fileName)}</strong>
+              <div className="media-viewer-controls">
+                <button onClick={() => setZoom((value) => Math.max(0.5, value - 0.25))}>−</button>
+                <span>{Math.round(zoom * 100)}%</span>
+                <button onClick={() => setZoom((value) => Math.min(4, value + 0.25))}>+</button>
+                <button onClick={() => setViewerOpen(false)}>Close</button>
+              </div>
+            </header>
+            <div className="media-viewer-scroll">
+              <img
+                src={original}
+                alt={String(record.data.caption || record.data.fileName)}
+                style={{ transform: `scale(${zoom})` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -2001,7 +2038,9 @@ function recordSummary(record: LocalResource): string | undefined {
 }
 
 function SyncBadge({ state }: { state: LocalResource['syncState'] }) {
-  return <span className={`sync-badge ${state}`}>{state === 'pending' ? 'not synced' : state}</span>;
+  return (
+    <span className={`sync-badge ${state}`}>{state === 'pending' ? 'not synced' : state}</span>
+  );
 }
 function Empty({ text }: { text: string }) {
   return <p className="empty">{text}</p>;
@@ -2124,6 +2163,15 @@ function VersionView({
         </div>
       </div>
       <section className="card details">
+        {frontendBuild.releaseChannel === 'preview' && (
+          <div className="preview-notice" role="note">
+            <strong>Public Preview</strong>
+            <span>
+              Not yet GA. Features and workflows may change, updates may arrive frequently, and
+              current backups are required.
+            </span>
+          </div>
+        )}
         <dl>
           <dt>Signed in as</dt>
           <dd>{session.user.displayName}</dd>
@@ -2131,6 +2179,8 @@ function VersionView({
           <dd>{session.membership.role}</dd>
           <dt>Product version</dt>
           <dd>{frontendBuild.productVersion}</dd>
+          <dt>Release channel</dt>
+          <dd>{frontendBuild.releaseChannel}</dd>
           <dt>API contract</dt>
           <dd>{frontendBuild.apiContract}</dd>
           <dt>Sync contract</dt>

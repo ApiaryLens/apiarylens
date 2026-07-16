@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const productVersion = "0.1.0-rc.7"
+const productVersion = "0.1.0-preview.1"
 
 type release struct {
 	Version        string `json:"version"`
@@ -112,8 +112,8 @@ func validate(p plan) error {
 	if !safeHTTPSURL(p.Release.ManifestURL) {
 		return errors.New("the release manifest must use HTTPS")
 	}
-	if p.Release.Channel != "release-candidate" && p.Release.Channel != "stable" {
-		return errors.New("only release-candidate or stable releases may be applied")
+	if p.Release.Channel != "preview" && p.Release.Channel != "release-candidate" && p.Release.Channel != "stable" {
+		return errors.New("only preview, release-candidate, or stable releases may be applied")
 	}
 	allowedOperations := map[string]bool{"install": true, "update": true, "backup": true, "restore": true, "export": true, "uninstall": true}
 	if !allowedOperations[p.Operation] {

@@ -2,7 +2,10 @@
 
 ## Status
 
-Active portfolio delivery sequence. The
+Active Public Preview 1 delivery sequence. Preview 1 is not GA or a stable release:
+features and workflows may change, updates may arrive frequently (sometimes multiple
+times per day), and preview users must keep backups and exports rather than relying
+on ApiaryLens as the sole copy of irreplaceable records or media. The
 [Master Architecture and Design Plan](../architecture/architecture-design-plan.md)
 remains authoritative for product architecture; this document controls the order in
 which the portfolio moves from foundation through release.
@@ -13,15 +16,16 @@ which the portfolio moves from foundation through release.
   2026-07-15
 - Six-repository portfolio and independently deployed public frontends: complete
 - PWA, Node and Cloudflare backends, shared SQLite contracts, Compose, and Scout Bee:
-  implemented in `0.1.0-rc.7`
-- Signed, content-addressed release candidate and complete server-profile lifecycle
+  implemented in the `0.1.0-rc.7` baseline carried by Public Preview 1
+- Signed, content-addressed preview artifacts and complete server-profile lifecycle
   evidence: published
-- MVP core release: Cloudflare family profile, approved Hyper-V Compose profile,
-  Scout Bee, documentation, and release artifacts are complete.
-- Post-MVP Version 1.1 backlog: AWS/provider expansion, extended physical-device
-  field sessions, assistive-technology review, and formal support operations.
-- Remaining MVP release action: project-owner acceptance of the verified candidate
-  and stable promotion.
+- MVP core implementation: Cloudflare family profile, approved Hyper-V Compose
+  profile, Scout Bee, documentation, and release artifacts are available in Public
+  Preview 1.
+- Post-MVP Version 1.1 backlog: AWS/provider expansion and broader operational polish;
+  remaining MVP acceptance work is tracked explicitly in the UAT record.
+- Remaining release action: complete owner/device acceptance before any stable/GA
+  promotion.
 
 ## Delivery Rule
 

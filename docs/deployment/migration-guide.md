@@ -27,10 +27,10 @@ copying D1 files, and a Compose volume is not uploaded directly into D1. Cross-p
 migration imports the versioned portable data contract and media after validating
 organization ownership and IDs.
 
-The MVP release candidate exposes export and backup contracts but cross-profile
-import automation is not accepted until the UAT record proves identity, records,
-media, and history on the destination. Preserve the source deployment until that
-proof is complete.
+Public Preview 1 exposes export and backup contracts, but cross-profile import
+automation is not accepted until the UAT record proves identity, records, media,
+and history on the destination. Preserve the source deployment until that proof is
+complete, and keep a current backup because Preview is not a stable release.
 
 ## Failure Recovery
 

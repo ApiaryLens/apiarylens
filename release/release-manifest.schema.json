@@ -21,7 +21,7 @@
       "type": "string",
       "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
     },
-    "channel": { "enum": ["development", "release-candidate", "stable"] },
+    "channel": { "enum": ["development", "preview", "release-candidate", "stable"] },
     "sourceCommit": { "type": "string", "minLength": 7 },
     "buildTime": { "type": "string", "minLength": 1 },
     "contracts": {

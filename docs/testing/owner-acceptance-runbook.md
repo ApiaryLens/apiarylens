@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Use this short runbook to close the remaining human-operated MVP gates for
-`0.1.0-rc.7`. The automated release, Cloudflare, Compose, Hyper-V, Azure/GCP
+Use this short runbook to close the remaining human-operated MVP gates for Public
+Preview 1 (verified against the `0.1.0-rc.7` baseline). The automated release, Cloudflare, Compose, Hyper-V, Azure/GCP
 reference, security, backup/restore, and desktop-browser evidence is already
 recorded in [`mvp-uat.md`](mvp-uat.md). This runbook covers only evidence that
 cannot be established from the build server.
@@ -28,6 +28,9 @@ cannot be established from the build server.
 The public `.app` entry is a demo and cannot prove multi-account or private-data
 behavior. Use the isolated Cloudflare UAT or the approved Compose target for the
 full acceptance journey.
+
+This is a Public Preview, not GA. Keep a current backup and export, and never use
+the preview deployment as the sole copy of irreplaceable records or media.
 
 ## Required journey
 

@@ -1,6 +1,6 @@
 # MVP Threat Model and ASVS Verification Map
 
-**Release scope:** ApiaryLens 0.1.0-rc.7
+**Release scope:** ApiaryLens Public Preview 1 (verified against 0.1.0-rc.7)
 
 **Review date:** 2026-07-16
 

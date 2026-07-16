@@ -1,15 +1,18 @@
 # MVP Release Gate Checklist
 
-**Release:** 0.1.0-rc.7
+**Release:** 0.1.0-preview.1 (based on 0.1.0-rc.7)
 
 **Date:** 2026-07-16
 
-**Status:** Published acceptance candidate; owner/device gates remain open
+**Status:** Public Preview; owner/device and final acceptance gates remain open
 
-rc.7 is the current corrective acceptance candidate. It includes the safe target
+Public Preview 1 carries forward rc.7 as the current corrective acceptance candidate. It includes the safe target
 creation and uninstall fixes validated after the rc.4/rc.6 history, and is verified,
 signed, published, independently attested, and proven through exact-public-byte
-Cloudflare, Compose, Hyper-V, and GCP evidence. Final stable acceptance still
+Cloudflare, Compose, Hyper-V, and GCP evidence. Preview is not GA or a stable
+release: features and workflows may change, updates may arrive frequently (sometimes
+multiple times per day), and users must keep backups rather than relying on this
+product as the sole copy of irreplaceable data. Final stable acceptance still
 requires the explicitly listed owner/device and manual-review gates.
 
 ## Pre-Deploy
@@ -108,8 +111,8 @@ requires the explicitly listed owner/device and manual-review gates.
 - [x] Verify production release identity after a 15-minute observation window.
 - [x] Record the dated Cloudflare quota/cost baseline and planning assumptions.
 - [ ] Record install time, device matrix, and all remaining evidence links.
-- [ ] Publish final release notes, changelog, support window, known limitations, and
-      recovery guidance.
+- [x] Publish Preview 1 release notes, changelog, support window, known limitations,
+      and recovery guidance; stable-release notes remain gated on owner acceptance.
 - [ ] Obtain project-owner acceptance.
 
 ## Isolated Cloudflare Evidence

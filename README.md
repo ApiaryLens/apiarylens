@@ -38,11 +38,17 @@ every decision made in this repo:
 
 ## Status
 
-ApiaryLens `0.1.0-rc.7` is the corrective MVP acceptance candidate. The PWA,
-Node and Cloudflare backends, Docker Compose profile, Scout Bee, release artifacts,
-and public documentation are implemented. It is not a stable release: physical
-iPhone/iPad, assistive-technology, AWS/GCP compatibility, and final project-owner
-acceptance remain open in the [MVP UAT record](docs/testing/mvp-uat.md).
+ApiaryLens is entering **Public Preview 1**. The PWA, Node and Cloudflare backends,
+Docker Compose profile, Scout Bee, release artifacts, and public documentation are
+available for controlled evaluation. This is not GA or a stable release: features
+and workflows may change, updates may arrive frequently (sometimes multiple times a
+day), and physical-device, assistive-technology, and final owner acceptance gates
+remain open in the [MVP UAT record](docs/testing/mvp-uat.md).
+
+Preview users should keep current backups and must not treat ApiaryLens as the sole
+copy of irreplaceable hive records or media. See the
+[Public Preview 1 release notes](docs/releases/0.1.0-preview.1.md) for scope,
+verification, and recovery guidance.
 
 ## Project direction
 

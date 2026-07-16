@@ -80,7 +80,7 @@ export function createApi(options: ApiOptions) {
     const requestId = c.req.header('x-request-id') ?? randomUUID();
     c.set('requestId', requestId);
     c.header('x-request-id', requestId);
-    c.header('x-apiarylens-version', '0.1.0-rc.7');
+    c.header('x-apiarylens-version', '0.1.0-preview.1');
     c.header('x-api-contract-version', '1.0');
     if (c.req.path.startsWith('/api/')) c.header('cache-control', 'no-store');
     await next();
@@ -458,7 +458,7 @@ export function createApi(options: ApiOptions) {
         JSON.stringify(
           {
             product: 'ApiaryLens',
-            productVersion: '0.1.0-rc.7',
+            productVersion: '0.1.0-preview.1',
             exportFormat: 1,
             exportedAt: new Date().toISOString(),
             organizationId,

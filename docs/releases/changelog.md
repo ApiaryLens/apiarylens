@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.0-preview.1 — 2026-07-16
+
+ApiaryLens is now available as Public Preview 1. This is an early, usable product,
+not GA or a stable release. It carries forward the verified MVP acceptance candidate
+with the installable PWA, family access, synchronized hive history, private media,
+portable Cloudflare and Compose deployments, Scout Bee operations, and the public
+documentation set.
+
+Features and workflows may change, and preview updates may arrive frequently,
+including multiple times per day. Keep current backups and exports, and do not use
+ApiaryLens as the sole copy of irreplaceable hive records or media. Physical-device,
+assistive-technology, and final owner acceptance gates remain visible in the
+[MVP UAT record](../testing/mvp-uat.md).
+
+See the [Preview 1 release notes](0.1.0-preview.1.md) for scope, safety guidance,
+verification, and feedback instructions.
+
 ## 0.1.0-rc.7 — 2026-07-16
 
 Corrective safe-target-removal candidate. Exact GCP cleanup proved a normal
