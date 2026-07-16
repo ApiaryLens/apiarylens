@@ -172,9 +172,15 @@ and deployment support rather than treating them as later cleanup.
 
 ## Immediate Work Queue
 
-1. Record project-owner acceptance and promote the unchanged verified candidate to
-   stable.
+1. Convert the Public Preview owner-feedback backlog into scoped implementation
+   slices, starting with automatic online/reconnect synchronization, installed-PWA
+   offline-launch regression coverage, update notification, member administration,
+   and backup/restore discoverability.
 2. Prove pending inspection/media work survives the released PWA/server update and
    synchronizes exactly once on the required MVP profiles.
-3. Track AWS, extended physical-device sessions, assistive-technology review, and
+3. Complete the intelligent-field and queen-identifier terminology discovery before
+   changing stored values or UI controls.
+4. Track AWS, extended physical-device sessions, assistive-technology review, and
    formal support operations in the Version 1.1 backlog.
+5. Record project-owner acceptance only after the remaining GA gates close; do not
+   promote Preview 1 directly to stable merely because the preview is available.

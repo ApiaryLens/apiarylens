@@ -116,6 +116,38 @@ core accepted for the MVP release.
 - A formal community support program, support-response targets, and expanded support
   channels beyond the current public documentation and issue/discussion workflow
 
+## Version 1.1 Backlog: Preview Usability and Guided Beekeeping
+
+Hands-on Preview 1 feedback adds the following prioritized outcomes. These refine
+existing capabilities as well as add new product experience; they do not redefine
+the completed Preview 1 artifact.
+
+### Now
+
+- Automatic synchronization during normal online use, on application resume, and
+  after reconnect; manual Sync becomes a recovery and status control
+- Permanent installed-PWA offline-launch regression coverage across iPhone, iPad,
+  and desktop
+- Safe in-app PWA update notification with pending-work protection
+- A clear owner-facing Members area for invitations, roles, revocation, and removal
+- Discoverable, profile-aware backup status, backup creation, restore, and recovery
+  guidance
+- Pointer- and keyboard-activatable Overview cards that route to their represented
+  product areas
+
+### Next
+
+- A beekeeper-reviewed intelligent-field audit with controlled vocabularies,
+  conditional Other values, units, validation, and accessible controls
+- Queen identifier types plus marking-color/year entry and complete queen history
+- An accessible visual and textual hive equipment-stack builder for brood boxes,
+  queen excluders, honey supers, covers, and other configurations
+- A searchable beekeeping glossary linked from product terminology and help
+- Clear manual inspection weather entry followed by optional, privacy-preserving
+  provider-assisted weather context in Phase 4
+- Cross-device authentication/session explanations and session-management UX without
+  weakening secure-cookie or server-side authorization boundaries
+
 ## Phase 2: Hive Record Expansion — Post-MVP
 
 Inspections, queens, boxes/equipment, photos, notes, and hive history are already in
