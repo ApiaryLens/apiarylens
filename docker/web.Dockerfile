@@ -1,7 +1,7 @@
 FROM node:24.18.0-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS build
 ARG APIARYLENS_SOURCE_COMMIT=development
 ARG APIARYLENS_BUILD_TIME=development
-ARG APIARYLENS_ARTIFACT_IDENTITY=ApiaryLens@0.1.0-rc.2+development
+ARG APIARYLENS_ARTIFACT_IDENTITY=ApiaryLens@0.1.0-rc.3+development
 WORKDIR /workspace
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
@@ -26,7 +26,7 @@ RUN GOBIN=/out go install -trimpath -ldflags="-s -w -buildid=" github.com/caddys
 
 FROM scratch
 LABEL org.opencontainers.image.title="ApiaryLens PWA" \
-      org.opencontainers.image.version="0.1.0-rc.2" \
+      org.opencontainers.image.version="0.1.0-rc.3" \
       org.opencontainers.image.licenses="Apache-2.0"
 ENV XDG_CONFIG_HOME=/config \
     XDG_DATA_HOME=/data

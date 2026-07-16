@@ -1,6 +1,6 @@
 {
   "name": "apiarylens",
-  "version": "0.1.0-rc.2",
+  "version": "0.1.0-rc.3",
   "private": true,
   "description": "Open-source, self-hosted, offline-first apiary management",
   "license": "Apache-2.0",
@@ -20,7 +20,7 @@
     "test": "pnpm -r --if-present test",
     "test:coverage": "pnpm -r --if-present test:coverage",
     "test:e2e": "pnpm --filter @apiarylens/e2e test",
-    "release:artifacts": "pnpm --filter @apiarylens/worker build && pnpm --filter @apiarylens/web build && node scripts/build-release-artifacts.mjs",
+    "release:artifacts": "node scripts/build-release-artifacts.mjs",
     "release:supply-chain": "node scripts/build-supply-chain.mjs",
     "release:verify": "node scripts/verify-release-identity.mjs && node scripts/verify-release-supply-chain.mjs",
     "security:secrets": "node scripts/scan-secrets.mjs",

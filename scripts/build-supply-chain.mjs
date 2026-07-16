@@ -8,12 +8,18 @@ const root = resolve(import.meta.dirname, '..');
 const releaseDirectory = join(root, 'release');
 const manifestPath = join(releaseDirectory, 'release-manifest.json');
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-const licenseProcess = spawnSync('pnpm', ['licenses', 'list', '--json'], {
-  cwd: root,
-  encoding: 'utf8',
-  shell: process.platform === 'win32',
-  maxBuffer: 16 * 1024 * 1024,
-});
+if (!process.env.npm_execpath) {
+  throw new Error('Run supply-chain assembly through `pnpm release:supply-chain`.');
+}
+const licenseProcess = spawnSync(
+  process.execPath,
+  [process.env.npm_execpath, 'licenses', 'list', '--json'],
+  {
+    cwd: root,
+    encoding: 'utf8',
+    maxBuffer: 16 * 1024 * 1024,
+  },
+);
 if (licenseProcess.status !== 0)
   throw new Error(licenseProcess.stderr || 'License inventory failed');
 const licenseGroups = JSON.parse(licenseProcess.stdout);

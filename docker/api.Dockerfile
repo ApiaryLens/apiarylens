@@ -16,7 +16,7 @@ RUN pnpm --filter @apiarylens/server deploy --prod --legacy /runtime
 
 FROM node:24.18.0-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS runtime
 LABEL org.opencontainers.image.title="ApiaryLens API" \
-      org.opencontainers.image.version="0.1.0-rc.2" \
+      org.opencontainers.image.version="0.1.0-rc.3" \
       org.opencontainers.image.licenses="Apache-2.0"
 ENV NODE_ENV=production \
     PORT=3000 \

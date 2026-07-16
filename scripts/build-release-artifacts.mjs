@@ -1,8 +1,12 @@
 import { createHash } from 'node:crypto';
+import { execFile } from 'node:child_process';
 import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
+import { promisify } from 'node:util';
 import prettier from 'prettier';
+
+const run = promisify(execFile);
 
 const root = resolve(import.meta.dirname, '..');
 const releaseDirectory = join(root, 'release');
@@ -10,8 +14,32 @@ const artifactDirectory = join(releaseDirectory, 'artifacts');
 const manifestPath = join(releaseDirectory, 'release-manifest.json');
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 const version = manifest.productVersion;
+const artifactIdentity = `ApiaryLens@${version}+${manifest.sourceCommit.slice(0, 7)}`;
 
 await mkdir(artifactDirectory, { recursive: true });
+
+await buildReleaseInputs();
+
+const workerOutput = await readFile(join(root, 'apps/worker/dist/index.js'), 'utf8');
+const compiledWorkerVersions = [
+  ...workerOutput.matchAll(/\bPRODUCT_VERSION\s*=\s*["']([^"']+)["']/g),
+].map((match) => match[1]);
+if (!compiledWorkerVersions.includes(version)) {
+  throw new Error(
+    `Worker runtime identity mismatch: expected ${version}, found ${compiledWorkerVersions.join(', ') || 'no compiled PRODUCT_VERSION'}`,
+  );
+}
+
+const webOutput = await readTreeText(join(root, 'apps/web/dist'), (name) => name.endsWith('.js'));
+for (const [label, expected] of [
+  ['version', version],
+  ['source commit', manifest.sourceCommit],
+  ['build time', manifest.buildTime],
+  ['artifact identity', artifactIdentity],
+]) {
+  if (!webOutput.includes(expected))
+    throw new Error(`Web release build does not contain the expected ${label}: ${expected}`);
+}
 
 const identity = Buffer.from(
   `${JSON.stringify(
@@ -30,7 +58,7 @@ const identity = Buffer.from(
 
 const cloudflareFiles = new Map([
   ['release-identity.json', identity],
-  ['worker/index.js', await readFile(join(root, 'apps/worker/dist/index.js'))],
+  ['worker/index.js', Buffer.from(workerOutput)],
 ]);
 await addTree(cloudflareFiles, join(root, 'apps/worker/migrations'), 'worker/migrations');
 await addTree(cloudflareFiles, join(root, 'apps/web/dist'), 'web');
@@ -91,15 +119,18 @@ for (const definition of definitions) {
   });
 }
 
-const deploymentTools = [];
-for (const artifact of manifest.artifacts.filter((item) => item.kind === 'deployment-tool')) {
-  const content = await readFile(join(artifactDirectory, artifact.name));
-  deploymentTools.push({
-    ...artifact,
-    sha256: createHash('sha256').update(content).digest('hex'),
-    bytes: content.length,
-  });
-}
+const scoutName = `apiarylens-scout-bee-${version}-windows-amd64.exe`;
+const scoutContent = await readFile(join(artifactDirectory, scoutName));
+const deploymentTools = [
+  {
+    name: scoutName,
+    kind: 'deployment-tool',
+    target: 'windows-amd64',
+    url: `https://apiarylens.org/releases/${version}/artifacts/${scoutName}`,
+    sha256: createHash('sha256').update(scoutContent).digest('hex'),
+    bytes: scoutContent.length,
+  },
+];
 
 manifest.artifacts = [
   ...artifacts,
@@ -110,6 +141,55 @@ manifest.artifacts = [
 ];
 await writeFile(manifestPath, await prettier.format(JSON.stringify(manifest), { parser: 'json' }));
 console.log(`Built ${artifacts.length} verified deployment bundles for ApiaryLens ${version}.`);
+
+async function buildReleaseInputs() {
+  if (!process.env.npm_execpath) {
+    throw new Error('Run release artifact assembly through `pnpm release:artifacts`.');
+  }
+  const pnpm = [process.env.npm_execpath];
+  const pnpmOptions = { cwd: root };
+  await run(process.execPath, [...pnpm, '--filter', '@apiarylens/contracts', 'build'], pnpmOptions);
+  await run(process.execPath, [...pnpm, '--filter', '@apiarylens/worker', 'build'], pnpmOptions);
+  await run(process.execPath, [...pnpm, '--filter', '@apiarylens/web', 'build'], {
+    ...pnpmOptions,
+    env: {
+      ...process.env,
+      VITE_DEPLOYMENT_PROFILE: 'cloudflare',
+      VITE_SOURCE_COMMIT: manifest.sourceCommit,
+      VITE_BUILD_TIME: manifest.buildTime,
+      VITE_ARTIFACT_IDENTITY: artifactIdentity,
+    },
+  });
+
+  const scoutName = `apiarylens-scout-bee-${version}-windows-amd64.exe`;
+  const go = process.env.GO_BINARY || 'go';
+  await run(
+    go,
+    [
+      'build',
+      '-trimpath',
+      '-buildvcs=false',
+      '-ldflags=-s -w',
+      '-o',
+      join(artifactDirectory, scoutName),
+      '.',
+    ],
+    {
+      cwd: join(root, 'apps/scout-bee'),
+      env: { ...process.env, GOOS: 'windows', GOARCH: 'amd64', CGO_ENABLED: '0' },
+    },
+  );
+}
+
+async function readTreeText(source, include) {
+  let text = '';
+  for (const entry of await readdir(source, { withFileTypes: true })) {
+    const path = join(source, entry.name);
+    if (entry.isDirectory()) text += await readTreeText(path, include);
+    else if (entry.isFile() && include(path)) text += await readFile(path, 'utf8');
+  }
+  return text;
+}
 
 async function addTree(files, source, prefix, include = () => true) {
   for (const entry of await readdir(source, { withFileTypes: true })) {
