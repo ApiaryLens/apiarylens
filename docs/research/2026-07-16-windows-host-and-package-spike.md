@@ -5,10 +5,10 @@
 `WIN-003` is in progress. The owner authorized research and follow-on ADR work on
 2026-07-16. This record does not select a framework or authorize product code.
 
-Official-source review plus Electron and Tauri/WebView2 packaging baselines and the
-Tauri clean-install lifecycle are complete. Accessibility, authenticated local-
-service supervision, and final comparable measurements remain required before the
-spike can close.
+Official-source review plus comparable Electron and Tauri/WebView2 packaging and
+clean-install lifecycle baselines are complete. Accessibility, authenticated local-
+service supervision, signed update behavior, and retail Windows profile evidence
+remain required before the spike can close.
 
 ## Question
 
@@ -204,6 +204,51 @@ on a clean profile. Compression format, locale pruning, symbols, installer forma
 code signing, antivirus scanning, the local Node service, SQLite, media, and real
 data will change the final numbers.
 
+The equivalent installer run
+[`29542856476`](https://github.com/ApiaryLens/apiarylens/actions/runs/29542856476)
+used Electron Forge 7.11.2 with Squirrel.Windows and retained its generated npm lock
+file in the disposable runner lab. Forge currently reaches `@electron/node-gyp`
+through a Git dependency; the repository's pnpm supply-chain policy correctly
+rejected that exotic transitive dependency. The research workflow did not weaken
+the product repository policy. This packaging dependency and its provenance must be
+resolved or explicitly accepted before Electron can be selected.
+
+| Installer metric | Result |
+|---|---:|
+| Squirrel setup executable | 133.8 MiB |
+| Full NuGet package | 133.1 MiB |
+| Loose application directory | 349.5 MiB, 75 files |
+| Electron host executable | 215.0 MiB |
+| Packaged `node:sqlite` probe | Passed |
+| Renderer-ready runs | 176, 197, 169, 211, 172 ms |
+| Renderer-ready mean / median | 185 / 176 ms |
+| Process count / working set / private memory | 4 / 229.4 MiB / 87.5 MiB |
+
+Lifecycle replay
+[`29543131869`](https://github.com/ApiaryLens/apiarylens/actions/runs/29543131869)
+downloaded the exact installer from that build run into a second fresh Windows
+runner. The replay restricted `PATH` to Windows system directories and confirmed
+that external Node, Rust, and .NET executables were unavailable.
+
+| Clean-profile lifecycle check | Result |
+|---|---:|
+| Artifact SHA-256 verification | Passed |
+| Silent current-user install | Exit 0 |
+| Installed footprint before uninstall | 467.1 MiB, 81 files |
+| Installed Electron host | 215.0 MiB |
+| Installed `node:sqlite` probe | Passed; Electron 43.1.1 / Node 24.18.0 |
+| Three-second installed-host smoke | Passed |
+| Smoke process count / working set / private memory | 4 / 229.2 MiB / 87.2 MiB |
+| Silent uninstall | Exit 0 |
+| Installed host / uninstall registration after uninstall | Absent / absent |
+| Remaining updater/cache directory | Present; 3.6 MiB |
+
+The residual directory is not counted as a complete uninstall. A product design
+must either remove safe updater residue or state precisely which recovery/cache data
+is retained and provide an explicit remove-all-data choice. As with the Tauri run,
+this is an unsigned research artifact on a hosted Windows runner rather than a
+retail family computer.
+
 ## Tauri and packaged Node sidecar baseline
 
 GitHub Actions run
@@ -259,12 +304,12 @@ ran its packaged runtime, and uninstalled without finding a developer runtime on
 `PATH`. It remains a hosted Windows Server runner with WebView2 already installed,
 not a retail Windows image or physical family computer, and the artifact is unsigned.
 
-The result establishes a material footprint difference: the Tauri installer is
-about one-sixth the size of the unoptimized Electron ZIP baseline, while its loose
-application files are about 29% of Electron's loose directory. That advantage
-depends on the separately serviced shared WebView2 runtime. An offline Tauri package
-that embeds the current WebView2 installer would add roughly the amount documented
-by Tauri and must be measured separately.
+The result establishes a material footprint difference: the Tauri installer is 18%
+of the equivalent Electron Squirrel installer, and its installed footprint is 21%
+of Electron's pre-uninstall footprint. That advantage depends on the separately
+serviced shared WebView2 runtime. An offline Tauri package that embeds the current
+WebView2 installer would add roughly the amount documented by Tauri and must be
+measured separately.
 
 ## Security and lifecycle requirements common to finalists
 
