@@ -1,0 +1,38 @@
+name: WIN-004 local service security research
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-service-boundary:
+    name: Loopback service lifecycle and security evidence
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out research automation
+        uses: actions/checkout@v5
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Run local-service security spike
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win004LocalServiceSpike.ps1
+          -OutputDirectory "$env:RUNNER_TEMP/win004-local-service-evidence"
+
+      - name: Upload sanitized research evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: win004-local-service-evidence
+          path: ${{ runner.temp }}/win004-local-service-evidence
+          if-no-files-found: warn
+          retention-days: 14
