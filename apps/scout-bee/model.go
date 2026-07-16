@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const productVersion = "0.1.0-rc.1"
+const productVersion = "0.1.0-rc.2"
 
 type release struct {
 	Version        string `json:"version"`
