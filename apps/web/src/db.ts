@@ -392,7 +392,11 @@ async function uploadStagedMedia(organizationId: string, csrfToken: string): Pro
         headers: { 'content-type': item.blob.type, 'x-csrf-token': csrfToken },
         body: item.blob,
       });
-      if (!response.ok) throw new Error(`Image upload failed (${response.status})`);
+      if (!response.ok) {
+        const detail = (await response.json().catch(() => undefined)) as
+          { message?: string } | undefined;
+        throw new Error(detail?.message ?? `Image upload failed (${response.status})`);
+      }
       const value = (await response.json()) as Record<string, unknown>;
       if (item.thumbnail) {
         const thumbnailResponse = await fetch(`/api/v1/media/${item.id}/thumbnail`, {
@@ -401,8 +405,13 @@ async function uploadStagedMedia(organizationId: string, csrfToken: string): Pro
           headers: { 'content-type': 'image/jpeg', 'x-csrf-token': csrfToken },
           body: item.thumbnail,
         });
-        if (!thumbnailResponse.ok)
-          throw new Error(`Thumbnail upload failed (${thumbnailResponse.status})`);
+        if (!thumbnailResponse.ok) {
+          const detail = (await thumbnailResponse.json().catch(() => undefined)) as
+            { message?: string } | undefined;
+          throw new Error(
+            detail?.message ?? `Thumbnail upload failed (${thumbnailResponse.status})`,
+          );
+        }
       }
       await db.transaction('rw', db.media, db.resources, async () => {
         await db.media.update(item.id, { state: 'ready', lastError: '' });

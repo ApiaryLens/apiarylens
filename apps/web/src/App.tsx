@@ -126,13 +126,17 @@ export function App() {
   }
 
   async function sync() {
-    if (!session?.csrfToken) {
-      setNotice('Reconnect and sign in before synchronizing. Your local work remains saved.');
-      return;
-    }
     setSyncing(true);
     try {
-      await synchronize(session.organization.id, session.csrfToken);
+      let active = session;
+      if (!active?.csrfToken) {
+        const refreshed = await api.session();
+        await cacheSession(refreshed);
+        active = refreshed;
+        setSession(refreshed);
+      }
+      if (!active?.csrfToken) throw new Error('Reconnect before synchronizing.');
+      await synchronize(active.organization.id, active.csrfToken);
       setNotice('Synchronization complete.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Synchronization failed.');
