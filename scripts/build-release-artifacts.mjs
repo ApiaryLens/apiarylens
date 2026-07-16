@@ -146,7 +146,6 @@ async function buildReleaseInputs() {
       VITE_ARTIFACT_IDENTITY: artifactIdentity,
     },
   });
-
 }
 
 async function readTreeText(source, include) {
