@@ -76,7 +76,7 @@ if (-not $uninstallCommand) { throw 'Research installation has no uninstall comm
 $uninstallExecutable = Get-CommandExecutable -CommandLine $uninstallCommand
 $registeredInstallLocation = if ($entry.PSObject.Properties.Name -contains 'InstallLocation') { $entry.InstallLocation } else { $null }
 $installDirectory = if ($registeredInstallLocation) {
-    $registeredInstallLocation.TrimEnd([char]'\')
+    $registeredInstallLocation.Trim().Trim('"').TrimEnd([char]'\')
 } else {
     Split-Path -Parent $uninstallExecutable
 }

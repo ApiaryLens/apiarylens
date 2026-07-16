@@ -1,0 +1,46 @@
+name: WIN-003 Tauri lifecycle research
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Workflow run containing win003-tauri-node-sidecar-evidence
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  clean-install-lifecycle:
+    name: Clean install and uninstall evidence
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out research automation
+        uses: actions/checkout@v5
+
+      - name: Download exact research artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: win003-tauri-node-sidecar-evidence
+          path: ${{ runner.temp }}/win003-input
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ inputs.source_run_id }}
+
+      - name: Run clean-profile lifecycle probe
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003TauriInstallProbe.ps1
+          -EvidenceDirectory "$env:RUNNER_TEMP/win003-input"
+          -OutputDirectory "$env:RUNNER_TEMP/win003-lifecycle"
+
+      - name: Upload lifecycle evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: win003-tauri-clean-install-evidence
+          path: ${{ runner.temp }}/win003-lifecycle
+          if-no-files-found: error
+          retention-days: 14
