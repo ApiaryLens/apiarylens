@@ -296,7 +296,7 @@ safe_backup() {
   if [ -f "$secrets_dir/auth-root" ]; then cp "$secrets_dir/auth-root" "$destination/auth-root"; fi
   if [ -f "$current/docker/compose.yaml" ]; then
     docker compose -p "$project" -f "$current/docker/compose.yaml" stop api
-    trap 'docker compose -p "$project" -f "$current/docker/compose.yaml" start api >/dev/null 2>&1 || true' EXIT
+    trap 'docker compose -p "$project" -f "$current/docker/compose.yaml" up -d --wait api >/dev/null 2>&1 || true' EXIT
   fi
   docker run --rm -v "${project}_apiarylens_data:/data:ro" -v "$destination:/backup" alpine:3.22 sh -c 'cd /data && tar czf /backup/data.tar.gz .'
   gzip -t "$destination/data.tar.gz"
@@ -306,7 +306,7 @@ safe_backup() {
     case "$expired" in "$backups"/*) rm -rf -- "$expired" ;; *) exit 65 ;; esac
   done
   if [ -f "$current/docker/compose.yaml" ]; then
-    docker compose -p "$project" -f "$current/docker/compose.yaml" start api
+    docker compose -p "$project" -f "$current/docker/compose.yaml" up -d --wait api
     trap - EXIT
   fi
   printf '%s\n' "$destination"
