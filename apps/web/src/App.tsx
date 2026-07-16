@@ -1386,10 +1386,7 @@ function MediaTile({
   const local = useLiveQuery(() => db.media.get(record.id), [record.id]);
   const [localUrls, setLocalUrls] = useState<{ original: string; thumbnail: string }>();
   useEffect(() => {
-    if (!local?.blob) {
-      setLocalUrls(undefined);
-      return;
-    }
+    if (!local?.blob) return;
     const original = URL.createObjectURL(local.blob);
     const thumbnail = local.thumbnail ? URL.createObjectURL(local.thumbnail) : original;
     setLocalUrls({ original, thumbnail });
