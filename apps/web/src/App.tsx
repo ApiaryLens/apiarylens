@@ -54,19 +54,25 @@ export function App() {
     const online = () => {
       setOffline(false);
       void (async () => {
-        try {
-          const active = await api.session();
-          await cacheSession(active);
-          setSession(active);
-          await synchronize(active.organization.id, active.csrfToken);
-          setNotice('Reconnected and synchronized.');
-        } catch (error) {
-          setNotice(
-            error instanceof Error
-              ? `Reconnected, but synchronization failed: ${error.message}`
-              : 'Reconnected, but synchronization failed. Tap Sync now to retry.',
-          );
+        let lastError: unknown;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          try {
+            if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+            const active = await api.session();
+            await cacheSession(active);
+            setSession(active);
+            await synchronize(active.organization.id, active.csrfToken);
+            setNotice('Reconnected and synchronized.');
+            return;
+          } catch (error) {
+            lastError = error;
+          }
         }
+        setNotice(
+          lastError instanceof Error
+            ? `Reconnected, but synchronization failed: ${lastError.message}`
+            : 'Reconnected, but synchronization failed. Tap Sync now to retry.',
+        );
       })();
     };
     const offlineHandler = () => setOffline(true);
