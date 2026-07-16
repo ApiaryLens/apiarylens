@@ -124,6 +124,7 @@ func (a *composeAdapter) apply(ctx context.Context, input request, manifest rele
 		base64.RawURLEncoding.EncodeToString([]byte(manifest.SourceCommit)),
 		base64.RawURLEncoding.EncodeToString([]byte(manifest.BuildTime)),
 		base64.RawURLEncoding.EncodeToString([]byte("ApiaryLens@"+manifest.ProductVersion+"+"+shortCommit(manifest.SourceCommit))),
+		strconv.Itoa(compose.BackupRetention),
 	)
 	output, err := a.executor.runner.Run(ctx, command{Executable: "ssh", Args: args, Stdin: []byte(composeRemoteScript)}, input.Secrets)
 	if err != nil {
@@ -287,6 +288,7 @@ auth_root_file=$(decode "$9")
 source_commit=$(decode "${10}")
 build_time=$(decode "${11}")
 artifact_identity=$(decode "${12}")
+backup_retention=${13}
 release_dir="$target/releases/$version"
 current="$target/current"
 backups="$target/backups"
@@ -306,6 +308,9 @@ safe_backup() {
   gzip -t "$destination/data.tar.gz"
   tar tzf "$destination/data.tar.gz" >/dev/null
   if [ -f "$current/release-manifest.json" ]; then cp "$current/release-manifest.json" "$destination/"; fi
+  find "$backups" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' | sort -nr | tail -n "+$((backup_retention + 1))" | cut -d' ' -f2- | while IFS= read -r expired; do
+    case "$expired" in "$backups"/*) rm -rf -- "$expired" ;; *) exit 65 ;; esac
+  done
   if [ -f "$current/docker/compose.yaml" ]; then
     docker compose -p "$project" -f "$current/docker/compose.yaml" start api
     trap - EXIT
@@ -352,8 +357,9 @@ case "$operation" in
     docker compose -p "$project" -f "$current/docker/compose.yaml" down
     if [ -f "$latest/auth-root" ]; then mkdir -p "$secrets_dir"; cp "$latest/auth-root" "$secrets_dir/auth-root"; chmod 600 "$secrets_dir/auth-root"; fi
     docker run --rm -v "${project}_apiarylens_data:/data" -v "$latest:/backup:ro" alpine:3.22 sh -c 'rm -rf /data/* /data/.[!.]* /data/..?* 2>/dev/null || true; tar xzf /backup/data.tar.gz -C /data'
+    docker run --rm --user 0:0 -v "${project}_apiarylens_data:/data" "apiarylens-api:$version" node -e "const { DatabaseSync } = require('node:sqlite'); const db = new DatabaseSync('/data/apiarylens.sqlite'); db.exec('DELETE FROM sessions'); db.close();"
     docker compose -p "$project" -f "$current/docker/compose.yaml" up -d --wait
-    printf 'The latest verified backup was restored and health checks passed.\n'
+    printf 'The latest verified backup was restored, sessions were revoked, and health checks passed.\n'
     ;;
   uninstall)
     if [ -f "$current/docker/compose.yaml" ]; then

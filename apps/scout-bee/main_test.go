@@ -169,6 +169,19 @@ func TestComposeHostKeyProbeFallsBackWithoutAuthentication(t *testing.T) {
 		t.Fatalf("fallback must capture the host key without authenticating or executing a command: %s", commands)
 	}
 }
+
+func TestComposeLifecycleEnforcesRetentionAndRevokesRestoredSessions(t *testing.T) {
+	for _, required := range []string{
+		"backup_retention=${13}",
+		"tail -n \"+$((backup_retention + 1))\"",
+		"DELETE FROM sessions",
+		"sessions were revoked",
+	} {
+		if !strings.Contains(composeRemoteScript, required) {
+			t.Fatalf("Compose lifecycle script is missing %q", required)
+		}
+	}
+}
 func TestRejectsSecretLookingPlan(t *testing.T) {
 	p := validPlan()
 	p.Cloudflare.AccountReference = "my-secret-token"
