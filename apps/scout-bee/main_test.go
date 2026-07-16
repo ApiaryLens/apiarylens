@@ -283,6 +283,8 @@ func TestComposeLifecycleEnforcesRetentionAndRevokesRestoredSessions(t *testing.
 		`encoded="${encoded}=="`,
 		"backup_retention=${13}",
 		"tail -n \"+$((backup_retention + 1))\"",
+		`for required_secret in "$secrets_dir/bootstrap-token" "$secrets_dir/auth-root"`,
+		`if [ ! -f "$required_secret" ]; then (umask 077; : > "$required_secret"); fi`,
 		"if [ \"$keep_data\" = false ]; then rm -rf \"$target\"; fi",
 		"DELETE FROM sessions",
 		"sessions were revoked",

@@ -390,7 +390,14 @@ case "$operation" in
   uninstall)
     if [ -f "$current/docker/compose.yaml" ]; then
       if [ "$keep_data" = true ]; then docker compose -p "$project" -f "$current/docker/compose.yaml" down
-      else docker compose -p "$project" -f "$current/docker/compose.yaml" down -v; fi
+      else
+        mkdir -p "$secrets_dir"
+        chmod 700 "$secrets_dir"
+        for required_secret in "$secrets_dir/bootstrap-token" "$secrets_dir/auth-root"; do
+          if [ ! -f "$required_secret" ]; then (umask 077; : > "$required_secret"); fi
+        done
+        docker compose -p "$project" -f "$current/docker/compose.yaml" down -v
+      fi
     fi
     if [ "$keep_data" = false ]; then rm -rf "$target"; fi
     printf 'ApiaryLens services were removed; keep-data=%s.\n' "$keep_data"
