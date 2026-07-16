@@ -353,7 +353,7 @@ case "$operation" in
     latest=$(find "$backups" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)
     [ -n "$latest" ] && gzip -t "$latest/data.tar.gz"
     docker compose -p "$project" -f "$current/docker/compose.yaml" down
-    if [ -f "$latest/auth-root" ]; then mkdir -p "$secrets_dir"; cp "$latest/auth-root" "$secrets_dir/auth-root"; chmod 600 "$secrets_dir/auth-root"; fi
+    if [ -f "$latest/auth-root" ]; then mkdir -p "$secrets_dir"; chmod 700 "$secrets_dir"; cp "$latest/auth-root" "$secrets_dir/auth-root"; chmod 644 "$secrets_dir/auth-root"; fi
     docker run --rm -v "${project}_apiarylens_data:/data" -v "$latest:/backup:ro" alpine:3.22 sh -c 'rm -rf /data/* /data/.[!.]* /data/..?* 2>/dev/null || true; tar xzf /backup/data.tar.gz -C /data'
     docker run --rm --user 0:0 -v "${project}_apiarylens_data:/data" "apiarylens-api:$version" node -e "const { DatabaseSync } = require('node:sqlite'); const db = new DatabaseSync('/data/apiarylens.sqlite'); db.exec('DELETE FROM sessions'); db.close();"
     docker compose -p "$project" -f "$current/docker/compose.yaml" up -d --wait

@@ -178,6 +178,7 @@ func TestComposeLifecycleEnforcesRetentionAndRevokesRestoredSessions(t *testing.
 		"DELETE FROM sessions",
 		"sessions were revoked",
 		`up -d --wait api`,
+		`chmod 644 "$secrets_dir/auth-root"`,
 	} {
 		if !strings.Contains(composeRemoteScript, required) {
 			t.Fatalf("Compose lifecycle script is missing %q", required)
