@@ -1,16 +1,18 @@
 # MVP Release Gate Checklist
 
-**Release:** 0.1.0-rc.2
+**Release:** 0.1.0-rc.3
 
 **Date:** 2026-07-16
 
 **Status:** Not yet releasable
 
-`rc.2` supersedes `rc.1` for final acceptance because the authorization audit closed
-Cloudflare route, permission, negative-test, and OpenAPI declaration gaps. The
-server lifecycle evidence below was completed with the immutable `rc.1` artifacts
-and remains predecessor/contract evidence; the explicitly open deployment check
-requires signed `rc.2` profile smoke tests before final acceptance.
+`rc.3` supersedes `rc.2` because exact-artifact Cloudflare smoke testing found that
+the published `rc.2` Worker had linked a stale compiled contracts package and
+reported `rc.1` at runtime. Scout Bee rejected the inconsistent health identity and
+the isolated resources were removed. Release assembly now rebuilds shared contracts,
+injects the Cloudflare frontend identity, and rejects mismatched runtime bytes before
+packaging. The complete immutable `rc.1` server lifecycle remains predecessor and
+contract evidence; final acceptance requires signed `rc.3` profile smoke tests.
 
 ## Pre-Deploy
 

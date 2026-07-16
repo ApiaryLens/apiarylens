@@ -1,13 +1,13 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:a10c9c35-8725-4a40-8cb9-7075fc9e158c",
+  "serialNumber": "urn:uuid:65d8b41a-05e2-48da-a28d-9e431ac601e2",
   "version": 1,
   "metadata": {
     "component": {
       "type": "application",
       "name": "ApiaryLens",
-      "version": "0.1.0-rc.2"
+      "version": "0.1.0-rc.3"
     },
     "properties": [
       {

@@ -9,7 +9,9 @@ not satisfy it.
 
 ## Build Under Test
 
-- Acceptance candidate: ApiaryLens 0.1.0-rc.2
+- Acceptance candidate: ApiaryLens 0.1.0-rc.3
+- Superseded candidate: ApiaryLens 0.1.0-rc.2 (rejected by exact-artifact runtime
+  identity smoke test)
 - Lifecycle predecessor evidence: ApiaryLens 0.1.0-rc.1
 - Release channel: release-candidate
 - API: 1.0
