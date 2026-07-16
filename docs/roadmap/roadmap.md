@@ -91,6 +91,8 @@ core accepted for the MVP release.
 
 - AWS EC2 Compose compatibility evidence and provider-specific operating guidance
 - Optional AWS/GCP Scout Bee adapters and disposable-provider lifecycle automation
+- Windows-first Scout Bee local deployment: guided Hyper-V/WSL setup, prerequisite
+  checks, and a no-Linux-CLI path for family operators deploying from Windows
 - Extended field-device acceptance on physical iPhone and iPad hardware, including
   invitation, offline media, interrupted-update, and multi-device synchronization
   sessions beyond the required MVP profile evidence
