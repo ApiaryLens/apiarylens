@@ -80,7 +80,7 @@ the current plan.
 
 ## Current Project State
 
-The product architecture and MVP contract are accepted. ApiaryLens `0.1.0-rc.5` is
+The product architecture and MVP contract are accepted. ApiaryLens `0.1.0-rc.6` is
 the published acceptance candidate: the PWA, both backends, shared contracts and
 schema, Compose profile, Scout Bee, public properties, signed artifacts, and
 documentation are implemented. Stable release remains gated by the open AWS/GCP,

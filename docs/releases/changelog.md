@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.0-rc.6 — 2026-07-16
+
+Corrective partial-uninstall recovery candidate. Exact published-byte GCP cleanup
+proved that rc.5 could not finish removal from rc.4's partially deleted secret-file
+state. Scout Bee now reconstructs only the missing restricted mount points, requires
+Compose resource removal to succeed, and then removes the complete validated target.
+See the [curated release notes](0.1.0-rc.6.md),
+[release gates](../testing/mvp-release-gates.md), and
+[UAT record](../testing/mvp-uat.md).
+
 ## 0.1.0-rc.5 — 2026-07-16
 
 Corrective remove-data candidate. GCP lifecycle acceptance proved rc.4 left verified

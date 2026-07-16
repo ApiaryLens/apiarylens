@@ -6,7 +6,7 @@ version, see the [Marketing Overview](marketing-overview.md).
 ## What is ApiaryLens?
 
 ApiaryLens is an open-source apiary intelligence platform for beekeepers. The
-`0.1.0-rc.5` acceptance candidate tracks apiaries, hives, queens,
+`0.1.0-rc.6` acceptance candidate tracks apiaries, hives, queens,
 equipment, inspections, health observations, photos, mite counts, feeding,
 treatments, harvests, follow-ups, and long-term hive history. It is licensed under
 Apache License 2.0 and is not yet a stable release.

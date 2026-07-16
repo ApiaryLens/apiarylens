@@ -90,7 +90,7 @@ app.use('*', async (c, next) => {
   const requestId = c.req.header('x-request-id') ?? crypto.randomUUID();
   c.set('requestId', requestId);
   c.header('x-request-id', requestId);
-  c.header('x-apiarylens-version', '0.1.0-rc.5');
+  c.header('x-apiarylens-version', '0.1.0-rc.6');
   c.header('x-api-contract-version', '1.0');
   if (c.req.path.startsWith('/api/')) c.header('cache-control', 'no-store');
   await next();
@@ -647,7 +647,7 @@ app.get('/api/v1/export/full', requireSession, async (c) => {
       JSON.stringify(
         {
           product: 'ApiaryLens',
-          productVersion: '0.1.0-rc.5',
+          productVersion: '0.1.0-rc.6',
           exportFormat: 1,
           profile: 'cloudflare',
           exportedAt: now(),
@@ -684,7 +684,7 @@ app.get('/api/v1/operator/backup', requireScoutOperator, async (c) => {
     'manifest.json': strToU8(
       JSON.stringify({
         product: 'ApiaryLens',
-        productVersion: '0.1.0-rc.5',
+        productVersion: '0.1.0-rc.6',
         backupFormat: 1,
         databaseMigration: DATABASE_MIGRATION_HEAD,
         profile: 'cloudflare',
