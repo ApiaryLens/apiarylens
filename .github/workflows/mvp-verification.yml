@@ -76,7 +76,13 @@ jobs:
           /tmp/grype version
 
       - name: Scan Compose API image for high or critical vulnerabilities
-        run: /tmp/grype apiarylens-api:0.1.0-rc.1 --fail-on high
+        run: |
+          image="$(docker compose --env-file docker/.env.example -f docker/compose.yaml config --images | grep '^apiarylens-api:' | head -n 1)"
+          test -n "$image"
+          /tmp/grype "$image" --fail-on high
 
       - name: Scan Compose web image for high or critical vulnerabilities
-        run: /tmp/grype apiarylens-web:0.1.0-rc.1 --fail-on high
+        run: |
+          image="$(docker compose --env-file docker/.env.example -f docker/compose.yaml config --images | grep '^apiarylens-web:' | head -n 1)"
+          test -n "$image"
+          /tmp/grype "$image" --fail-on high
