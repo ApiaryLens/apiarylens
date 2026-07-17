@@ -121,15 +121,24 @@ SSH key, deployment secret, or recovery code. Authentication happens in the Wind
 client after import. Returning to standalone mode preserves the prior standalone
 data; it does not silently copy newer remote-only records back into that database.
 
-ApiaryLens for Windows is distributed as a signed, current-user `ApiaryLensSetup.exe`
-release. It installs without administrator rights and does not require Node, Go,
-WSL, Docker, or a Linux shell. Release verification also publishes a full Squirrel
-update package, `RELEASES` metadata, artifact sizes, and SHA-256 hashes. Preview
-users should download only from the official ApiaryLens GitHub release and verify
-that Windows shows the expected ApiaryLens publisher before running Setup. The
-database, original photos, protected credentials, connection profile, and backups
-live in the user's application-data directory rather than the replaceable install
-directory, so application updates do not overwrite family data.
+ApiaryLens for Windows Preview 1 is available as a current-user
+[`ApiaryLensSetup.exe`](https://github.com/ApiaryLens/apiarylens/releases/download/v0.1.0-preview.1/ApiaryLensSetup.exe).
+It installs without administrator rights and does not require Node, Go, WSL, Docker,
+or a Linux shell. Review the
+[official versioned release](https://github.com/ApiaryLens/apiarylens/releases/tag/v0.1.0-preview.1)
+before running Setup. The current Preview installer is **not Authenticode-signed**;
+its SHA-256 is
+`6347167ce6d17dce5503412ff7d1edd45a60379c386f662eeac33558a4234753`.
+Windows may show **Windows protected your PC**. Choose **More info → Run anyway**
+only after the downloaded file matches that exact hash. A future signed release
+must show the publisher documented on its own release page; this unsigned Preview
+must not be described as signed.
+
+The release also publishes a full Squirrel update package, `RELEASES` metadata,
+artifact sizes, and SHA-256 hashes. The database, original photos, protected
+credentials, connection profile, and backups live in the user's application-data
+directory rather than the replaceable install directory, so application updates do
+not overwrite family data.
 
 An owner using Windows standalone can choose **Account and build → Create Windows
 backup**. Select a destination for the `.albackup` file and keep it somewhere other
