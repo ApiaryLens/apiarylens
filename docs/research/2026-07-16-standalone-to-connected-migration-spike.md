@@ -111,6 +111,11 @@ Follow-up run
 [`29550918994`](https://github.com/ApiaryLens/apiarylens/actions/runs/29550918994)
 passed preservation of a non-empty pending outbox on the Windows hosted runner.
 
+Follow-up run
+[`29550982088`](https://github.com/ApiaryLens/apiarylens/actions/runs/29550982088)
+passed idempotent tombstone replay and the full accumulated scenario set on the
+Windows hosted runner.
+
 ## Proposed migration protocol
 
 ### Durable objects
