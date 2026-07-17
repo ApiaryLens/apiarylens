@@ -93,9 +93,11 @@ protected replacement and secret-free journal but before committing rotation. Th
 next launch validated the purpose/version state, promoted the protected replacement,
 removed pending state, deleted a revoked connected session, retained hive data on
 sign-out/keep-data, and removed both protected credentials and hive data on
-remove-all. This advances condition 4; server-integrated rotation, backup/restore,
-Windows-account changes, actual installer choices, and the final adapter decision
-remain open.
+remove-all. This advances condition 4. The proposed initial adapter is now
+Electron's supported current-user DPAPI-backed `safeStorage` with versioned purpose
+envelopes and an atomic journal; Credential Manager remains a fallback rather than
+a parallel store. Server-integrated rotation, backup/restore, Windows-account
+changes, actual installer choices, and owner acceptance remain open.
 
 ## Proposed Decision
 
@@ -120,8 +122,9 @@ The released application:
   process-scoped control credential outside renderer code;
 - uses the shared portable API, SQLite store, filesystem media store, contracts, and
   organization-authorization behavior rather than creating a desktop-only backend;
-- stores durable standalone and connected credentials through the accepted Windows
-  credential-protection adapter owned by the main process; and
+- stores durable standalone and connected credentials through main-process
+  `safeStorage` using versioned, purpose-scoped protected files, current-user ACLs,
+  and an atomic recovery journal; and
 - keeps standalone data, media, backups, cached verified releases, and package
   residue outside the executable installation directory under documented per-user
   locations with explicit keep-data and remove-all-data behavior.
@@ -242,13 +245,15 @@ must replace it.
    broader Windows lifecycle evaluation. Single-instance, parent-death,
    stale-readiness recovery, and clean shutdown now pass in packaged and installed
    artifacts.
-4. Integrate and replay the `WIN-005` Credential Manager, DPAPI, rotation/crash,
-   revocation, restore, sign-out, keep-data, and remove-all behavior through the
-   actual main-process adapter. The packaged and installed Electron `safeStorage`
+4. Integrate and replay the `WIN-005` DPAPI, rotation/crash, revocation, restore,
+   sign-out, keep-data, and remove-all behavior through the actual main-process
+   adapter. The proposed adapter is Electron `safeStorage`; Credential Manager is a
+   fallback that does not require selected-host integration unless this decision is
+   reopened. The packaged and installed `safeStorage`
    store/read/rotate/corruption/delete baseline and synthetic interrupted-rotation,
    revocation, sign-out, keep-data, and remove-all state machine now pass. Real
    server rotation, restore/account-change behavior, installer choices, and the
-   final-adapter decision stay open.
+   owner acceptance stay open.
 5. Resolve or reject the Forge/Squirrel exotic dependency under the repository
    supply-chain policy; reconcile every runtime/build component to an allowlisted
    license and install complete Apache-2.0 and third-party notices.

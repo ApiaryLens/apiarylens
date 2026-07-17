@@ -181,10 +181,20 @@ decryption outside a sandboxed renderer, but ApiaryLens would still own cipherte
 file location, ACLs, atomic replacement, deletion, versioning, and diagnostics
 redaction.
 
-`safeStorage` is the Electron baseline, not an automatic final choice. A small
-native Credential Manager adapter could align Electron and Tauri storage semantics,
-but its native dependency, signing, licensing, and update provenance must be weighed
-against using the supported Electron API directly.
+`safeStorage` is now the proposed initial Electron adapter. It is supported by the
+selected host, keeps encryption and decryption in the main process, uses the required
+current-user DPAPI boundary on Windows, and avoids adding a native addon with a
+separate ABI, signing, licensing, and update-provenance lifecycle. ApiaryLens still
+owns ciphertext location, current-user ACLs, versioned purpose envelopes, atomic
+journaling, deletion, diagnostics redaction, and recovery UX.
+
+Windows Credential Manager remains the documented fallback and revisit candidate.
+The direct API baseline proves it is viable, but an initial Electron implementation
+would require either a custom native addon or a shell/runtime bridge. The latter is
+rejected, and the former adds privileged code without a demonstrated security or
+family-experience advantage over the exact-artifact `safeStorage` results. Revisit
+if Windows policy, roaming behavior, protected-file limits, or a future non-Electron
+host makes the supported adapter unsuitable.
 
 Exact-artifact run
 [`29557388536`](https://github.com/ApiaryLens/apiarylens/actions/runs/29557388536)
@@ -239,7 +249,7 @@ entropy, or secret hash. This closes the selected-host synthetic rotation-crash,
 revocation, sign-out, keep-data, and remove-all state-machine subgate. A real remote
 server rotation transaction, same-user backup/restore, different-user/computer
 guided failure, Windows account changes, actual installer UI choices, and final
-adapter decision remain open.
+ADR acceptance remain open.
 
 Primary source:
 
@@ -269,14 +279,15 @@ Primary sources:
 
 1. Define one framework-neutral native credential interface: `store`, `load`,
    `replace`, and `delete`, with a purpose enum rather than arbitrary target names.
-2. Use Windows Credential Manager generic credentials as the primary Windows
-   implementation for the standalone authentication root and connected session.
+2. Use Electron `safeStorage` with versioned, purpose-scoped protected files and an
+   atomic rotation journal as the initial Windows Preview implementation for the
+   standalone authentication root and connected session.
 3. Keep the loopback control token, CSRF token, passwords, and recovery codes in
    memory only.
 4. Let the native HTTP bridge own the connected cookie jar and session rotation.
    React receives the resulting session view, never the opaque cookie value.
-5. Retain Electron `safeStorage` and a Tauri Stronghold design as measured fallback
-   or challenger paths, not parallel product stores.
+5. Retain Windows Credential Manager as a measured fallback and Tauri Stronghold
+   only as part of a reopened host decision; do not ship parallel credential stores.
 6. Version every protected payload and bind its target to installation, environment,
    organization where applicable, and purpose. Reject cross-purpose substitution.
 7. Treat credential loss separately from hive-data loss. Preserve local data and
@@ -287,18 +298,19 @@ Primary sources:
 
 `WIN-005` closes only after:
 
-1. Replaying the passing `CredWriteW`, `CredReadW`, replacement, maximum-size
-   rejection, `CredDeleteW`, missing-entry, and cleanup lifecycle in the selected
-   signed host package. The direct Windows API baseline is complete.
+1. Replaying the selected `safeStorage` store/read/replace/corruption/delete and
+   interrupted-rotation lifecycle in the selected signed host package. Packaged and
+   clean-installed unsigned research artifacts now pass; production signing remains.
+   The direct Credential Manager API baseline is complete but no selected-host
+   native integration is required unless the adapter decision is reopened.
 2. Repeating the passing current-user DPAPI, wrong/missing entropy, corruption,
    cross-process same-user, different-user, and separate-computer denial baselines on
    supported retail Windows profiles. The hosted baselines are complete.
-3. Proving Electron main/preload and Tauri Rust-command prototypes can store, rotate,
-   use, and delete a credential while the raw value remains absent from renderer
-   globals, storage, DevTools-visible messages, arguments, logs, and diagnostics.
-   The packaged and installed Electron `safeStorage` path now passes; the Credential
-   Manager candidate and any retained Tauri challenger still require selected-scope
-   evidence.
+3. Proving the Electron main/preload path can store, rotate, use, and delete a
+   credential while the raw value remains absent from renderer globals, storage,
+   DevTools-visible messages, arguments, logs, and diagnostics. The packaged and
+   installed `safeStorage` path now passes the tested surfaces. Credential Manager
+   or Tauri evidence is required only if the selected adapter or host is reopened.
 4. Testing app crash between server token rotation and local credential replacement,
    revoked sessions, Windows password/account changes, backup/restore on the same
    user, restore on another user/computer, and keep-data/remove-all uninstall. The
@@ -307,8 +319,9 @@ Primary sources:
    restore, account-change, and actual installer-choice evidence remain.
 5. Recording ACL, roaming-profile, Remote Desktop, multiple Windows session, and
    locked-workstation behavior on supported retail Windows profiles.
-6. Completing dependency/license/provenance review and accepting the authentication
-   and credential-protection section of the Windows security ADR.
+6. Completing the supported Electron API, protected-file, dependency, license, and
+   provenance review and accepting the authentication and credential-protection
+   section of the Windows security ADR.
 
 ## Gallery or registry impact
 
