@@ -1,0 +1,28 @@
+name: WIN-004 Windows path security research
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  path-security:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Exercise per-user ACL and hostile path boundaries
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win004WindowsPathSecurityProbe.ps1
+          -OutputDirectory "$env:RUNNER_TEMP/win004-windows-path-security-evidence"
+          -TestDifferentUser
+      - name: Upload sanitized path-security evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: win004-windows-path-security-evidence
+          path: ${{ runner.temp }}/win004-windows-path-security-evidence
+          if-no-files-found: warn
+          retention-days: 14
