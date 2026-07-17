@@ -197,6 +197,7 @@ jobs:
           APIARYLENS_WINDOWS_SIGNING_MODE: ${{ needs.policy.outputs.signing_mode }}
           APIARYLENS_EXPLICIT_UNSIGNED_PREVIEW_OPT_IN: ${{ needs.policy.outputs.explicit_unsigned_preview_opt_in }}
           APIARYLENS_RELEASE_COMMIT: ${{ needs.policy.outputs.release_commit }}
+          GITHUB_SHA: ${{ needs.policy.outputs.release_commit }}
         run: node scripts/finalize-windows-release.mjs
 
       - name: Verify Windows package signatures, hashes, and release identity
