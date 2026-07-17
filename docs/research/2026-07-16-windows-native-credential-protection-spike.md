@@ -8,8 +8,9 @@ change the product authentication contract, or authorize a Windows scaffold.
 
 Official-source review is complete for Windows Credential Manager, DPAPI, Electron
 `safeStorage`, and Tauri Stronghold. The first exact Credential Manager and current-
-user DPAPI lifecycle passed on a fresh hosted Windows profile. Host-bridge, different-
-user/computer, recovery, and rotation evidence remain required.
+user DPAPI lifecycle passed on a fresh hosted Windows profile, including denial and
+cleanup for a disposable second Windows user. Host-bridge, different-computer,
+recovery, and rotation evidence remain required.
 
 ## Decision question
 
@@ -106,7 +107,7 @@ Primary sources checked 2026-07-16:
 ## Exact Windows API evidence
 
 GitHub Actions run
-[`29549980742`](https://github.com/ApiaryLens/apiarylens/actions/runs/29549980742)
+[`29550138483`](https://github.com/ApiaryLens/apiarylens/actions/runs/29550138483)
 called the Unicode Windows Credential Manager APIs through disposable PowerShell
 P/Invoke and exercised current-user DPAPI on a fresh hosted Windows profile. The
 P/Invoke compiler is a research mechanism, not a proposed product runtime dependency.
@@ -125,6 +126,8 @@ P/Invoke compiler is a research mechanism, not a proposed product runtime depend
 | Corrupt ciphertext | Rejected |
 | Ciphertext contains plaintext sequence | No |
 | Second process under the same Windows user | Decrypted successfully |
+| Disposable second Windows user | Decryption denied |
+| Disposable account and public test directory | Removed |
 | Secret in arguments or evidence | No |
 | Credential cleanup after the run | Deleted |
 
@@ -135,9 +138,9 @@ sandboxing, a narrow host bridge, process-scoped loopback tokens, and honest thr
 model language.
 
 The evidence artifact deliberately records only `current-runner-user`; it does not
-retain the runner's SID, credential target, ciphertext, entropy, hashes of secrets,
-or generated values. Different-user and different-computer denial remain open and
-must use disposable accounts/profiles without uploading identity data.
+retain either user's name or SID, the credential target, password, ciphertext,
+entropy, hashes of secrets, or generated values. Different-computer denial remains
+open and must not upload machine or identity data.
 
 ## Host-option findings
 
@@ -203,8 +206,8 @@ Primary sources:
 1. Replaying the passing `CredWriteW`, `CredReadW`, replacement, maximum-size
    rejection, `CredDeleteW`, missing-entry, and cleanup lifecycle in the selected
    signed host package. The direct Windows API baseline is complete.
-2. Extending the passing current-user DPAPI, wrong/missing entropy, corruption, and
-   cross-process same-user baseline with a disposable different-user and different-
+2. Extending the passing current-user DPAPI, wrong/missing entropy, corruption,
+   cross-process same-user, and disposable different-user baseline with a different-
    computer denial.
 3. Proving Electron main/preload and Tauri Rust-command prototypes can store, rotate,
    use, and delete a credential while the raw value remains absent from renderer
