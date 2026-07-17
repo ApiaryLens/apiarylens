@@ -1959,7 +1959,7 @@ $measurement = [ordered]@{
     limitations = @(
         $(if ($env:WINDOWS_CERTIFICATE_FILE) { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research build; not a release artifact' }),
         'Hosted Windows runner, not a retail family computer',
-        'Historical 0001/0002/0003 upgrades and failed 0004 repair/retry pass, but an existing migration checksum mismatch is accepted at readiness and remains a release-blocking product defect',
+        'Historical 0001/0002/0003 upgrades, failed 0004 repair/retry, and rejection of an existing migration checksum mismatch before readiness pass',
         $(if ($readyFileRemovedAfterHostCrash) { 'Forced host termination removed readiness state' } else { 'Forced host termination left stale readiness state; the next host rejected, replaced, and removed it during verified recovery' }),
         'Warm filesystem/runtime effects after the first launch'
     )
