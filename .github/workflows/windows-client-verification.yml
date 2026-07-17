@@ -118,7 +118,8 @@ jobs:
             'runtimeStatus',
             'bootstrapOwner',
             'createStandaloneBackup',
-            'restoreStandaloneBackup'
+            'restoreStandaloneBackup',
+            'migrateStandaloneToConnected'
           )
           if (Compare-Object $expectedBridge @($evidence.bridgeKeys)) {
             throw 'The preload bridge differs from the approved minimal surface.'
