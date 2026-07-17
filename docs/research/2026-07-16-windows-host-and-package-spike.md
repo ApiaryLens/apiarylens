@@ -5,10 +5,12 @@
 `WIN-003` is in progress. The owner authorized research and follow-on ADR work on
 2026-07-16. This record does not select a framework or authorize product code.
 
-Official-source review plus comparable Electron and Tauri/WebView2 packaging and
-clean-install lifecycle baselines are complete. Accessibility, authenticated local-
-service supervision, signed update behavior, and retail Windows profile evidence
-remain required before the spike can close.
+Official-source review plus comparable Electron and Tauri/WebView2 packaging,
+test-signing, and exact-artifact clean-install lifecycle baselines are complete.
+Accessibility, signed update and rollback behavior, retail Windows profile evidence,
+and the final license/provenance comparison remain required before the spike can
+close. Authenticated local-service supervision is being validated separately under
+`WIN-004`.
 
 ## Question
 
@@ -304,8 +306,8 @@ and the normal WebView2 Evergreen bootstrapper installer mode.
 The startup value is time to detection of a descendant WebView2 process, not DOM
 ready, so it cannot be compared directly with Electron's renderer-ready event. The
 memory measurements were also taken on a different Windows host and include the
-shared WebView2 process tree attributable to the application. The unsigned installer
-was built but not installed in this pass.
+shared WebView2 process tree attributable to the application. This build-step
+measurement did not install the artifact; the separate lifecycle replay below did.
 
 Lifecycle run
 [`29542529439`](https://github.com/ApiaryLens/apiarylens/actions/runs/29542529439)
@@ -339,6 +341,41 @@ of Electron's pre-uninstall footprint. That advantage depends on the separately
 serviced shared WebView2 runtime. An offline Tauri package that embeds the current
 WebView2 installer would add roughly the amount documented by Tauri and must be
 measured separately.
+
+### Tauri test-signing evidence
+
+Targeted run
+[`29545675051`](https://github.com/ApiaryLens/apiarylens/actions/runs/29545675051)
+created a runner-only 3072-bit RSA code-signing identity, built the Tauri challenger,
+verified the exact final NSIS installer signer, and then installed, launched, and
+uninstalled that same artifact. The private key and certificate were not uploaded
+and were destroyed with the hosted runner.
+
+| Signing and lifecycle check | Result |
+|---|---:|
+| Final NSIS installer | 24.3 MiB; exact ephemeral signer present |
+| Packaged Node sidecar | 88.2 MiB; `node:sqlite` passed |
+| Five WebView process-ready proxy launches | Passed; mean 353.8 ms / median 157 ms |
+| Exact signed installer install | Exit 0 |
+| Installed footprint | 96.7 MiB, 3 files |
+| Installed Tauri host | 8.4 MiB; exact installer signer retained |
+| Installed-sidecar `node:sqlite` / three-second host smoke | Passed / passed |
+| Smoke process count / working set / private memory | 8 / 313.2 MiB / 118.0 MiB |
+| Exact signed installer uninstall | Exit 0; install directory and registration absent |
+
+Tauri's loose `target/release` host was deliberately recorded as `NotSigned`. It is
+an intermediate build output, not the distributed release shape. Tauri signs the
+copy placed into the final NSIS bundle; the exact installed host retained the same
+certificate thumbprint as the final installer. Release verification must therefore
+inspect the final installer and the installed executable, not mistake the loose
+intermediate for the shipped binary.
+
+Windows reported `UnknownError` for trust status because the self-signed root was
+deliberately not added to the runner's trusted-root store. As with the Electron
+candidate, this proves Authenticode embedding and signer continuity, not publisher
+reputation, trusted timestamping, or the production certificate chain. The runner
+already had WebView2 and was a hosted Windows Server profile, so missing-runtime and
+retail Windows behavior remain open gates.
 
 ## Security and lifecycle requirements common to finalists
 

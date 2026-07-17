@@ -272,7 +272,7 @@ $measurement = [ordered]@{
         $(if ($env:WIN003_CERT_THUMBPRINT) { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research build; not a release artifact' }),
         'WebView process creation is a startup proxy, not a DOM-ready event',
         'Hosted runner has a warm shared WebView2 runtime',
-        'Installer was built but not installed in this pass',
+        'Build-step measurement only; installation evidence is produced by the separate lifecycle probe',
         'Node sidecar sqlite was probed directly; authenticated IPC and supervision belong to WIN-004'
     )
 }
