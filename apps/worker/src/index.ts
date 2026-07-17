@@ -92,7 +92,8 @@ app.use('*', async (c, next) => {
   c.header('x-request-id', requestId);
   c.header('x-apiarylens-version', '0.1.0-preview.1');
   c.header('x-api-contract-version', '1.0');
-  if (c.req.path.startsWith('/api/')) c.header('cache-control', 'no-store');
+  if (c.req.path.startsWith('/api/') || c.req.path === '/health')
+    c.header('cache-control', 'no-store');
   await next();
 });
 

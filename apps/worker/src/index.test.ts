@@ -101,6 +101,21 @@ const emptyEnvironment = (operatorToken?: string) =>
     ...(operatorToken ? { SCOUT_OPERATOR_TOKEN: operatorToken } : {}),
   }) as never;
 
+describe('Cloudflare build identity', () => {
+  it('returns the deployed identity without allowing a stale health response to be cached', async () => {
+    const response = await app.request('/health', {}, {
+      DB: {},
+      MEDIA: {},
+      APIARYLENS_SOURCE_COMMIT: '02386ef',
+      APIARYLENS_BUILD_TIME: '2026-07-17T15:47:15.000Z',
+      APIARYLENS_ARTIFACT_IDENTITY: 'ApiaryLens@0.1.0-preview.1+02386ef',
+    } as never);
+    const body = (await response.json()) as { build: { sourceCommit: string } };
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(body.build.sourceCommit).toBe('02386ef');
+  });
+});
+
 describe('Cloudflare operator boundary', () => {
   for (const [method, path] of [
     ['GET', '/api/v1/operator/backup'],
