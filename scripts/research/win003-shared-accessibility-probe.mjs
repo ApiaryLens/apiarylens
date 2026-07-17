@@ -56,6 +56,9 @@ const profiles = [
   { name: 'desktop-100', width: 1280, height: 800 },
   { name: 'zoom-equivalent-200', width: 640, height: 800 },
   { name: 'zoom-equivalent-400', width: 320, height: 800 },
+  // A classic Windows scrollbar can reserve four CSS pixels from an exact
+  // 320-CSS-pixel Electron window at 400% zoom.
+  { name: 'packaged-windows-400-usable-width', width: 316, height: 800 },
   { name: 'forced-colors', width: 1280, height: 800, forcedColors: 'active' },
   { name: 'reduced-motion', width: 1280, height: 800, reducedMotion: 'reduce' },
 ];
