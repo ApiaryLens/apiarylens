@@ -1,0 +1,38 @@
+name: WIN-003 shared UI accessibility research
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shared-ui-accessibility:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Build exact shared React UI
+        shell: pwsh
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm --filter @apiarylens/web... build
+      - name: Exercise accessibility profiles
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003SharedAccessibilityProbe.ps1
+          -WebDist ./apps/web/dist
+          -OutputDirectory "$env:RUNNER_TEMP/win003-accessibility-evidence"
+      - name: Upload sanitized accessibility evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: win003-shared-ui-accessibility-evidence
+          path: ${{ runner.temp }}/win003-accessibility-evidence
+          if-no-files-found: warn
+          retention-days: 14
