@@ -72,6 +72,12 @@ jobs:
           )) {
             $signature = Get-AuthenticodeSignature -LiteralPath $executable
             if ($signature.Status -ne 'Valid') { throw "Invalid Authenticode signature on $executable: $($signature.Status)" }
+            if ($signature.SignerCertificate.Subject -ne $manifest.signature.publisher) {
+              throw "Publisher mismatch on $executable"
+            }
+            if ($signature.SignerCertificate.Thumbprint -ne $manifest.signature.thumbprint) {
+              throw "Certificate thumbprint mismatch on $executable"
+            }
           }
 
       - name: Upload signed Windows release subjects

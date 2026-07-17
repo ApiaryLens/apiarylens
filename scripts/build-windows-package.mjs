@@ -155,6 +155,22 @@ const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], {
   cwd: root,
   encoding: 'utf8',
 }).trim();
+const signature = certificateFile
+  ? JSON.parse(
+      execFileSync(
+        'powershell.exe',
+        [
+          '-NoLogo',
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          "$s=Get-AuthenticodeSignature -LiteralPath $args[0]; if ($s.Status -ne 'Valid' -or -not $s.SignerCertificate) { exit 41 }; [pscustomobject]@{publisher=$s.SignerCertificate.Subject;thumbprint=$s.SignerCertificate.Thumbprint} | ConvertTo-Json -Compress",
+          join(artifacts, 'ApiaryLensSetup.exe'),
+        ],
+        { encoding: 'utf8', windowsHide: true },
+      ).trim(),
+    )
+  : undefined;
 const manifest = {
   schemaVersion: 1,
   product: 'ApiaryLens for Windows',
@@ -164,6 +180,7 @@ const manifest = {
   packageKind: 'squirrel-current-user',
   sourceCommit,
   signed: Boolean(process.env.WINDOWS_CERTIFICATE_FILE),
+  ...(signature ? { signature } : {}),
   createdAt: new Date().toISOString(),
   artifacts: records,
 };
