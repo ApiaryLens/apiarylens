@@ -125,14 +125,34 @@ let serviceReady;
 let serviceProcess;
 let serviceLab;
 let serviceOutput = "";
+let lastStartRemovedStaleReadiness = false;
 
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-async function startRealService(reuseLab = false) {
-  if (!reuseLab) {
+async function startRealService(reuseLab = false, requestedLab) {
+  if (requestedLab) {
+    serviceLab = path.resolve(requestedLab);
+  } else if (!reuseLab) {
     serviceLab = fs.mkdtempSync(path.join(os.tmpdir(), "apiarylens-win003-electron-service-"));
   }
   const readyFile = path.join(serviceLab, "ready.json");
+  lastStartRemovedStaleReadiness = false;
+  if (fs.existsSync(readyFile)) {
+    let priorPid;
+    try {
+      priorPid = Number.parseInt(JSON.parse(fs.readFileSync(readyFile, "utf8")).pid, 10);
+    } catch {}
+    if (Number.isSafeInteger(priorPid)) {
+      try {
+        process.kill(priorPid, 0);
+        throw new Error("active-service-readiness-record");
+      } catch (error) {
+        if (error.message === "active-service-readiness-record") throw error;
+      }
+    }
+    fs.rmSync(readyFile, { force: true });
+    lastStartRemovedStaleReadiness = true;
+  }
   const serverRoot = path.join(process.resourcesPath, "server");
   const serviceScript = path.join(serverRoot, "desktop-wrapper.mjs");
   serviceProcess = spawn(process.execPath, [serviceScript], {
@@ -217,8 +237,41 @@ function sqliteProbe() {
 const probeIndex = process.argv.indexOf("--win003-probe-output");
 const bridgeProbeIndex = process.argv.indexOf("--win003-bridge-output");
 const crashProbeIndex = process.argv.indexOf("--win003-crash-probe-output");
+const recoveryProbeInputIndex = process.argv.indexOf("--win003-recovery-probe-input");
+const recoveryProbeOutputIndex = process.argv.indexOf("--win003-recovery-probe-output");
 if (!hasSingleInstanceLock) {
   // The primary instance owns all application and embedded-service work.
+} else if (recoveryProbeInputIndex >= 0 && recoveryProbeOutputIndex >= 0) {
+  app.whenReady().then(async () => {
+    const crashState = JSON.parse(fs.readFileSync(process.argv[recoveryProbeInputIndex + 1], "utf8"));
+    const previousReadyFile = path.resolve(crashState.serviceReadyFile);
+    const previousLab = path.dirname(previousReadyFile);
+    const tempRoot = path.resolve(os.tmpdir()) + path.sep;
+    if (
+      !previousLab.startsWith(tempRoot) ||
+      !path.basename(previousLab).startsWith("apiarylens-win003-electron-service-")
+    ) {
+      throw new Error("recovery-probe-lab-outside-electron-temp");
+    }
+    await startRealService(false, previousLab);
+    const recoveredPid = serviceProcess.pid;
+    const readinessReplacedForRecoveredService =
+      serviceReady.pid === recoveredPid && serviceReady.address === "127.0.0.1";
+    await stopRealService();
+    const readyFileRemovedAfterRecoveryShutdown = !fs.existsSync(previousReadyFile);
+    fs.writeFileSync(process.argv[recoveryProbeOutputIndex + 1], JSON.stringify({
+      staleReadinessRemovedBeforeRestart: lastStartRemovedStaleReadiness,
+      readinessReplacedForRecoveredService,
+      recoveredServiceExitCode: serviceProcess.exitCode,
+      readyFileRemovedAfterRecoveryShutdown
+    }));
+    fs.rmSync(previousLab, { recursive: true, force: true });
+    app.quit();
+  }).catch((error) => {
+    console.error(`recovery-probe-failed:${error.message}`);
+    if (serviceProcess?.exitCode === null) serviceProcess.kill();
+    app.exit(72);
+  });
 } else if (crashProbeIndex >= 0) {
   app.whenReady().then(async () => {
     await startRealService();
@@ -533,7 +586,22 @@ if (-not $singleInstancePassed -or -not $serviceExitedAfterHostCrash) {
     Stop-Process -Id ([int] $crashState.serviceProcessId) -Force -ErrorAction SilentlyContinue
     throw "Packaged Electron single-instance or parent-death acceptance failed (singleInstance=$singleInstancePassed, serviceExited=$serviceExitedAfterHostCrash, readyFileRemoved=$readyFileRemovedAfterHostCrash)"
 }
-Remove-Item -LiteralPath $crashLab -Recurse -Force -ErrorAction SilentlyContinue
+$recoveryProbePath = Join-Path $runnerTemp 'win003-electron-package-recovery-probe.json'
+$recoveryProbe = Start-Process -FilePath $hostExecutable.FullName -ArgumentList @('--win003-recovery-probe-input', "`"$crashProbePath`"", '--win003-recovery-probe-output', "`"$recoveryProbePath`"") -PassThru -WindowStyle Hidden
+if (-not $recoveryProbe.WaitForExit(15000)) {
+    Stop-Process -Id $recoveryProbe.Id -Force -ErrorAction SilentlyContinue
+    throw 'Packaged Electron stale-readiness recovery probe exceeded 15 seconds'
+}
+if ($recoveryProbe.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $recoveryProbePath)) {
+    throw 'Packaged Electron stale-readiness recovery probe failed'
+}
+$recoveryState = Get-Content -Raw -LiteralPath $recoveryProbePath | ConvertFrom-Json
+$staleReadinessRecoveryPassed =
+    $recoveryState.staleReadinessRemovedBeforeRestart -and
+    $recoveryState.readinessReplacedForRecoveredService -and
+    $recoveryState.recoveredServiceExitCode -eq 0 -and
+    $recoveryState.readyFileRemovedAfterRecoveryShutdown
+if (-not $staleReadinessRecoveryPassed) { throw 'Packaged Electron stale-readiness recovery acceptance failed' }
 
 $runs = @()
 foreach ($run in 1..5) {
@@ -614,6 +682,7 @@ $measurement = [ordered]@{
     packagedSingleInstancePassed = $singleInstancePassed
     packagedServiceExitedAfterHostCrash = $serviceExitedAfterHostCrash
     packagedReadyFileRemovedAfterHostCrash = $readyFileRemovedAfterHostCrash
+    packagedStaleReadinessRecoveryPassed = $staleReadinessRecoveryPassed
     runs = $runs
     meanRendererReadyMs = [math]::Round(($runs.rendererReadyMs | Measure-Object -Average).Average, 1)
     medianRendererReadyMs = ($runs.rendererReadyMs | Sort-Object)[2]
@@ -623,7 +692,7 @@ $measurement = [ordered]@{
         $(if ($env:WINDOWS_CERTIFICATE_FILE) { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research build; not a release artifact' }),
         'Hosted Windows runner, not a retail family computer',
         'Real packaged API/auth/org-isolation/media/export/restart lifecycle exercised; historical and failed migration transitions remain open',
-        $(if ($readyFileRemovedAfterHostCrash) { 'Forced host termination removed readiness state' } else { 'Forced host termination killed the service but left stale readiness state; startup rejection and cleanup remain open' }),
+        $(if ($readyFileRemovedAfterHostCrash) { 'Forced host termination removed readiness state' } else { 'Forced host termination left stale readiness state; the next host rejected, replaced, and removed it during verified recovery' }),
         'Warm filesystem/runtime effects after the first launch'
     )
 }

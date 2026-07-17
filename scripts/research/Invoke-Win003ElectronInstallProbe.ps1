@@ -225,7 +225,23 @@ if (-not $installedSingleInstancePassed -or -not $installedServiceExitedAfterHos
     Stop-Process -Id ([int] $crashState.serviceProcessId) -Force -ErrorAction SilentlyContinue
     throw "Installed Electron single-instance or parent-death acceptance failed (singleInstance=$installedSingleInstancePassed, serviceExited=$installedServiceExitedAfterHostCrash, readyFileRemoved=$installedReadyFileRemovedAfterHostCrash)"
 }
-Remove-Item -LiteralPath $crashLab -Recurse -Force -ErrorAction SilentlyContinue
+$recoveryProbePath = Join-Path $runnerTemp 'win003-electron-installed-recovery-probe.json'
+$recoveryProbeArguments = "--win003-recovery-probe-input `"$crashProbePath`" --win003-recovery-probe-output `"$recoveryProbePath`""
+$recoveryProbe = Start-Process -FilePath $installedHost.FullName -ArgumentList $recoveryProbeArguments -WorkingDirectory $appDirectory.FullName -PassThru -WindowStyle Hidden
+if (-not $recoveryProbe.WaitForExit(15000)) {
+    Stop-Process -Id $recoveryProbe.Id -Force -ErrorAction SilentlyContinue
+    throw 'Installed Electron stale-readiness recovery probe exceeded 15 seconds'
+}
+if ($recoveryProbe.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $recoveryProbePath)) {
+    throw 'Installed Electron stale-readiness recovery probe failed'
+}
+$recoveryState = Get-Content -Raw -LiteralPath $recoveryProbePath | ConvertFrom-Json
+$installedStaleReadinessRecoveryPassed =
+    $recoveryState.staleReadinessRemovedBeforeRestart -and
+    $recoveryState.readinessReplacedForRecoveredService -and
+    $recoveryState.recoveredServiceExitCode -eq 0 -and
+    $recoveryState.readyFileRemovedAfterRecoveryShutdown
+if (-not $installedStaleReadinessRecoveryPassed) { throw 'Installed Electron stale-readiness recovery acceptance failed' }
 
 $process = Start-Process -FilePath $installedHost.FullName -PassThru -WindowStyle Hidden
 Start-Sleep -Seconds 3
@@ -367,6 +383,7 @@ $result = [ordered]@{
     installedSingleInstancePassed = $installedSingleInstancePassed
     installedServiceExitedAfterHostCrash = $installedServiceExitedAfterHostCrash
     installedReadyFileRemovedAfterHostCrash = $installedReadyFileRemovedAfterHostCrash
+    installedStaleReadinessRecoveryPassed = $installedStaleReadinessRecoveryPassed
     installedBridgeTokenPresentInRendererStorageGlobalsConsoleArgumentsReadinessOrServiceOutput =
         $bridgeProbeResult.tokenPresentInRendererSnapshot -or
         $bridgeProbeResult.tokenPresentInConsoleMessages -or
@@ -385,7 +402,7 @@ $result = [ordered]@{
         'Fresh hosted runner profile, not a retail Windows image',
         $(if ($measurement.signingMode -eq 'ephemeral-test-signing') { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research artifact' }),
         'Real API/auth/org-isolation/media/export/restart lifecycle exercised; historical and failed migration transitions remain open',
-        $(if ($installedReadyFileRemovedAfterHostCrash) { 'Forced host termination removed readiness state' } else { 'Forced host termination killed the service but left stale readiness state; startup rejection and cleanup remain open' })
+        $(if ($installedReadyFileRemovedAfterHostCrash) { 'Forced host termination removed readiness state' } else { 'Forced host termination left stale readiness state; the next host rejected, replaced, and removed it during verified recovery' })
     )
 }
 
