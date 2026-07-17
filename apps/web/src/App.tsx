@@ -2480,6 +2480,12 @@ function VersionView({
           >
             Release notes and artifacts
           </a>
+          <a
+            className="button secondary link-button"
+            href="https://apiarylens.org/docs/user/beekeeping-glossary/"
+          >
+            Beekeeping glossary
+          </a>
           {session.membership.role === 'owner' && (
             <a className="button secondary link-button" href="/api/v1/export/full">
               Download full export

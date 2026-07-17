@@ -87,5 +87,7 @@ the public demo.
 
 ## Help
 
-See [Troubleshooting](../troubleshooting.md) for offline, sign-in, media, update, and
-deployment symptoms. Operators should use the [Operations Guide](../operator/operations-guide.md).
+Use the searchable [Beekeeping glossary](beekeeping-glossary.md) for product and hive
+terminology. See [Troubleshooting](../troubleshooting.md) for offline, sign-in, media,
+update, and deployment symptoms. Operators should use the [Operations
+Guide](../operator/operations-guide.md).
