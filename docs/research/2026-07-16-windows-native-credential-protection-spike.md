@@ -7,8 +7,9 @@ the standalone and connected Windows client. It does not select a host framework
 change the product authentication contract, or authorize a Windows scaffold.
 
 Official-source review is complete for Windows Credential Manager, DPAPI, Electron
-`safeStorage`, and Tauri Stronghold. Exact Windows API lifecycle, host-bridge, user-
-boundary, recovery, and rotation evidence remain required.
+`safeStorage`, and Tauri Stronghold. The first exact Credential Manager and current-
+user DPAPI lifecycle passed on a fresh hosted Windows profile. Host-bridge, different-
+user/computer, recovery, and rotation evidence remain required.
 
 ## Decision question
 
@@ -102,6 +103,42 @@ Primary sources checked 2026-07-16:
 - [CREDENTIALW and persistence limits](https://learn.microsoft.com/en-us/windows/win32/api/wincred/ns-wincred-credentialw)
 - [CryptProtectData](https://learn.microsoft.com/en-us/windows/win32/api/dpapi/nf-dpapi-cryptprotectdata)
 
+## Exact Windows API evidence
+
+GitHub Actions run
+[`29549980742`](https://github.com/ApiaryLens/apiarylens/actions/runs/29549980742)
+called the Unicode Windows Credential Manager APIs through disposable PowerShell
+P/Invoke and exercised current-user DPAPI on a fresh hosted Windows profile. The
+P/Invoke compiler is a research mechanism, not a proposed product runtime dependency.
+
+| Credential-protection check | Result |
+|---|---:|
+| Generic credential write/read | Passed |
+| Replacement at the same namespaced target | Passed |
+| 2,561-byte oversized credential blob | Rejected |
+| Prior credential after rejected oversized write | Retained unchanged |
+| Credential delete | Passed |
+| Read after delete | Missing, as required |
+| Current-user DPAPI protect/unprotect | Passed |
+| Wrong optional entropy | Rejected |
+| Missing optional entropy | Rejected |
+| Corrupt ciphertext | Rejected |
+| Ciphertext contains plaintext sequence | No |
+| Second process under the same Windows user | Decrypted successfully |
+| Secret in arguments or evidence | No |
+| Credential cleanup after the run | Deleted |
+
+The same-user cross-process result is expected and load-bearing: DPAPI and Credential
+Manager protect against other Windows identities and offline disclosure, not native
+malware already executing as the same user. ApiaryLens still needs renderer
+sandboxing, a narrow host bridge, process-scoped loopback tokens, and honest threat-
+model language.
+
+The evidence artifact deliberately records only `current-runner-user`; it does not
+retain the runner's SID, credential target, ciphertext, entropy, hashes of secrets,
+or generated values. Different-user and different-computer denial remain open and
+must use disposable accounts/profiles without uploading identity data.
+
 ## Host-option findings
 
 ### Electron
@@ -163,10 +200,12 @@ Primary sources:
 
 `WIN-005` closes only after:
 
-1. Exercising `CredWriteW`, `CredReadW`, replacement, maximum-size rejection,
-   `CredDeleteW`, missing-entry behavior, and cleanup on a clean Windows user profile.
-2. Exercising current-user DPAPI round-trip, wrong/missing entropy, corrupt
-   ciphertext, cross-process same-user access, and a different-user denial.
+1. Replaying the passing `CredWriteW`, `CredReadW`, replacement, maximum-size
+   rejection, `CredDeleteW`, missing-entry, and cleanup lifecycle in the selected
+   signed host package. The direct Windows API baseline is complete.
+2. Extending the passing current-user DPAPI, wrong/missing entropy, corruption, and
+   cross-process same-user baseline with a disposable different-user and different-
+   computer denial.
 3. Proving Electron main/preload and Tauri Rust-command prototypes can store, rotate,
    use, and delete a credential while the raw value remains absent from renderer
    globals, storage, DevTools-visible messages, arguments, logs, and diagnostics.
@@ -182,4 +221,3 @@ Primary sources:
 
 No gallery or registry is required. Credential adapters are privileged native code
 owned by the signed Windows host and cannot be installed from a community gallery.
-
