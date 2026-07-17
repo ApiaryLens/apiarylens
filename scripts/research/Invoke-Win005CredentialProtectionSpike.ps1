@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]
-    [string] $OutputDirectory
+    [string] $OutputDirectory,
+    [switch] $TestDifferentUser
 )
 
 $ErrorActionPreference = 'Stop'
@@ -131,6 +132,10 @@ $entropy = New-RandomBytes 32
 $lab = Join-Path $runnerTemp "win005-dpapi-$([guid]::NewGuid().ToString('n'))"
 $ciphertextPath = Join-Path $lab 'protected.bin'
 $entropyPath = Join-Path $lab 'entropy.bin'
+$differentUserDenied = $null
+$differentUserCleanupPassed = $null
+$temporaryUserName = $null
+$differentUserLab = $null
 New-Item -ItemType Directory -Force -Path $lab | Out-Null
 
 try {
@@ -186,7 +191,44 @@ try {
     $expectedHash = [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData($dpapiSecret))
     $crossProcessSameUserPassed = (Get-Content -Raw -LiteralPath $childOut).Trim() -eq $expectedHash
 
-    if (-not $initialRoundTrip -or -not $replacementRoundTrip -or -not $oversizedRejectedWithoutReplacement -or -not $deleteAndMissingPassed -or -not $dpapiRoundTrip -or -not $wrongEntropyRejected -or -not $missingEntropyRejected -or -not $corruptCiphertextRejected -or $ciphertextContainsPlaintext -or -not $crossProcessSameUserPassed) {
+    if ($TestDifferentUser) {
+        $temporaryUserName = "alw5$([guid]::NewGuid().ToString('n').Substring(0, 8))"
+        $temporaryPasswordText = "W5-$((New-RandomBytes 24 | ForEach-Object { $_.ToString('x2') }) -join '')!"
+        $temporaryPassword = ConvertTo-SecureString -String $temporaryPasswordText -AsPlainText -Force
+        try {
+            New-LocalUser -Name $temporaryUserName -Password $temporaryPassword -AccountNeverExpires -PasswordNeverExpires -UserMayNotChangePassword | Out-Null
+            $publicRoot = [System.IO.Path]::GetFullPath([Environment]::GetFolderPath([Environment+SpecialFolder]::CommonDocuments))
+            $publicPrefix = $publicRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+            $differentUserLab = [System.IO.Path]::GetFullPath((Join-Path $publicRoot "ApiaryLens-WIN005-$([guid]::NewGuid().ToString('n'))"))
+            if (-not $differentUserLab.StartsWith($publicPrefix, [System.StringComparison]::OrdinalIgnoreCase)) { throw 'Different-user lab escaped the Public Documents root' }
+            New-Item -ItemType Directory -Force -Path $differentUserLab | Out-Null
+            $differentCiphertext = Join-Path $differentUserLab 'protected.bin'
+            $differentEntropy = Join-Path $differentUserLab 'entropy.bin'
+            $differentChildScript = Join-Path $differentUserLab 'dpapi-child.ps1'
+            [System.IO.File]::WriteAllBytes($differentCiphertext, $ciphertext)
+            [System.IO.File]::WriteAllBytes($differentEntropy, $entropy)
+            Copy-Item -LiteralPath $childScript -Destination $differentChildScript
+            $differentOut = Join-Path $differentUserLab 'child.stdout.log'
+            $differentError = Join-Path $differentUserLab 'child.stderr.log'
+            $credential = [pscredential]::new("$env:COMPUTERNAME\$temporaryUserName", $temporaryPassword)
+            $differentChild = Start-Process -FilePath (Get-Command pwsh.exe -ErrorAction Stop).Source -Credential $credential -ArgumentList @('-NoProfile', '-File', $differentChildScript, '-CiphertextPath', $differentCiphertext, '-EntropyPath', $differentEntropy, '-ExpectDenied') -WorkingDirectory $differentUserLab -PassThru -WindowStyle Hidden -RedirectStandardOutput $differentOut -RedirectStandardError $differentError
+            if (-not $differentChild.WaitForExit(30000) -or $differentChild.ExitCode -ne 0) {
+                Stop-Process -Id $differentChild.Id -Force -ErrorAction SilentlyContinue
+                throw "Different-user DPAPI child failed: $(Get-Content -Raw -LiteralPath $differentError -ErrorAction SilentlyContinue)"
+            }
+            $differentUserDenied = (Get-Content -Raw -LiteralPath $differentOut).Trim() -eq 'denied'
+            if (-not $differentUserDenied) { throw 'A different Windows user was not denied DPAPI decryption' }
+        } finally {
+            $temporaryPasswordText = $null
+            $credential = $null
+            $temporaryPassword = $null
+            if ($differentUserLab) { Remove-Item -LiteralPath $differentUserLab -Recurse -Force -ErrorAction SilentlyContinue }
+            if ($temporaryUserName) { Remove-LocalUser -Name $temporaryUserName -ErrorAction SilentlyContinue }
+            $differentUserCleanupPassed = $null -eq (Get-LocalUser -Name $temporaryUserName -ErrorAction SilentlyContinue) -and (-not $differentUserLab -or -not (Test-Path -LiteralPath $differentUserLab))
+        }
+    }
+
+    if (-not $initialRoundTrip -or -not $replacementRoundTrip -or -not $oversizedRejectedWithoutReplacement -or -not $deleteAndMissingPassed -or -not $dpapiRoundTrip -or -not $wrongEntropyRejected -or -not $missingEntropyRejected -or -not $corruptCiphertextRejected -or $ciphertextContainsPlaintext -or -not $crossProcessSameUserPassed -or ($TestDifferentUser -and (-not $differentUserDenied -or -not $differentUserCleanupPassed))) {
         throw 'One or more Windows credential-protection acceptance checks failed'
     }
 
@@ -212,12 +254,15 @@ try {
         dpapiCorruptCiphertextRejected = $corruptCiphertextRejected
         dpapiCiphertextContainsPlaintext = $ciphertextContainsPlaintext
         dpapiCrossProcessSameUserRoundTrip = $crossProcessSameUserPassed
+        dpapiDifferentUserTestRequested = [bool] $TestDifferentUser
+        dpapiDifferentUserDenied = $differentUserDenied
+        disposableDifferentUserCleanupPassed = $differentUserCleanupPassed
         secretsWrittenToArguments = $false
         secretsWrittenToEvidence = $false
         cleanupCredentialDeleted = $deleteError -eq 0
         limitations = @(
             'Direct Windows API research through PowerShell P/Invoke, not a product runtime dependency',
-            'Different-user and different-computer DPAPI denial are not exercised',
+            $(if ($TestDifferentUser) { 'Different-computer DPAPI denial is not exercised' } else { 'Different-user and different-computer DPAPI denial are not exercised' }),
             'Electron and Tauri host bridges are not exercised'
         )
     }
@@ -230,4 +275,6 @@ try {
         if ($buffer -is [System.Array]) { [System.Array]::Clear($buffer, 0, $buffer.Length) }
     }
     Remove-Item -LiteralPath $lab -Recurse -Force -ErrorAction SilentlyContinue
+    if ($differentUserLab) { Remove-Item -LiteralPath $differentUserLab -Recurse -Force -ErrorAction SilentlyContinue }
+    if ($temporaryUserName) { Remove-LocalUser -Name $temporaryUserName -ErrorAction SilentlyContinue }
 }
