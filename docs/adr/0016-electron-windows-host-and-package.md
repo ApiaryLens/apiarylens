@@ -39,9 +39,11 @@ Neither finalist is release-ready. Electron's measured Squirrel package leaves a
 small updater/cache directory. The initial Forge build reached an exotic Git
 dependency, but exact follow-up packaging removed it with an integrity-pinned npm
 registry override and a release-failing zero-Git-reference assertion. Neither
-candidate installed a complete third-party notice bundle. Retail Windows
-accessibility, physical lifecycle tests, production signing, and signed provenance
-also remain open.
+candidate was initially complete on third-party notices; exact Electron follow-up
+now installs a hashed top-level runtime notice bundle and reconciled runtime/build
+CycloneDX inventories. Tauri notice coverage, final installer-vendor binary review,
+retail Windows accessibility, physical lifecycle tests, production signing, and
+signed provenance remain open.
 
 Subsequent research run
 [`29554694681`](https://github.com/ApiaryLens/apiarylens/actions/runs/29554694681)
@@ -146,8 +148,22 @@ still built the Squirrel artifact, and setup SHA-256
 `1FB5341345263200BD690ACE373306DF83751901D570B225455D60DD868EABCC` passed the
 complete clean-profile installed lifecycle, including different-user credential
 denial and cleanup. This closes the exotic-dependency mechanism gate without
-weakening repository policy. Full notice/SBOM reconciliation, signed provenance,
-and production signing remain open.
+weakening repository policy. Notice/SBOM reconciliation remained open after this
+run and is addressed by the following evidence; signed provenance and production
+signing remain open.
+
+Run
+[`29565064135`](https://github.com/ApiaryLens/apiarylens/actions/runs/29565064135)
+then packaged and probed the exact Electron/Chromium/Node runtime before generating
+the installer. It reconciled declared licenses and npm registry integrity for all
+414 build entries, mapped all 13 top-level runtime components to nine installed,
+hashed license/notice files, and retained zero exotic Git references. The clean-
+install job independently verified every hash and SBOM count before passing the
+complete API/security/credential and uninstall/reinstall lifecycle. Setup SHA-256
+was `A40D49122EDBEBC084955C8780687FB3CE24578E85924CE28C0DEE6CB6289CB2`.
+This closes the automated top-level Electron notice and manifest gap. Final
+installer-vendor binary review, signed provenance, production signing, and retail
+evidence remain open.
 
 Run
 [`29559517037`](https://github.com/ApiaryLens/apiarylens/actions/runs/29559517037)
@@ -243,7 +259,7 @@ evidence does not satisfy production trust.
 | Security | Acceptable only with sandbox, context isolation, narrow preload, sender validation, and host-owned credentials |
 | Footprint | Weakest measured finalist: approximately 133.8 MiB setup and 467 MiB installed research footprint |
 | Lifecycle | Exact install, upgrade, downgrade, repair, and uninstall mechanics measured; product gates still required |
-| Supply chain | Registry-only exact lock now measured; notice/SBOM reconciliation, signed provenance, and production signing still block acceptance |
+| Supply chain | Registry-only exact lock plus installed runtime/build SBOM and hashed notice reconciliation measured; final vendor-binary review, signed provenance, and production signing still block acceptance |
 
 ### Tauri 2 with packaged Node sidecar
 
@@ -350,8 +366,9 @@ mechanism must replace it.
    mechanics now pass. Password/PIN and local-to-Microsoft-account transitions plus
    guided recovery UX remain open.
 5. Preserve the measured registry-only Electron rebuild lock and release-failing
-   zero-Git-reference assertion; reconcile every runtime/build component to an
-   allowlisted license and install complete Apache-2.0 and third-party notices.
+   zero-Git-reference assertion. Preserve the measured 414-build-entry and
+   13-runtime-component SBOM/notice reconciliation; complete final installer-vendor
+   binary review and sign/attest the evidence with production release artifacts.
 6. Prove complete current-user uninstall and both explicit data-retention choices,
    including the measured updater/cache residue. Default keep-data,
    same-user reinstall/decrypt, explicit remove-all, and a second uninstall now

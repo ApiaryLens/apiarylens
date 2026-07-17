@@ -10,12 +10,13 @@ test-signing, exact-artifact clean-install and package-transition lifecycle,
 SQLite recovery, SBOM inventory, and automated shared-UI accessibility baselines
 are complete. Packaged and clean-installed Electron preload/main-process isolation
 now starts the real portable ApiaryLens service for a protected health probe and
-disposable SQLite/media creation. Earlier lifecycle replay exposed nondeterministic
-Squirrel uninstall cleanup that remains a package-selection risk. Full API and
-organization-isolation replay, retail Windows profiles, host accessibility,
-integrated power-loss behavior, distribution-license closure, and the final ADR
-remain required before the spike can close. Authenticated local-service supervision
-continues separately under `WIN-004`.
+disposable SQLite/media creation. Exact API, organization-isolation, media,
+credential, recovery, and current-user uninstall/reinstall replay now passes.
+Retail Windows profiles, host accessibility, integrated power-loss behavior,
+historical/failed migrations, production signing and attestation, final binary
+license review, and owner ADR acceptance remain required before the spike can
+close. Authenticated local-service supervision continues separately under
+`WIN-004`.
 
 ## Question
 
@@ -266,8 +267,9 @@ zero such references. The same run built setup SHA-256
 the complete clean-profile install, packaged API/security/credential lifecycle,
 keep-data uninstall, reinstall/restore, remove-all, and second-uninstall workflow.
 This closes the exotic-dependency mechanism gate; the eventual product repository
-must retain the exact override and lock assertions. Complete license/notice/SBOM
-reconciliation and signed provenance remain open.
+must retain the exact override and lock assertions. License/notice/SBOM
+reconciliation remained open after this run and is addressed by the later
+`29565064135` evidence; signed provenance remains open.
 
 | Installer metric | Result |
 |---|---:|
@@ -849,7 +851,37 @@ licenses. The Tauri lock inventory also lacks license expressions because Cargo 
 files do not carry that metadata. Most importantly, the Tauri package installed no
 third-party notice file, and Electron installed only one general license file.
 
-Before either candidate can be selected for release:
+Electron follow-up run
+[`29565064135`](https://github.com/ApiaryLens/apiarylens/actions/runs/29565064135)
+replaced that incomplete Electron result with release-failing reconciliation in the
+exact Squirrel artifact. The build first packaged and probed Electron 43.1.1,
+Chromium 150.0.7871.114, and Node 24.18.0, generated deterministic CycloneDX files,
+injected them and the notice bundle into the already-probed package, and invoked
+Forge `make --skip-package`. Setup SHA-256 was
+`A40D49122EDBEBC084955C8780687FB3CE24578E85924CE28C0DEE6CB6289CB2`.
+
+| Exact Electron reconciliation | Result |
+|---|---:|
+| npm build components with declared licenses | 414 of 414 |
+| npm build components with registry integrity | 414 of 414 |
+| Exotic Git dependency references | 0 |
+| Top-level runtime components with notice mapping | 13 of 13 |
+| Installed hashed license/notice files | 9 |
+| Installed runtime CycloneDX SHA-256 | `ABC148A174A2650DDAC80119B626779D3FD8736594B29E423A5BC0961790BB74` |
+| Installed build-input CycloneDX SHA-256 | `FAF04089AD219CFD04E25D7FD89AE115A067EA38B612DCD5AA04FB677F7BA3BA` |
+| Independent clean-install reconciliation | Passed |
+
+The installed bundle now carries ApiaryLens Apache-2.0 `LICENSE` and `NOTICE`,
+Electron's license, Electron's complete Chromium third-party notice document, the
+Squirrel.Windows license, and the four external server-library licenses. The
+clean-install job independently matched every notice hash and every SBOM count
+before completing the existing API/security/credential and uninstall/reinstall
+lifecycle. This closes the automated top-level Electron notice and manifest gap.
+It does not replace final counsel/maintainer review of installer-vendor binaries,
+nor signed provenance and production Authenticode evidence.
+
+Before either candidate can be selected for release, the remaining applicable work
+is:
 
 1. Produce a Rust-aware and npm-aware license inventory from resolved, verified
    manifests rather than treating missing CycloneDX license fields as acceptable.
@@ -926,17 +958,17 @@ research recommendation, not the host/package ADR.
 | Measured package/runtime footprint | 10 | 2 | 5 | 4 | 3 |
 | Update/rollback integration | 10 | 4 | 4 | 2 | 3 |
 | Accessibility evidence path | 10 | 4 | 4 | 3 | 5 |
-| Supply chain, license, notice, and provenance | 5 | 2 | 2 | 3 | 4 |
+| Supply chain, license, notice, and provenance | 5 | 3 | 2 | 3 | 4 |
 | Maintainer/build complexity | 5 | 5 | 3 | 1 | 2 |
-| Weighted score out of 500 | 100 | **390** | **380** | 290 | 305 |
+| Weighted score out of 500 | 100 | **395** | **380** | 290 | 305 |
 
-Both finalists score `2` for supply-chain closure because neither installed a
-complete notice bundle, runtime binary scanning inferred no dependable license
-metadata, and signed/attested SBOM reconciliation is not complete. Electron's
-Forge/Squirrel exotic Git dependency conflict is now removed in the exact measured
-lock without weakening policy. Tauri has a materially larger Rust/npm build graph
-and an unproven exact-product Node application sidecar. The score must rise before
-either can ship.
+Electron rises to `3` for supply-chain closure because the exact package now has
+registry-integrity and declared-license coverage for all 414 npm build entries,
+zero exotic Git references, and installed hashed notice coverage for all 13
+top-level runtime components. Signed/attested provenance and final installer-vendor
+binary review remain open. Tauri stays at `2` with a materially larger Rust/npm
+build graph, incomplete installed notices, and an unproven exact-product Node
+application sidecar. Neither can ship from research evidence alone.
 
 ## Evidence-based recommendation for the ADR
 
@@ -965,9 +997,10 @@ The recommendation is based on delivery risk, not framework preference:
   tokens or general filesystem/process access overturns the recommendation.
 - Squirrel is the measured package mechanism, not yet the selected release package.
   The exotic Git dependency is removed by an exact registry override and a
-  release-failing lock assertion. Residual cache policy, complete notice/SBOM
-  reconciliation, signed provenance, and retail evidence remain before ADR
-  acceptance.
+  release-failing lock assertion. Exact top-level runtime/build SBOM and hashed
+  notice reconciliation now passes. Residual cache policy, final installer-vendor
+  binary review, signed provenance, production signing, and retail evidence remain
+  before ADR acceptance.
 - Do not introduce a native Windows Job Object binding or bootstrap launcher solely
   for child cleanup in the initial Preview. The exact packaged and installed host
   already proves non-detached parent polling, forced-parent-death convergence,
