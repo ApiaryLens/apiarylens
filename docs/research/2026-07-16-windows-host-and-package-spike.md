@@ -615,51 +615,68 @@ Regardless of framework:
 8. Preserve unsynchronized work and media across application, WebView, and operating
    system updates.
 
-## Weighted decision matrix
+## Evidence-weighted decision matrix
 
-Scores are preliminary (`1` poor, `5` strong) and identify what measurements must
-challenge. They are not an ADR decision.
+Scores use `1` (poor) through `5` (strong) and now reflect the measured lifecycle,
+signing, transition, recovery, SBOM, and shared-UI evidence above. The matrix is a
+research recommendation, not the host/package ADR.
 
 | Criterion | Weight | Electron | Tauri + Node sidecar | Custom WebView2 + sidecar | Native WinUI |
 |---|---:|---:|---:|---:|---:|
-| Existing React/domain reuse | 20 | 5 | 4 | 4 | 2 |
+| Existing React/domain reuse | 15 | 5 | 4 | 4 | 2 |
 | Existing Node/SQLite reuse | 15 | 5 | 3 | 3 | 2 |
 | Family installation simplicity | 15 | 4 | 4 | 3 | 3 |
 | Security boundary/hardening clarity | 15 | 3 | 4 | 2 | 4 |
-| Package/runtime footprint | 10 | 2 | 4 | 4 | 3 |
+| Measured package/runtime footprint | 10 | 2 | 5 | 4 | 3 |
 | Update/rollback integration | 10 | 4 | 4 | 2 | 3 |
 | Accessibility evidence path | 10 | 4 | 4 | 3 | 5 |
+| Supply chain, license, notice, and provenance | 5 | 2 | 2 | 3 | 4 |
 | Maintainer/build complexity | 5 | 5 | 3 | 1 | 2 |
-| Weighted score out of 500 | 100 | 405 | 390 | 290 | 300 |
+| Weighted score out of 500 | 100 | **390** | **380** | 290 | 305 |
 
-The final matrix must add an explicit supply-chain, license, notice, and SBOM closure
-criterion. The preliminary weights predate the measured notice gaps and must not hide
-release compliance inside the maintainer-complexity score.
+Both finalists score `2` for supply-chain closure because neither installed a
+complete notice bundle, runtime binary scanning inferred no dependable license
+metadata, and signed/attested SBOM reconciliation is not complete. Electron also
+has the Forge/Squirrel exotic Git dependency conflict with the repository policy;
+Tauri has a materially larger Rust/npm build graph and an unproven exact-product
+Node application sidecar. The score must rise before either can ship.
 
-Electron currently leads on delivery and direct backend reuse, while Tauri's measured
-package footprint and capability-scoped IPC narrow the gap. The preliminary score
-difference is not sufficient to decide without lifecycle, accessibility, and
-authenticated-sidecar evidence.
+## Evidence-based recommendation for the ADR
 
-## Preliminary recommendation
+Select **Electron as the initial Windows Preview host**, conditional on the remaining
+host-bridge, package, license, and retail-profile gates. Retain **Tauri 2 plus a
+packaged Node sidecar** as the measured revisit candidate rather than building two
+product clients.
 
-Advance **Electron** and **Tauri 2 plus a packaged Node sidecar** to equivalent
-prototype and clean-profile testing.
+The recommendation is based on delivery risk, not framework preference:
 
-- Use Electron as the delivery-risk baseline because it directly hosts React and
-  Node, minimizes backend repackaging uncertainty, and already produced a working
-  host measurement without adding a machine-level SDK.
-- Use Tauri as the footprint/security challenger because it reuses Evergreen
-  WebView2 and provides capability-scoped IPC and signed updater artifacts.
-- Do not select a native WinUI rewrite for the first Windows client.
-- Do not build a custom WebView2 framework unless the finalist tests demonstrate a
-  concrete requirement that Electron and Tauri cannot meet. Reimplementing IPC,
-  security policy, packaging, updater behavior, and lifecycle supervision is not a
-  family-user benefit by itself.
-- Default WebView2-based candidates to Evergreen with installer detection and
-  remediation. Evaluate a separate offline installer artifact; do not make Fixed
-  Version the normal channel without a documented compatibility need and an owned
-  browser-patching SLA.
+- Electron directly carries the required Node 24 runtime and `node:sqlite`, reuses
+  the current React application, and avoids making WebView2 acquisition or servicing
+  part of the normal installation path.
+- The exact Electron research artifact already installed, launched, exercised
+  `node:sqlite`, upgraded, downgraded, repaired, and uninstalled without external
+  Node, Rust, .NET, WSL, or Linux tooling.
+- Tauri's 24.3 MiB online installer and 96.7 MiB installed footprint are compelling,
+  but the current probe packages only the Node executable. It has not yet packaged
+  and supervised the exact ApiaryLens server application and dependency graph.
+- Electron's larger 133.8 MiB installer and approximately 467 MiB installed
+  footprint are an accepted Preview trade-off only if complete removal, patch
+  cadence, and family-device performance pass exact-artifact UAT.
+- A sandboxed renderer, context isolation, narrow sender-validated preload bridge,
+  and host-owned service/credential access are mandatory. A bridge that exposes raw
+  tokens or general filesystem/process access overturns the recommendation.
+- Squirrel is the measured package mechanism, not yet the selected release package.
+  Its residual cache and exotic build dependency must be resolved or a separately
+  measured current-user package must replace it before ADR acceptance.
+
+Reject a native WinUI rewrite for the first Windows client. Keep a custom WebView2
+host only as a control; reimplementing IPC, security policy, packaging, updating,
+and supervision provides no family-user benefit while a finalist remains viable.
+
+Revisit Tauri when an exact ApiaryLens server sidecar, host bridge, WebView2
+remediation, notices, and update/rollback lifecycle all pass with lower operational
+risk than the selected Electron release. Do not maintain Electron and Tauri product
+implementations in parallel.
 
 ## Remaining experiments and exit gate
 
@@ -677,8 +694,10 @@ prototype and clean-profile testing.
    on both candidates. Record failures by shared UI versus host integration.
 5. Produce SBOM/license/provenance output and compare signing, update, downgrade,
    interrupted-update, health-failure, and rollback behavior.
-6. Replace preliminary matrix scores with evidence, record rejected alternatives,
-   and propose the Windows host/package ADR for `WIN-008`.
+6. Draft the Windows host/package ADR for `WIN-008` from the completed evidence-
+   weighted matrix and conditional Electron recommendation. The ADR cannot be
+   accepted until the host bridge, package mechanism, and distribution review either
+   satisfy the stated conditions or overturn the recommendation.
 
 The resulting ADR must state the selected host, package formats, runtime acquisition
 policy, update mechanism, support baseline, signing/trust model, and conditions that
