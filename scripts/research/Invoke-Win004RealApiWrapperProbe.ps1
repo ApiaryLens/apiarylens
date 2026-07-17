@@ -105,8 +105,11 @@ function Invoke-WrapperRequest {
 $stdout1 = Join-Path $outputPath 'wrapper-first.stdout.log'
 $stderr1 = Join-Path $outputPath 'wrapper-first.stderr.log'
 $token1 = New-Secret
+Set-Content -LiteralPath $readyFile -Value '{"pid":1,"port":1,"protocolVersion":0}' -Encoding utf8NoBOM
 $service1 = Start-Wrapper -ControlToken $token1 -ReadyPath $readyFile -OutLog $stdout1 -ErrorLog $stderr1
 $ready1 = Wait-Ready -Process $service1 -ReadyPath $readyFile -ErrorLog $stderr1
+$staleReadinessReplaced = $ready1.pid -eq $service1.Id -and $ready1.port -ne 1 -and $ready1.protocolVersion -eq 1
+if (-not $staleReadinessReplaced) { throw 'Wrapper did not replace stale readiness metadata' }
 $serviceCommandLine = (Get-CimInstance Win32_Process -Filter "ProcessId = $($service1.Id)" -ErrorAction Stop).CommandLine
 $tokenPresentInArguments = $serviceCommandLine.Contains($token1)
 $listeners1 = @(Get-NetTCPConnection -OwningProcess $service1.Id -State Listen -ErrorAction Stop)
@@ -138,17 +141,29 @@ if ($wrongBootstrap.StatusCode -ne 403 -or $bootstrap.StatusCode -ne 201 -or $se
     throw 'Protected real API bootstrap or session failed through the wrapper'
 }
 
-$duplicateReady = Join-Path $lab 'duplicate-ready.json'
-$duplicateOut = Join-Path $outputPath 'wrapper-duplicate.stdout.log'
-$duplicateError = Join-Path $outputPath 'wrapper-duplicate.stderr.log'
-$duplicateToken = New-Secret
-$duplicate = Start-Wrapper -ControlToken $duplicateToken -ReadyPath $duplicateReady -OutLog $duplicateOut -ErrorLog $duplicateError
-if (-not $duplicate.WaitForExit(10000)) {
-    Stop-Process -Id $duplicate.Id -Force -ErrorAction SilentlyContinue
-    throw 'Duplicate real API wrapper did not reject ownership promptly'
+$duplicateAttempts = @()
+foreach ($attempt in 1..4) {
+    $duplicateReady = Join-Path $lab "duplicate-ready-$attempt.json"
+    $duplicateOut = Join-Path $outputPath "wrapper-duplicate-$attempt.stdout.log"
+    $duplicateError = Join-Path $outputPath "wrapper-duplicate-$attempt.stderr.log"
+    $duplicateToken = New-Secret
+    $duplicateAttempts += [pscustomobject]@{
+        Process = Start-Wrapper -ControlToken $duplicateToken -ReadyPath $duplicateReady -OutLog $duplicateOut -ErrorLog $duplicateError
+        ReadyPath = $duplicateReady
+    }
 }
-if ($duplicate.ExitCode -ne 73 -or (Test-Path -LiteralPath $duplicateReady)) {
-    throw "Duplicate real API wrapper guard failed with exit code $($duplicate.ExitCode)"
+foreach ($attempt in $duplicateAttempts) {
+    if (-not $attempt.Process.WaitForExit(10000)) {
+        Stop-Process -Id $attempt.Process.Id -Force -ErrorAction SilentlyContinue
+        throw 'Rapid duplicate real API wrapper did not reject ownership promptly'
+    }
+}
+$duplicateExitCodes = @($duplicateAttempts | ForEach-Object { $_.Process.ExitCode })
+$rapidDuplicateLaunchesRejected =
+    @($duplicateExitCodes | Where-Object { $_ -ne 73 }).Count -eq 0 -and
+    @($duplicateAttempts | Where-Object { Test-Path -LiteralPath $_.ReadyPath }).Count -eq 0
+if (-not $rapidDuplicateLaunchesRejected) {
+    throw "Rapid duplicate wrapper guard failed with exit codes $($duplicateExitCodes -join ',')"
 }
 
 Stop-Process -Id $service1.Id -Force
@@ -172,6 +187,25 @@ if ($shutdown.StatusCode -ne 202 -or -not $service2.WaitForExit(10000) -or $serv
     Stop-Process -Id $service2.Id -Force -ErrorAction SilentlyContinue
     throw 'Real API wrapper graceful shutdown failed'
 }
+
+$corruptData = Join-Path $lab 'corrupt-data'
+$corruptReady = Join-Path $lab 'corrupt-ready.json'
+$corruptOut = Join-Path $outputPath 'wrapper-corrupt.stdout.log'
+$corruptError = Join-Path $outputPath 'wrapper-corrupt.stderr.log'
+New-Item -ItemType Directory -Force -Path $corruptData | Out-Null
+Set-Content -LiteralPath (Join-Path $corruptData 'apiarylens.sqlite') -Value 'not-a-sqlite-database' -Encoding utf8NoBOM
+$corruptToken = New-Secret
+$corrupt = Start-Wrapper -ControlToken $corruptToken -ReadyPath $corruptReady -OutLog $corruptOut -ErrorLog $corruptError -DataPath $corruptData -Name "${instanceName}-corrupt"
+$corruptDatabaseRejected = $false
+try {
+    Wait-Ready -Process $corrupt -ReadyPath $corruptReady -ErrorLog $corruptError | Out-Null
+} catch {
+    $corrupt.Refresh()
+    $corruptDatabaseRejected = $corrupt.HasExited -and $corrupt.ExitCode -ne 0 -and -not (Test-Path -LiteralPath $corruptReady)
+} finally {
+    if (-not $corrupt.HasExited) { Stop-Process -Id $corrupt.Id -Force -ErrorAction SilentlyContinue }
+}
+if (-not $corruptDatabaseRejected) { throw 'Corrupt database did not fail closed before readiness' }
 
 $orphanData = Join-Path $lab 'orphan-data'
 $orphanReady = Join-Path $lab 'orphan-ready.json'
@@ -241,7 +275,11 @@ $result = [ordered]@{
     wrongBootstrapTokenStatus = $wrongBootstrap.StatusCode
     ownerBootstrapStatus = $bootstrap.StatusCode
     createdSessionStatus = $session1.StatusCode
-    duplicateInstanceExitCode = $duplicate.ExitCode
+    staleReadinessReplaced = $staleReadinessReplaced
+    readyProtocolVersion = $ready1.protocolVersion
+    rapidDuplicateLaunchCount = $duplicateAttempts.Count
+    rapidDuplicateExitCodes = $duplicateExitCodes
+    rapidDuplicateLaunchesRejected = $rapidDuplicateLaunchesRejected
     forcedTerminationExitCode = $service1.ExitCode
     signInAfterForcedRestartStatus = $signIn.StatusCode
     restartedSessionStatus = $session2.StatusCode
@@ -253,6 +291,7 @@ $result = [ordered]@{
     orphanReadyFileRemoved = $orphanReadyRemoved
     matchingFirewallRuleCount = $firewallRuleCount
     databaseExistsAfterShutdown = $databaseExists
+    corruptDatabaseRejectedBeforeReadiness = $corruptDatabaseRejected
     tokenPresentInChildArguments = $tokenPresentInArguments
     readyFileContainsSecret = -not $readySecretFree
     secretFoundInEvidence = $secretFound
@@ -264,4 +303,3 @@ $result = [ordered]@{
 }
 $result | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $outputPath 'measurement.json') -Encoding utf8NoBOM
 $result | ConvertTo-Json -Depth 8
-
