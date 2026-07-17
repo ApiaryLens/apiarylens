@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
-import { cp, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { once } from 'node:events';
+import { access, cp, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { join, resolve } from 'node:path';
 import { SqliteStore } from '../../packages/database/dist/index.js';
 import { FilesystemMediaStore } from '../../packages/media/dist/index.js';
@@ -289,6 +292,10 @@ async function migrate(root, options = {}) {
         queuedAt: '2026-07-16T18:00:00.000Z',
       });
       applied += 1;
+      if (options.pauseAfterApply === applied) {
+        await writeFile(options.pauseMarker, 'applied-before-journal\n', { mode: 0o600 });
+        await new Promise(() => {});
+      }
       if (options.interruptAfterApply === applied) throw new InjectedInterruption('record_apply');
       if (result.status === 'duplicate') journal.duplicateOperations += 1;
       if (result.status === 'conflict') {
@@ -571,6 +578,40 @@ function exerciseAnnualReferenceWorkload(recordCount) {
   }
 }
 
+async function exerciseRealProcessTermination(root) {
+  await seedScenario(root);
+  const marker = join(root, 'child-applied.marker');
+  const child = spawn(
+    process.execPath,
+    [fileURLToPath(import.meta.url), '--child-migrate', root, marker],
+    { stdio: 'ignore', windowsHide: true },
+  );
+  let markerPresent = false;
+  try {
+    for (let attempt = 1; attempt <= 200; attempt += 1) {
+      try {
+        await access(marker);
+        markerPresent = true;
+        break;
+      } catch {
+        if (child.exitCode !== null) throw new Error(`migration_child_exited_${child.exitCode}`);
+        await new Promise((resolveDelay) => setTimeout(resolveDelay, 50));
+      }
+    }
+    assert.equal(markerPresent, true, 'child reached the post-write pre-journal boundary');
+  } finally {
+    if (child.exitCode === null) {
+      const closed = once(child, 'close');
+      child.kill();
+      await closed;
+    }
+  }
+  assert.equal((await readJson(join(root, 'client-config.json'))).mode, 'standalone');
+  const resumed = await migrate(root);
+  assert.equal(resumed.status, 'complete');
+  assert.ok(resumed.duplicateOperations >= 1);
+}
+
 async function run(output) {
   const workspace = resolve(output, 'work');
   await rm(workspace, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
@@ -679,6 +720,10 @@ async function run(output) {
   await assert.rejects(restoreBackup(corruptBackup), /backup_database_hash_mismatch/);
   results.push('corrupt-backup-is-rejected-before-restore');
 
+  const terminated = join(workspace, 'process-termination');
+  await exerciseRealProcessTermination(terminated);
+  results.push('real-child-process-termination-after-write-resumes-exactly-once');
+
   const evidenceText = await Promise.all(
     [
       happy,
@@ -691,6 +736,7 @@ async function run(output) {
       remote,
       busy,
       corruptBackup,
+      terminated,
     ].map(async (root) => {
       let text = '';
       for (const file of ['migration-journal.json', 'client-config.json']) {
@@ -722,6 +768,7 @@ async function run(output) {
       durableAnnualReferenceMigrationProven: false,
       databaseBusyResume: true,
       corruptBackupRejected: true,
+      realProcessTerminationResume: true,
       interruptionBoundaries: 5,
       identitiesMigrated: false,
       atomicCutoverAfterReconciliation: true,
@@ -735,8 +782,16 @@ async function run(output) {
   console.log(JSON.stringify(report, null, 2));
 }
 
-const outputIndex = process.argv.indexOf('--output');
-if (outputIndex < 0 || !process.argv[outputIndex + 1]) {
-  throw new Error('Usage: node win006-migration-spike.mjs --output <directory>');
+const childIndex = process.argv.indexOf('--child-migrate');
+if (childIndex >= 0) {
+  const root = process.argv[childIndex + 1];
+  const marker = process.argv[childIndex + 2];
+  if (!root || !marker) throw new Error('Missing child migration arguments');
+  await migrate(resolve(root), { pauseAfterApply: 1, pauseMarker: resolve(marker) });
+} else {
+  const outputIndex = process.argv.indexOf('--output');
+  if (outputIndex < 0 || !process.argv[outputIndex + 1]) {
+    throw new Error('Usage: node win006-migration-spike.mjs --output <directory>');
+  }
+  await run(resolve(process.argv[outputIndex + 1]));
 }
-await run(resolve(process.argv[outputIndex + 1]));

@@ -96,6 +96,9 @@ The local run passed these scenarios:
   the lock is released;
 - a modified backup database is rejected against its recorded SHA-256 before restore;
   and
+- a real child process terminated immediately after a target write but before the
+  journal checkpoint releases its handles, preserves standalone authority, and
+  resumes through an exact duplicate receipt; and
 - journal, client configuration, and sanitized evidence contain no seeded secret.
 
 The workflow
@@ -270,9 +273,10 @@ installation ID, accepted hashes, and outcome.
 - Durable packaged migration at the 20,000-record annual family reference workload
   after the SQLite journal and bounded bulk-import contract exist. The record model
   and reconciliation pass at that count in memory; this is not yet packaged evidence.
-- Inject real process termination, disk-full, access-denied, target timeout, expired
-  auth, and partial media failures at each state boundary. Database-busy resume and
-  corrupt-backup rejection are now covered at the package-adapter level.
+- Inject disk-full, access-denied, target timeout, expired auth, and partial media
+  failures at each state boundary. Real post-write process termination,
+  database-busy resume, and corrupt-backup rejection are now covered at the
+  package-adapter level.
 - Prove restored backup equivalence for the packaged Windows runtime, not only the
   package-level SQLite and filesystem adapters.
 - Define and test D1/R2 target behavior as well as Node SQLite/filesystem behavior.
