@@ -9,6 +9,9 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      APIARYLENS_BIND_ADDRESS: 0.0.0.0
+      APIARYLENS_ALLOW_NETWORK_BIND: 'true'
+      APIARYLENS_BEHIND_HTTPS_PROXY: 'true'
       APIARYLENS_DATABASE: /data/apiarylens.sqlite
       APIARYLENS_MEDIA: /data/media
       APIARYLENS_SOURCE_COMMIT: ${APIARYLENS_SOURCE_COMMIT:-development}

@@ -5,6 +5,7 @@ import { createBuildIdentity } from '@apiarylens/contracts';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createApi } from './app.js';
+import { formatServerAddress, resolveServerBinding } from './runtime-config.js';
 
 const port = Number(process.env.PORT ?? 3000);
 const databasePath = process.env.APIARYLENS_DATABASE ?? './data/apiarylens.sqlite';
@@ -21,6 +22,10 @@ if (process.env.NODE_ENV === 'production' && !bootstrapToken) {
 if (process.env.NODE_ENV === 'production' && (!authRootSecret || authRootSecret.length < 32)) {
   throw new Error('A durable authentication root secret of at least 32 characters is required');
 }
+const binding = resolveServerBinding(
+  process.env,
+  Boolean(bootstrapToken && authRootSecret && authRootSecret.length >= 32),
+);
 if (databasePath !== ':memory:') mkdirSync(dirname(databasePath), { recursive: true });
 const store = new SqliteStore(databasePath, {
   ...(authRootSecret ? { authRootSecret } : {}),
@@ -44,6 +49,6 @@ const app = createApi({
   }),
 });
 
-serve({ fetch: app.fetch, port }, (info) => {
-  console.log(`ApiaryLens API listening on http://127.0.0.1:${info.port}`);
+serve({ fetch: app.fetch, port, hostname: binding.hostname }, (info) => {
+  console.log(`ApiaryLens API listening on ${formatServerAddress(info.address, info.port)}`);
 });

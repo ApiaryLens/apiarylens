@@ -21,7 +21,8 @@ const instanceName = required('APIARYLENS_INSTANCE_NAME').replace(/[^a-zA-Z0-9_.
 const pipeName = `\\\\.\\pipe\\${instanceName}`;
 
 if (!Number.isSafeInteger(parentPid) || parentPid < 1) throw new Error('invalid-parent-pid');
-if (process.argv.some((argument) => argument.includes(token))) throw new Error('secret-present-in-arguments');
+if (process.argv.some((argument) => argument.includes(token)))
+  throw new Error('secret-present-in-arguments');
 
 fs.mkdirSync(dataDirectory, { recursive: true });
 const databasePath = path.join(dataDirectory, 'apiarylens-research.sqlite3');
@@ -34,7 +35,9 @@ database.exec(`
   );
   INSERT OR IGNORE INTO schema_metadata (id, version) VALUES (1, 0);
 `);
-const currentVersion = database.prepare('SELECT version FROM schema_metadata WHERE id = 1').get().version;
+const currentVersion = database
+  .prepare('SELECT version FROM schema_metadata WHERE id = 1')
+  .get().version;
 if (currentVersion < 1) {
   database.exec(`
     BEGIN IMMEDIATE;
@@ -51,7 +54,10 @@ if (currentVersion < 1) {
 const safeEqual = (presented) => {
   const expectedBytes = Buffer.from(token, 'utf8');
   const presentedBytes = Buffer.from(presented, 'utf8');
-  return expectedBytes.length === presentedBytes.length && crypto.timingSafeEqual(expectedBytes, presentedBytes);
+  return (
+    expectedBytes.length === presentedBytes.length &&
+    crypto.timingSafeEqual(expectedBytes, presentedBytes)
+  );
 };
 
 const authorize = (request, response) => {
@@ -91,15 +97,19 @@ const httpServer = http.createServer(async (request, response) => {
 
   try {
     if (request.method === 'GET' && request.url === '/health') {
-      const version = database.prepare('SELECT version FROM schema_metadata WHERE id = 1').get().version;
+      const version = database
+        .prepare('SELECT version FROM schema_metadata WHERE id = 1')
+        .get().version;
       response.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
       response.end(JSON.stringify({ status: 'ok', schemaVersion: version }));
       return;
     }
     if (request.method === 'POST' && request.url === '/records') {
       const body = await readBody(request);
-      if (typeof body.id !== 'string' || typeof body.value !== 'string') throw new Error('invalid-record');
-      database.prepare('INSERT INTO research_records (id, value, created_at) VALUES (?, ?, ?)')
+      if (typeof body.id !== 'string' || typeof body.value !== 'string')
+        throw new Error('invalid-record');
+      database
+        .prepare('INSERT INTO research_records (id, value, created_at) VALUES (?, ?, ?)')
         .run(body.id, body.value, new Date().toISOString());
       response.writeHead(201, { 'content-type': 'application/json', 'cache-control': 'no-store' });
       response.end('{"created":true}');
@@ -151,16 +161,20 @@ instanceGuard.once('error', (error) => {
 instanceGuard.listen(pipeName, () => {
   httpServer.listen(0, '127.0.0.1', () => {
     const address = httpServer.address();
-    fs.writeFileSync(readyFile, JSON.stringify({
-      pid: process.pid,
-      port: address.port,
-      address: address.address,
-      family: address.family,
-      instanceName,
-      dataDirectory,
-      databasePath,
-      schemaVersion: 1,
-    }), { encoding: 'utf8', mode: 0o600 });
+    fs.writeFileSync(
+      readyFile,
+      JSON.stringify({
+        pid: process.pid,
+        port: address.port,
+        address: address.address,
+        family: address.family,
+        instanceName,
+        dataDirectory,
+        databasePath,
+        schemaVersion: 1,
+      }),
+      { encoding: 'utf8', mode: 0o600 },
+    );
     parentTimer = setInterval(() => {
       try {
         process.kill(parentPid, 0);
