@@ -179,6 +179,12 @@ $installedRealServiceBridgeProbePassed =
     $bridgeProbeResult.apiAcceptance.viewerAuthorizationPassed -and
     $bridgeProbeResult.apiAcceptance.mediaOriginalThumbnailExportDeletePassed -and
     $bridgeProbeResult.apiAcceptance.restartPersistencePassed -and
+    $bridgeProbeResult.forcedWriteRecovery.forcedExitWasNonZero -and
+    $bridgeProbeResult.forcedWriteRecovery.integrityPassed -and
+    $bridgeProbeResult.forcedWriteRecovery.committedMarkerRetained -and
+    $bridgeProbeResult.forcedWriteRecovery.interruptedMarkerRolledBack -and
+    $bridgeProbeResult.forcedWriteRecovery.restartedSameDataDirectory -and
+    $bridgeProbeResult.corruptDatabaseStartup.rejectedBeforeReadiness -and
     $bridgeProbeResult.nativeCredentialProtection.encryptionAvailable -and
     $bridgeProbeResult.nativeCredentialProtection.initialRoundTrip -and
     $bridgeProbeResult.nativeCredentialProtection.initialCiphertextExcludesPlaintext -and
@@ -534,6 +540,13 @@ $result = [ordered]@{
     installedApiOrganizationIsolationPassed = $bridgeProbeResult.apiAcceptance.organizationIsolationPassed
     installedApiMediaLifecyclePassed = $bridgeProbeResult.apiAcceptance.mediaOriginalThumbnailExportDeletePassed
     installedApiRestartPersistencePassed = $bridgeProbeResult.apiAcceptance.restartPersistencePassed
+    installedForcedWriteRecoveryPassed =
+        $bridgeProbeResult.forcedWriteRecovery.forcedExitWasNonZero -and
+        $bridgeProbeResult.forcedWriteRecovery.integrityPassed -and
+        $bridgeProbeResult.forcedWriteRecovery.committedMarkerRetained -and
+        $bridgeProbeResult.forcedWriteRecovery.interruptedMarkerRolledBack -and
+        $bridgeProbeResult.forcedWriteRecovery.restartedSameDataDirectory
+    installedCorruptDatabaseRejectedBeforeReadiness = $bridgeProbeResult.corruptDatabaseStartup.rejectedBeforeReadiness
     installedNativeCredentialProtectionPassed =
         $bridgeProbeResult.nativeCredentialProtection.encryptionAvailable -and
         $bridgeProbeResult.nativeCredentialProtection.initialRoundTrip -and

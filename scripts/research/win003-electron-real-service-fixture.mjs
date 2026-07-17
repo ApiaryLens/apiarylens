@@ -175,6 +175,47 @@ instanceGuard.listen(pipeName, () => {
               .digest('hex'),
       });
     }
+    if (
+      request.method === 'POST' &&
+      new URL(request.url).pathname === '/__desktop/research/commit-storage-marker'
+    ) {
+      const timestamp = new Date().toISOString();
+      store.database
+        .prepare(
+          `INSERT INTO organizations(id, name, timezone, created_at, updated_at)
+           VALUES ('win003-committed-storage-marker', 'Committed storage marker', 'UTC', ?, ?)`,
+        )
+        .run(timestamp, timestamp);
+      return Response.json({ committed: true }, { status: 201 });
+    }
+    if (
+      request.method === 'POST' &&
+      new URL(request.url).pathname === '/__desktop/research/open-interrupted-write'
+    ) {
+      const timestamp = new Date().toISOString();
+      store.database.exec('BEGIN IMMEDIATE');
+      store.database
+        .prepare(
+          `INSERT INTO organizations(id, name, timezone, created_at, updated_at)
+           VALUES ('win003-interrupted-storage-marker', 'Interrupted storage marker', 'UTC', ?, ?)`,
+        )
+        .run(timestamp, timestamp);
+      return Response.json({ transactionOpen: true }, { status: 202 });
+    }
+    if (
+      request.method === 'POST' &&
+      new URL(request.url).pathname === '/__desktop/research/check-storage-recovery'
+    ) {
+      const integrityRows = store.database.prepare('PRAGMA integrity_check').all();
+      const count = (id) =>
+        store.database.prepare('SELECT COUNT(*) AS count FROM organizations WHERE id = ?').get(id)
+          .count;
+      return Response.json({
+        integrityPassed: integrityRows.length === 1 && integrityRows[0].integrity_check === 'ok',
+        committedMarkerRetained: count('win003-committed-storage-marker') === 1,
+        interruptedMarkerRolledBack: count('win003-interrupted-storage-marker') === 0,
+      });
+    }
     return app.fetch(request);
   };
 

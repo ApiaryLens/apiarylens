@@ -211,6 +211,72 @@ async function restartRealService() {
   });
 }
 
+async function forcedWriteRecoveryProbe() {
+  const controlHeaders = {
+    authorization: `Bearer ${controlToken}`,
+    origin: allowedOrigin
+  };
+  const committed = await fetch(`${serviceEndpoint}/__desktop/research/commit-storage-marker`, {
+    method: "POST",
+    headers: controlHeaders
+  });
+  if (committed.status !== 201) throw new Error("storage-marker-commit-failed");
+  const interrupted = await fetch(`${serviceEndpoint}/__desktop/research/open-interrupted-write`, {
+    method: "POST",
+    headers: controlHeaders
+  });
+  if (interrupted.status !== 202) throw new Error("interrupted-write-open-failed");
+  const interruptedProcess = serviceProcess;
+  interruptedProcess.kill("SIGKILL");
+  for (
+    let attempt = 0;
+    attempt < 100 && interruptedProcess.exitCode === null && interruptedProcess.signalCode === null;
+    attempt += 1
+  ) {
+    await delay(50);
+  }
+  if (interruptedProcess.exitCode === null && interruptedProcess.signalCode === null) {
+    throw new Error("forced-write-service-did-not-exit");
+  }
+  const forcedExitWasNonZero =
+    interruptedProcess.exitCode !== 0 || interruptedProcess.signalCode !== null;
+  await startRealService(true);
+  const recovery = await fetch(`${serviceEndpoint}/__desktop/research/check-storage-recovery`, {
+    method: "POST",
+    headers: controlHeaders
+  });
+  if (recovery.status !== 200) throw new Error("storage-recovery-check-failed");
+  const recoveryState = await recovery.json();
+  return Object.freeze({
+    forcedExitWasNonZero,
+    integrityPassed: recoveryState.integrityPassed,
+    committedMarkerRetained: recoveryState.committedMarkerRetained,
+    interruptedMarkerRolledBack: recoveryState.interruptedMarkerRolledBack,
+    restartedSameDataDirectory: true
+  });
+}
+
+async function corruptDatabaseStartupProbe() {
+  const previousLab = serviceLab;
+  const corruptLab = fs.mkdtempSync(path.join(os.tmpdir(), "apiarylens-win003-electron-corrupt-"));
+  const corruptData = path.join(corruptLab, "data");
+  fs.mkdirSync(path.join(corruptData, "media"), { recursive: true });
+  fs.writeFileSync(path.join(corruptData, "apiarylens.sqlite"), "not-a-sqlite-database");
+  let rejectedBeforeReadiness = false;
+  try {
+    await startRealService(false, corruptLab);
+  } catch {
+    rejectedBeforeReadiness =
+      serviceProcess?.exitCode !== null &&
+      !fs.existsSync(path.join(corruptLab, "ready.json"));
+  } finally {
+    if (serviceProcess?.exitCode === null) serviceProcess.kill("SIGKILL");
+    fs.rmSync(corruptLab, { recursive: true, force: true });
+    serviceLab = previousLab;
+  }
+  return Object.freeze({ rejectedBeforeReadiness });
+}
+
 ipcMain.handle("apiarylens:desktop-health", async (event, ...args) => {
   bridgeArgumentCount += args.length;
   if (event.senderFrame.url !== trustedDocumentUrl) throw new Error("untrusted-sender");
@@ -624,6 +690,7 @@ if (!hasSingleInstanceLock) {
       restartService: restartRealService,
       credentialLifecycle: serverSessionCredentialLifecycle
     });
+    const forcedWriteRecovery = await forcedWriteRecoveryProbe();
     const credentialProbe = safeStorageCredentialProbe();
     const consoleMessages = [];
     const trustedWindow = new BrowserWindow({
@@ -689,6 +756,8 @@ if (!hasSingleInstanceLock) {
       serviceOutput.includes(secret)
     );
     await stopRealService();
+    const healthyServiceExitCode = serviceProcess.exitCode;
+    const corruptDatabaseStartup = await corruptDatabaseStartupProbe();
     const databasePath = path.join(serviceLab, "data", "apiarylens.sqlite");
     const mediaPath = path.join(serviceLab, "data", "media");
     const result = {
@@ -709,8 +778,10 @@ if (!hasSingleInstanceLock) {
       realServiceAddress: serviceReady.address,
       realServiceDatabaseCreated: fs.existsSync(databasePath),
       realServiceMediaDirectoryCreated: fs.existsSync(mediaPath),
-      realServiceExitCode: serviceProcess.exitCode,
+      realServiceExitCode: healthyServiceExitCode,
       apiAcceptance,
+      forcedWriteRecovery,
+      corruptDatabaseStartup,
       nativeCredentialProtection: credentialProbe.evidence,
       serverSessionCredentialLifecyclePassed:
         apiAcceptance.serverSessionCredentialLifecyclePassed,
@@ -884,6 +955,12 @@ $bridgePassed =
     $bridgeResult.apiAcceptance.viewerAuthorizationPassed -and
     $bridgeResult.apiAcceptance.mediaOriginalThumbnailExportDeletePassed -and
     $bridgeResult.apiAcceptance.restartPersistencePassed -and
+    $bridgeResult.forcedWriteRecovery.forcedExitWasNonZero -and
+    $bridgeResult.forcedWriteRecovery.integrityPassed -and
+    $bridgeResult.forcedWriteRecovery.committedMarkerRetained -and
+    $bridgeResult.forcedWriteRecovery.interruptedMarkerRolledBack -and
+    $bridgeResult.forcedWriteRecovery.restartedSameDataDirectory -and
+    $bridgeResult.corruptDatabaseStartup.rejectedBeforeReadiness -and
     $bridgeResult.nativeCredentialProtection.encryptionAvailable -and
     $bridgeResult.nativeCredentialProtection.initialRoundTrip -and
     $bridgeResult.nativeCredentialProtection.initialCiphertextExcludesPlaintext -and
@@ -1056,6 +1133,13 @@ $measurement = [ordered]@{
     packagedApiOrganizationIsolationPassed = $bridgeResult.apiAcceptance.organizationIsolationPassed
     packagedApiMediaLifecyclePassed = $bridgeResult.apiAcceptance.mediaOriginalThumbnailExportDeletePassed
     packagedApiRestartPersistencePassed = $bridgeResult.apiAcceptance.restartPersistencePassed
+    packagedForcedWriteRecoveryPassed =
+        $bridgeResult.forcedWriteRecovery.forcedExitWasNonZero -and
+        $bridgeResult.forcedWriteRecovery.integrityPassed -and
+        $bridgeResult.forcedWriteRecovery.committedMarkerRetained -and
+        $bridgeResult.forcedWriteRecovery.interruptedMarkerRolledBack -and
+        $bridgeResult.forcedWriteRecovery.restartedSameDataDirectory
+    packagedCorruptDatabaseRejectedBeforeReadiness = $bridgeResult.corruptDatabaseStartup.rejectedBeforeReadiness
     packagedNativeCredentialProtectionPassed =
         $bridgeResult.nativeCredentialProtection.encryptionAvailable -and
         $bridgeResult.nativeCredentialProtection.initialRoundTrip -and
