@@ -109,6 +109,7 @@ const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const { DatabaseSync } = require("node:sqlite");
 const { pathToFileURL } = require("node:url");
 const { app, BrowserWindow, ipcMain, safeStorage } = require("electron");
 
@@ -314,6 +315,209 @@ async function corruptDatabaseStartupProbe() {
     serviceLab = previousLab;
   }
   return Object.freeze({ rejectedBeforeReadiness });
+}
+
+function seedHistoricalDatabase(lab, migrations, throughVersion, checksumOverride) {
+  const dataDirectory = path.join(lab, "data");
+  fs.mkdirSync(path.join(dataDirectory, "media"), { recursive: true });
+  const databasePath = path.join(dataDirectory, "apiarylens.sqlite");
+  const database = new DatabaseSync(databasePath);
+  try {
+    for (const [version, sql] of migrations) {
+      if (version > throughVersion) break;
+      database.exec(sql);
+      const checksum = checksumOverride?.version === version
+        ? checksumOverride.value
+        : crypto.createHash("sha256").update(sql).digest("hex");
+      database
+        .prepare("INSERT OR REPLACE INTO migrations(version, applied_at, checksum) VALUES (?, ?, ?)")
+        .run(version, "2026-07-17T00:00:00.000Z", checksum);
+    }
+    database
+      .prepare(
+        `INSERT INTO organizations(id, name, timezone, created_at, updated_at)
+         VALUES ('win003-historical-organization', 'Historical family', 'UTC', ?, ?)`
+      )
+      .run("2026-07-17T00:00:00.000Z", "2026-07-17T00:00:00.000Z");
+    database
+      .prepare(
+        `INSERT INTO users(id, identifier, display_name, password_hash, created_at, updated_at)
+         VALUES ('win003-historical-user', 'historical@example.test', 'Historical owner', 'disabled', ?, ?)`
+      )
+      .run("2026-07-17T00:00:00.000Z", "2026-07-17T00:00:00.000Z");
+    database
+      .prepare(
+        `INSERT INTO memberships(id, organization_id, user_id, role, status, created_at, updated_at)
+         VALUES ('win003-historical-membership', 'win003-historical-organization',
+                 'win003-historical-user', 'owner', 'active', ?, ?)`
+      )
+      .run("2026-07-17T00:00:00.000Z", "2026-07-17T00:00:00.000Z");
+  } finally {
+    database.close();
+  }
+  return databasePath;
+}
+
+function inspectMigratedDatabase(databasePath, migrations) {
+  const database = new DatabaseSync(databasePath);
+  try {
+    const rows = database
+      .prepare("SELECT version, checksum FROM migrations ORDER BY version")
+      .all();
+    const expected = migrations.map(([version, sql]) => ({
+      version,
+      checksum: crypto.createHash("sha256").update(sql).digest("hex")
+    }));
+    const integrity = database.prepare("PRAGMA integrity_check").all();
+    return Object.freeze({
+      migrationHeadReached:
+        JSON.stringify(rows.map(({ version }) => version)) ===
+        JSON.stringify(migrations.map(([version]) => version)),
+      checksumsMatch: rows.every(
+        (row, index) => row.version === expected[index]?.version && row.checksum === expected[index]?.checksum
+      ),
+      ownerMarkerPreserved:
+        database
+          .prepare("SELECT COUNT(*) AS count FROM organizations WHERE id = 'win003-historical-organization'")
+          .get().count === 1,
+      bootstrapClaimBackfilled:
+        database
+          .prepare("SELECT COUNT(*) AS count FROM bootstrap_claims WHERE singleton = 1")
+          .get().count === 1,
+      auditIndexPresent:
+        database
+          .prepare("SELECT 1 AS present FROM sqlite_master WHERE type = 'index' AND name = 'audit_events_by_organization_created_at'")
+          .get()?.present === 1,
+      integrityPassed: integrity.length === 1 && integrity[0].integrity_check === "ok",
+      recordedChecksums: rows.map(({ version, checksum }) => ({ version, checksum }))
+    });
+  } finally {
+    database.close();
+  }
+}
+
+async function migrationLifecycleProbe() {
+  const previousLab = serviceLab;
+  const labs = [];
+  const serverRoot = path.join(process.resourcesPath, "server");
+  const schema = await import(
+    `${pathToFileURL(path.join(serverRoot, "node_modules/@apiarylens/database/dist/schema.js")).href}?run=${crypto.randomUUID()}`
+  );
+  const migrations = [
+    ["0001", schema.migration0001],
+    ["0002", schema.migration0002],
+    ["0003", schema.migration0003],
+    ["0004", schema.migration0004]
+  ];
+  try {
+    const historicalCases = [];
+    for (const fromVersion of ["0001", "0002", "0003"]) {
+      const lab = fs.mkdtempSync(path.join(os.tmpdir(), `apiarylens-win003-migration-${fromVersion}-`));
+      labs.push(lab);
+      const databasePath = seedHistoricalDatabase(lab, migrations, fromVersion);
+      await startRealService(false, lab);
+      const inspection = inspectMigratedDatabase(databasePath, migrations);
+      const readyAtHead =
+        JSON.stringify(serviceReady.migrationVersions) ===
+        JSON.stringify(migrations.map(([version]) => version));
+      await stopRealService();
+      historicalCases.push(Object.freeze({
+        fromVersion,
+        readyAtHead,
+        migrationHeadReached: inspection.migrationHeadReached,
+        checksumsMatch: inspection.checksumsMatch,
+        ownerMarkerPreserved: inspection.ownerMarkerPreserved,
+        bootstrapClaimBackfilled: inspection.bootstrapClaimBackfilled,
+        auditIndexPresent: inspection.auditIndexPresent,
+        integrityPassed: inspection.integrityPassed
+      }));
+    }
+
+    const failedLab = fs.mkdtempSync(path.join(os.tmpdir(), "apiarylens-win003-migration-failed-"));
+    labs.push(failedLab);
+    const failedDatabasePath = seedHistoricalDatabase(failedLab, migrations, "0003");
+    let failedDatabase = new DatabaseSync(failedDatabasePath);
+    failedDatabase.exec("CREATE TABLE bootstrap_claims (incompatible_column TEXT)");
+    failedDatabase.close();
+    let failedMigrationRejectedBeforeReadiness = false;
+    try {
+      await startRealService(false, failedLab);
+    } catch {
+      failedMigrationRejectedBeforeReadiness =
+        serviceProcess?.exitCode !== null && !fs.existsSync(path.join(failedLab, "ready.json"));
+    }
+    failedDatabase = new DatabaseSync(failedDatabasePath);
+    const ledgerUnchangedAfterFailure =
+      failedDatabase.prepare("SELECT COUNT(*) AS count FROM migrations").get().count === 3 &&
+      failedDatabase
+        .prepare("SELECT COUNT(*) AS count FROM organizations WHERE id = 'win003-historical-organization'")
+        .get().count === 1;
+    failedDatabase.exec("DROP TABLE bootstrap_claims");
+    failedDatabase.close();
+    await startRealService(false, failedLab);
+    const repairedInspection = inspectMigratedDatabase(failedDatabasePath, migrations);
+    const repairedRetryReachedHead =
+      JSON.stringify(serviceReady.migrationVersions) ===
+      JSON.stringify(migrations.map(([version]) => version)) &&
+      repairedInspection.migrationHeadReached &&
+      repairedInspection.checksumsMatch &&
+      repairedInspection.bootstrapClaimBackfilled &&
+      repairedInspection.ownerMarkerPreserved &&
+      repairedInspection.integrityPassed;
+    await stopRealService();
+
+    const checksumLab = fs.mkdtempSync(path.join(os.tmpdir(), "apiarylens-win003-migration-checksum-"));
+    labs.push(checksumLab);
+    const checksumDatabasePath = seedHistoricalDatabase(
+      checksumLab,
+      migrations,
+      "0003",
+      { version: "0003", value: "win003-mismatched-checksum" }
+    );
+    let checksumMismatchRejectedBeforeReadiness = false;
+    let checksumMismatchAcceptedAtReadiness = false;
+    let checksumMismatchPersisted = false;
+    try {
+      await startRealService(false, checksumLab);
+      checksumMismatchAcceptedAtReadiness = fs.existsSync(path.join(checksumLab, "ready.json"));
+      const checksumDatabase = new DatabaseSync(checksumDatabasePath);
+      checksumMismatchPersisted =
+        checksumDatabase
+          .prepare("SELECT checksum FROM migrations WHERE version = '0003'")
+          .get().checksum === "win003-mismatched-checksum";
+      checksumDatabase.close();
+      await stopRealService();
+    } catch {
+      checksumMismatchRejectedBeforeReadiness =
+        serviceProcess?.exitCode !== null && !fs.existsSync(path.join(checksumLab, "ready.json"));
+    }
+
+    return Object.freeze({
+      historicalCases,
+      historicalUpgradePassed: historicalCases.every((item) =>
+        item.readyAtHead &&
+        item.migrationHeadReached &&
+        item.checksumsMatch &&
+        item.ownerMarkerPreserved &&
+        item.bootstrapClaimBackfilled &&
+        item.auditIndexPresent &&
+        item.integrityPassed
+      ),
+      failedMigrationRejectedBeforeReadiness,
+      ledgerUnchangedAfterFailure,
+      repairedRetryReachedHead,
+      checksumMismatchRejectedBeforeReadiness,
+      checksumMismatchAcceptedAtReadiness,
+      checksumMismatchPersisted
+    });
+  } finally {
+    if (serviceProcess?.exitCode === null && serviceProcess?.signalCode === null) {
+      serviceProcess.kill("SIGKILL");
+      await waitForServiceExit(serviceProcess);
+    }
+    for (const lab of labs) fs.rmSync(lab, { recursive: true, force: true });
+    serviceLab = previousLab;
+  }
 }
 
 async function startupFailurePolicyProbe() {
@@ -954,6 +1158,7 @@ if (!hasSingleInstanceLock) {
     await stopRealService();
     const healthyServiceExitCode = serviceProcess.exitCode;
     const corruptDatabaseStartup = await corruptDatabaseStartupProbe();
+    const migrationLifecycle = await migrationLifecycleProbe();
     const startupFailurePolicy = await startupFailurePolicyProbe();
     const databasePath = path.join(serviceLab, "data", "apiarylens.sqlite");
     const mediaPath = path.join(serviceLab, "data", "media");
@@ -980,6 +1185,7 @@ if (!hasSingleInstanceLock) {
       apiAcceptance,
       forcedWriteRecovery,
       corruptDatabaseStartup,
+      migrationLifecycle,
       startupFailurePolicy,
       nativeCredentialProtection: credentialProbe.evidence,
       serverSessionCredentialLifecyclePassed:
@@ -1221,6 +1427,10 @@ $bridgePassed =
     $bridgeResult.forcedWriteRecovery.databaseFullTransactionRolledBack -and
     $bridgeResult.forcedWriteRecovery.integrityAfterDatabaseFull -and
     $bridgeResult.corruptDatabaseStartup.rejectedBeforeReadiness -and
+    $bridgeResult.migrationLifecycle.historicalUpgradePassed -and
+    $bridgeResult.migrationLifecycle.failedMigrationRejectedBeforeReadiness -and
+    $bridgeResult.migrationLifecycle.ledgerUnchangedAfterFailure -and
+    $bridgeResult.migrationLifecycle.repairedRetryReachedHead -and
     $bridgeResult.startupFailurePolicy.timeoutRejectedBeforeReadiness -and
     $bridgeResult.startupFailurePolicy.timeoutChildExited -and
     $bridgeResult.startupFailurePolicy.restartBudget -eq 3 -and
@@ -1461,6 +1671,14 @@ $measurement = [ordered]@{
         $bridgeResult.forcedWriteRecovery.databaseFullTransactionRolledBack -and
         $bridgeResult.forcedWriteRecovery.integrityAfterDatabaseFull
     packagedCorruptDatabaseRejectedBeforeReadiness = $bridgeResult.corruptDatabaseStartup.rejectedBeforeReadiness
+    packagedHistoricalMigrationUpgradePassed = $bridgeResult.migrationLifecycle.historicalUpgradePassed
+    packagedHistoricalMigrationVersions = @($bridgeResult.migrationLifecycle.historicalCases | ForEach-Object { $_.fromVersion })
+    packagedFailedMigrationRejectedBeforeReadiness = $bridgeResult.migrationLifecycle.failedMigrationRejectedBeforeReadiness
+    packagedFailedMigrationLedgerUnchanged = $bridgeResult.migrationLifecycle.ledgerUnchangedAfterFailure
+    packagedFailedMigrationRepairRetryPassed = $bridgeResult.migrationLifecycle.repairedRetryReachedHead
+    packagedMigrationChecksumMismatchRejectedBeforeReadiness = $bridgeResult.migrationLifecycle.checksumMismatchRejectedBeforeReadiness
+    packagedMigrationChecksumMismatchAcceptedAtReadiness = $bridgeResult.migrationLifecycle.checksumMismatchAcceptedAtReadiness
+    packagedMigrationChecksumMismatchPersisted = $bridgeResult.migrationLifecycle.checksumMismatchPersisted
     packagedStartupFailurePolicyPassed =
         $bridgeResult.startupFailurePolicy.timeoutRejectedBeforeReadiness -and
         $bridgeResult.startupFailurePolicy.timeoutChildExited -and
@@ -1494,7 +1712,7 @@ $measurement = [ordered]@{
     limitations = @(
         $(if ($env:WINDOWS_CERTIFICATE_FILE) { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research build; not a release artifact' }),
         'Hosted Windows runner, not a retail family computer',
-        'Real packaged API/auth/org-isolation/media/export/restart lifecycle exercised; historical and failed migration transitions remain open',
+        'Historical 0001/0002/0003 upgrades and failed 0004 repair/retry pass, but an existing migration checksum mismatch is accepted at readiness and remains a release-blocking product defect',
         $(if ($readyFileRemovedAfterHostCrash) { 'Forced host termination removed readiness state' } else { 'Forced host termination left stale readiness state; the next host rejected, replaced, and removed it during verified recovery' }),
         'Warm filesystem/runtime effects after the first launch'
     )

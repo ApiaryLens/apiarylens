@@ -330,6 +330,10 @@ $installedRealServiceBridgeProbePassed =
     $bridgeProbeResult.forcedWriteRecovery.databaseFullTransactionRolledBack -and
     $bridgeProbeResult.forcedWriteRecovery.integrityAfterDatabaseFull -and
     $bridgeProbeResult.corruptDatabaseStartup.rejectedBeforeReadiness -and
+    $bridgeProbeResult.migrationLifecycle.historicalUpgradePassed -and
+    $bridgeProbeResult.migrationLifecycle.failedMigrationRejectedBeforeReadiness -and
+    $bridgeProbeResult.migrationLifecycle.ledgerUnchangedAfterFailure -and
+    $bridgeProbeResult.migrationLifecycle.repairedRetryReachedHead -and
     $bridgeProbeResult.startupFailurePolicy.timeoutRejectedBeforeReadiness -and
     $bridgeProbeResult.startupFailurePolicy.timeoutChildExited -and
     $bridgeProbeResult.startupFailurePolicy.restartBudget -eq 3 -and
@@ -784,6 +788,14 @@ $result = [ordered]@{
         $bridgeProbeResult.forcedWriteRecovery.databaseFullTransactionRolledBack -and
         $bridgeProbeResult.forcedWriteRecovery.integrityAfterDatabaseFull
     installedCorruptDatabaseRejectedBeforeReadiness = $bridgeProbeResult.corruptDatabaseStartup.rejectedBeforeReadiness
+    installedHistoricalMigrationUpgradePassed = $bridgeProbeResult.migrationLifecycle.historicalUpgradePassed
+    installedHistoricalMigrationVersions = @($bridgeProbeResult.migrationLifecycle.historicalCases | ForEach-Object { $_.fromVersion })
+    installedFailedMigrationRejectedBeforeReadiness = $bridgeProbeResult.migrationLifecycle.failedMigrationRejectedBeforeReadiness
+    installedFailedMigrationLedgerUnchanged = $bridgeProbeResult.migrationLifecycle.ledgerUnchangedAfterFailure
+    installedFailedMigrationRepairRetryPassed = $bridgeProbeResult.migrationLifecycle.repairedRetryReachedHead
+    installedMigrationChecksumMismatchRejectedBeforeReadiness = $bridgeProbeResult.migrationLifecycle.checksumMismatchRejectedBeforeReadiness
+    installedMigrationChecksumMismatchAcceptedAtReadiness = $bridgeProbeResult.migrationLifecycle.checksumMismatchAcceptedAtReadiness
+    installedMigrationChecksumMismatchPersisted = $bridgeProbeResult.migrationLifecycle.checksumMismatchPersisted
     installedStartupFailurePolicyPassed =
         $bridgeProbeResult.startupFailurePolicy.timeoutRejectedBeforeReadiness -and
         $bridgeProbeResult.startupFailurePolicy.timeoutChildExited -and
@@ -836,7 +848,7 @@ $result = [ordered]@{
     limitations = @(
         'Fresh hosted runner profile, not a retail Windows image',
         $(if ($measurement.signingMode -eq 'ephemeral-test-signing') { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research artifact' }),
-        'Real API/auth/org-isolation/media/export/restart lifecycle exercised; historical and failed migration transitions remain open',
+        'Historical 0001/0002/0003 upgrades and failed 0004 repair/retry pass, but an existing migration checksum mismatch is accepted at readiness and remains a release-blocking product defect',
         $(if ($installedReadyFileRemovedAfterHostCrash) { 'Forced host termination removed readiness state' } else { 'Forced host termination left stale readiness state; the next host rejected, replaced, and removed it during verified recovery' })
     )
 }
