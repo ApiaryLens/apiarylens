@@ -35,6 +35,7 @@ import {
   type EquipmentType,
 } from './equipment-stack.js';
 import { formatWeatherSummary } from './weather-fields.js';
+import { fieldChoices, mergeFieldChoices, recentFieldValues } from './field-intelligence.js';
 
 type Page = 'dashboard' | 'apiaries' | 'hives' | 'inspections' | 'care' | 'version';
 type ActiveSession = Omit<SessionView, 'csrfToken'> & { csrfToken: string | undefined };
@@ -1393,15 +1394,29 @@ function InspectionForm({
       </div>
       <label>
         Brood condition
-        <textarea
+        <input
           name="broodCondition"
-          rows={2}
+          list="inspection-brood-options"
           defaultValue={String(data?.broodCondition ?? '')}
         />
+        <datalist id="inspection-brood-options">
+          {fieldChoices.broodCondition.map((value) => (
+            <option key={value} value={value} />
+          ))}
+        </datalist>
       </label>
       <label>
         Stores
-        <textarea name="stores" rows={2} defaultValue={String(data?.stores ?? '')} />
+        <input
+          name="stores"
+          list="inspection-stores-options"
+          defaultValue={String(data?.stores ?? '')}
+        />
+        <datalist id="inspection-stores-options">
+          {fieldChoices.stores.map((value) => (
+            <option key={value} value={value} />
+          ))}
+        </datalist>
       </label>
       <label>
         Inspection notes
@@ -1857,7 +1872,12 @@ function CareRecords({ organizationId, onNotice, canWrite = true }: FormProps) {
           ) : hives.length === 0 ? (
             <Empty text="Add a hive first." />
           ) : (
-            <CareForm organizationId={organizationId} hives={hives} onNotice={onNotice} />
+            <CareForm
+              organizationId={organizationId}
+              hives={hives}
+              records={records}
+              onNotice={onNotice}
+            />
           )}
         </section>
         <section className="card">
@@ -1981,7 +2001,12 @@ function MiteTrend({ records, hives }: { records: LocalResource[]; hives: LocalR
   );
 }
 
-function CareForm({ organizationId, hives, onNotice }: FormProps & { hives: LocalResource[] }) {
+function CareForm({
+  organizationId,
+  hives,
+  records,
+  onNotice,
+}: FormProps & { hives: LocalResource[]; records: LocalResource[] }) {
   const [kind, setKind] = useState<CareType>('miteCount');
   const [error, setError] = useState('');
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -2071,7 +2096,7 @@ function CareForm({ organizationId, hives, onNotice }: FormProps & { hives: Loca
           ))}
         </select>
       </label>
-      <CareFields kind={kind} />
+      <CareFields kind={kind} records={records} />
       <label>
         Notes
         <textarea name="notes" rows={3} />
@@ -2081,7 +2106,37 @@ function CareForm({ organizationId, hives, onNotice }: FormProps & { hives: Loca
   );
 }
 
-function CareFields({ kind }: { kind: CareType }) {
+function SmartTextField({
+  label,
+  name,
+  choices,
+  recent = [],
+  required = false,
+  hint,
+}: {
+  label: string;
+  name: string;
+  choices: readonly string[];
+  recent?: string[];
+  required?: boolean;
+  hint?: string;
+}) {
+  const options = mergeFieldChoices(recent, choices);
+  return (
+    <label>
+      {label}
+      <input name={name} list={`${name}-choices`} required={required} />
+      <datalist id={`${name}-choices`}>
+        {options.map((value) => (
+          <option key={value} value={value} />
+        ))}
+      </datalist>
+      <span className="field-hint">{hint ?? 'Choose a suggestion or type your own value.'}</span>
+    </label>
+  );
+}
+
+function CareFields({ kind, records }: { kind: CareType; records: LocalResource[] }) {
   if (kind === 'miteCount')
     return (
       <>
@@ -2108,10 +2163,17 @@ function CareFields({ kind }: { kind: CareType }) {
   if (kind === 'healthObservation')
     return (
       <>
-        <label>
-          Observation
-          <input name="category" required />
-        </label>
+        <SmartTextField
+          label="Observation"
+          name="category"
+          required
+          choices={fieldChoices.category}
+          recent={recentFieldValues(
+            records.filter((item) => item.entityType === 'healthObservation'),
+            'category',
+          )}
+          hint="Choose a common concern or type the observation you saw. A diagnosis is not implied."
+        />
         <label>
           Severity
           <select name="severity">
@@ -2126,43 +2188,78 @@ function CareFields({ kind }: { kind: CareType }) {
   if (kind === 'feedingEvent')
     return (
       <>
-        <label>
-          Feed type
-          <input name="feedType" required />
-        </label>
+        <SmartTextField
+          label="Feed type"
+          name="feedType"
+          required
+          choices={fieldChoices.feedType}
+          recent={recentFieldValues(
+            records.filter((item) => item.entityType === 'feedingEvent'),
+            'feedType',
+          )}
+        />
         <label>
           Amount
           <input name="amount" type="number" min="0" step="any" />
         </label>
-        <label>
-          Unit
-          <input name="unit" />
-        </label>
-        <label>
-          Reason
-          <input name="reason" />
-        </label>
+        <SmartTextField
+          label="Unit"
+          name="unit"
+          choices={fieldChoices.feedUnit}
+          recent={recentFieldValues(
+            records.filter((item) => item.entityType === 'feedingEvent'),
+            'unit',
+          )}
+        />
+        <SmartTextField
+          label="Reason"
+          name="reason"
+          choices={fieldChoices.feedReason}
+          recent={recentFieldValues(
+            records.filter((item) => item.entityType === 'feedingEvent'),
+            'reason',
+          )}
+        />
       </>
     );
   if (kind === 'treatmentEvent')
     return (
       <>
-        <label>
-          Product or method
-          <input name="productOrMethod" required />
-        </label>
+        <SmartTextField
+          label="Product or method"
+          name="productOrMethod"
+          required
+          choices={fieldChoices.treatment}
+          recent={recentFieldValues(
+            records.filter((item) => item.entityType === 'treatmentEvent'),
+            'productOrMethod',
+          )}
+          hint="Record the exact label or method used. Follow local law and the product label."
+        />
         <label>
           Removal date
           <input name="removalDate" type="date" />
         </label>
-        <label>
-          Dosage or amount
-          <input name="dosageOrAmount" />
-        </label>
-        <label>
-          Restrictions
-          <input name="restrictions" />
-        </label>
+        <SmartTextField
+          label="Dosage or amount"
+          name="dosageOrAmount"
+          choices={[]}
+          recent={recentFieldValues(
+            records.filter((item) => item.entityType === 'treatmentEvent'),
+            'dosageOrAmount',
+          )}
+          hint="Enter the exact amount and unit from your treatment record."
+        />
+        <SmartTextField
+          label="Restrictions"
+          name="restrictions"
+          choices={fieldChoices.restriction}
+          recent={recentFieldValues(
+            records.filter((item) => item.entityType === 'treatmentEvent'),
+            'restrictions',
+          )}
+          hint="Choose a reminder or enter the exact label restriction."
+        />
       </>
     );
   if (kind === 'harvest')
@@ -2172,18 +2269,30 @@ function CareFields({ kind }: { kind: CareType }) {
           Quantity
           <input name="quantity" type="number" min="0" step="any" required />
         </label>
-        <label>
-          Unit
-          <input name="unit" required placeholder="lb, kg, jars" />
-        </label>
+        <SmartTextField
+          label="Unit"
+          name="unit"
+          required
+          choices={fieldChoices.harvestUnit}
+          recent={recentFieldValues(
+            records.filter((item) => item.entityType === 'harvest'),
+            'unit',
+          )}
+        />
       </>
     );
   return (
     <>
-      <label>
-        Description
-        <input name="description" required />
-      </label>
+      <SmartTextField
+        label="Description"
+        name="description"
+        required
+        choices={[]}
+        recent={recentFieldValues(
+          records.filter((item) => item.entityType === 'followUp'),
+          'description',
+        )}
+      />
       <label>
         Due date
         <input name="dueDate" type="date" />

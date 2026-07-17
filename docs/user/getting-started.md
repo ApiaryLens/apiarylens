@@ -46,6 +46,13 @@ history. ApiaryLens does not currently contact a weather provider or share your
 location; any future automatic current or historical enrichment will require an
 explicit consent step and will preserve manual offline entry.
 
+Common inspection and care fields suggest beekeeper vocabulary without locking you
+into it. Brood condition, stores, health observations, feed type/unit/reason,
+treatment product or method, restrictions, harvest units, and follow-up descriptions
+accept standard suggestions, recent family values where available, or a typed custom
+value. Treatment suggestions are recordkeeping aids, not treatment advice; always
+follow applicable law and the exact product label.
+
 ### Queen identity and marking
 
 When adding a queen, choose a numbered disc/tag, breeder code, queen name, or an
