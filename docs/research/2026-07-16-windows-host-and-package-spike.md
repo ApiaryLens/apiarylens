@@ -452,6 +452,47 @@ migrations, media snapshot, pending PWA/desktop work, and selected package host.
 Process termination also does not prove whole-machine power-loss behavior during a
 filesystem flush; that remains a physical/VM fault-injection acceptance case.
 
+## SBOM, license, and provenance evidence
+
+Exact-artifact run
+[`29547645058`](https://github.com/ApiaryLens/apiarylens/actions/runs/29547645058)
+replayed both signed installer lifecycles and generated CycloneDX JSON from each
+installed runtime plus its retained lock/build inputs. It used
+[Syft 1.48.0](https://github.com/anchore/syft/releases/tag/v1.48.0), downloaded from
+the official release and accepted only after its archive matched SHA-256
+`B46CB02A47C5B76A1656958757D62AC07D0CB7DE35F92E8A7E02D450CBB53097`.
+Syft is a disposable research tool, not an ApiaryLens runtime dependency.
+
+| Provenance check | Electron | Tauri + Node sidecar |
+|---|---:|---:|
+| Source signed-artifact run | `29545351946` | `29545675051` |
+| Installed-runtime CycloneDX components | 12 | 3 |
+| Lock/build-input CycloneDX components | 5 | 431 |
+| Installed license/notice files | `LICENSE` | None |
+| Runtime components with inferred license metadata | 0 of 12 | 0 of 3 |
+| Runtime SBOM SHA-256 recorded | Yes | Yes |
+| Build-input SBOM SHA-256 recorded | Yes | Yes |
+
+The generated SBOMs prove repeatable catalog and provenance plumbing, but they do
+**not** close distribution review. Binary inspection identifies Electron/Chromium,
+Squirrel, graphics, Tauri-host, and Node components without reliably inferring their
+licenses. The Tauri lock inventory also lacks license expressions because Cargo lock
+files do not carry that metadata. Most importantly, the Tauri package installed no
+third-party notice file, and Electron installed only one general license file.
+
+Before either candidate can be selected for release:
+
+1. Produce a Rust-aware and npm-aware license inventory from resolved, verified
+   manifests rather than treating missing CycloneDX license fields as acceptable.
+2. Reconcile runtime binaries, sidecars, web assets, installer engines, and build
+   inputs to the release manifest and SBOM.
+3. Generate and install the complete Apache-2.0 notice plus every required
+   third-party license/notice, including Node, WebView2 redistribution where
+   applicable, Electron/Chromium or Tauri/Rust dependencies, and installer tooling.
+4. Fail the release when a component is unlicensed, has a prohibited license, lacks
+   provenance, or is absent from the notice/SBOM reconciliation.
+5. Sign and attest the SBOM and notice bundle with the immutable release artifacts.
+
 ## Security and lifecycle requirements common to finalists
 
 Regardless of framework:
@@ -491,6 +532,10 @@ challenge. They are not an ADR decision.
 | Accessibility evidence path | 10 | 4 | 4 | 3 | 5 |
 | Maintainer/build complexity | 5 | 5 | 3 | 1 | 2 |
 | Weighted score out of 500 | 100 | 405 | 390 | 290 | 300 |
+
+The final matrix must add an explicit supply-chain, license, notice, and SBOM closure
+criterion. The preliminary weights predate the measured notice gaps and must not hide
+release compliance inside the maintainer-complexity score.
 
 Electron currently leads on delivery and direct backend reuse, while Tauri's measured
 package footprint and capability-scoped IPC narrow the gap. The preliminary score
