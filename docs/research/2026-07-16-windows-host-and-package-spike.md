@@ -6,11 +6,12 @@
 2026-07-16. This record does not select a framework or authorize product code.
 
 Official-source review plus comparable Electron and Tauri/WebView2 packaging,
-test-signing, and exact-artifact clean-install lifecycle baselines are complete.
-Accessibility, integrated signed-update/power-loss behavior, retail Windows profile
-evidence, and the final license/provenance comparison remain required before the
-spike can close. Authenticated local-service supervision is being validated
-separately under `WIN-004`.
+test-signing, exact-artifact clean-install and package-transition lifecycle,
+SQLite recovery, SBOM inventory, and automated shared-UI accessibility baselines
+are complete. Retail Windows profile and host accessibility evidence, integrated
+power-loss behavior, distribution-license closure, and the final ADR remain required
+before the spike can close. Authenticated local-service supervision is being
+validated separately under `WIN-004`.
 
 ## Question
 
@@ -44,6 +45,42 @@ The selected design must:
 Build-time SDKs are not end-user prerequisites. A Rust, C++, .NET, or Node build
 toolchain can be acceptable in CI only if the released package is self-contained or
 performs guided prerequisite remediation without requiring technical knowledge.
+
+## Proposed Windows support baseline
+
+Framework compatibility is not an ApiaryLens support promise. Electron publishes
+Windows 10-and-newer binaries, and WebView2 documents Windows 10 and Windows 11
+client compatibility, but Windows 10 Home and Pro left Microsoft's normal support
+on 2025-10-14. Windows 10 ESU supplies security updates for enrolled 22H2 devices;
+it does not restore normal product support, feature work, or unrelated fixes.
+
+The release ADR should therefore use this baseline unless retail-profile evidence
+contradicts it:
+
+- Standard support: x64 Windows 11 Home, Pro, Enterprise, or Education releases that
+  are still within Microsoft's servicing lifecycle and fully patched.
+- Conditional Preview support: x64 Windows 10 22H2 enrolled in the applicable ESU
+  program, plus Windows 10 LTSC editions that remain within their Microsoft
+  lifecycle, only after exact-install, lifecycle, accessibility, and recovery tests.
+- Unsupported: Windows releases outside Microsoft's servicing or ESU/LTSC lifecycle,
+  32-bit Windows, and editions or architectures not named and tested by the release.
+- ARM64 remains a separately measured target. Availability of Electron or WebView2
+  ARM64 binaries does not make it supported before the full ApiaryLens package and
+  native-dependency lifecycle passes on ARM64 hardware.
+
+Preview documentation must state the exact tested Windows release, edition,
+architecture, patch level, WebView2 state, and package artifact. The matrix is
+re-evaluated for every supported product channel rather than freezing “Windows 10+
+support” as an indefinite claim.
+
+Primary sources checked 2026-07-16:
+
+- [Windows 10 Home and Pro lifecycle](https://learn.microsoft.com/en-us/lifecycle/products/windows-10-home-and-pro)
+- [Windows 10 Extended Security Updates](https://learn.microsoft.com/en-us/windows/whats-new/extended-security-updates)
+- [Windows 11 Home and Pro lifecycle](https://learn.microsoft.com/en-us/lifecycle/products/windows-11-home-and-pro)
+- [Windows 11 release information](https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information)
+- [Electron platform support](https://github.com/electron/electron#platform-support)
+- [WebView2 supported Windows versions](https://learn.microsoft.com/en-us/microsoft-edge/webview2/)
 
 ## Existing ApiaryLens facts
 
