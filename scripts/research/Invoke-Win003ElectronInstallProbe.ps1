@@ -156,6 +156,34 @@ Get-Process -Id (@($ids) | Sort-Object -Descending) -ErrorAction SilentlyContinu
 $process.WaitForExit(5000) | Out-Null
 if (-not $hostStayedRunning) { throw 'Installed Electron host exited during smoke test' }
 
+# Electron/Squirrel can re-parent a process outside the launcher's original process
+# tree. Quiesce every executable whose resolved image remains inside this exact
+# installation root before asking Squirrel to remove files.
+$installPrefix = [IO.Path]::GetFullPath($installDirectory).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+foreach ($attempt in 1..20) {
+    $installedProcesses = @(
+        Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.ExecutablePath -and
+                [IO.Path]::GetFullPath($_.ExecutablePath).StartsWith($installPrefix, [StringComparison]::OrdinalIgnoreCase)
+            }
+    )
+    if ($installedProcesses.Count -eq 0) { break }
+    Get-Process -Id @($installedProcesses.ProcessId) -ErrorAction SilentlyContinue |
+        Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 250
+}
+$installedProcessCountBeforeUninstall = @(
+    Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.ExecutablePath -and
+            [IO.Path]::GetFullPath($_.ExecutablePath).StartsWith($installPrefix, [StringComparison]::OrdinalIgnoreCase)
+        }
+).Count
+if ($installedProcessCountBeforeUninstall -ne 0) {
+    throw 'Electron host did not fully quiesce before uninstall'
+}
+
 $installedFiles = Get-ChildItem -LiteralPath $installDirectory -Recurse -File
 $installedBytes = ($installedFiles | Measure-Object Length -Sum).Sum
 $installedFileCount = $installedFiles.Count
@@ -217,6 +245,7 @@ $result = [ordered]@{
     bundledElectronVersion = $probeResult.electron
     bundledNodeVersion = $probeResult.node
     hostSmoke = $hostSmoke
+    installedProcessCountBeforeUninstall = $installedProcessCountBeforeUninstall
     uninstallExitCode = $uninstall.ExitCode
     uninstallEntryRemains = $entryRemains
     installedHostRemains = $hostRemains
