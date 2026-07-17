@@ -252,7 +252,7 @@ retail family computer.
 ### Electron test-signing evidence
 
 Targeted run
-[`29544430682`](https://github.com/ApiaryLens/apiarylens/actions/runs/29544430682)
+[`29545351946`](https://github.com/ApiaryLens/apiarylens/actions/runs/29545351946)
 created a runner-only 3072-bit RSA code-signing identity, signed both the packaged
 Electron host and outer Squirrel setup, and verified that each embedded signer
 matched the exact ephemeral certificate. The private key and certificate were not
@@ -263,9 +263,14 @@ uploaded and were destroyed with the hosted runner.
 | Packaged host signer | Exact ephemeral certificate present |
 | Squirrel setup signer | Exact ephemeral certificate present |
 | Host size change | +15,368 bytes |
-| Setup size change | +54,272 bytes |
+| Setup size change | +53,760 bytes |
 | Packaged `node:sqlite` after signing | Passed |
-| Five renderer-ready launches after signing | Passed; mean 240.8 ms |
+| Five renderer-ready launches after signing | Passed; mean 227.6 ms |
+| Exact signed setup install / installed signer | Exit 0 / exact signer retained |
+| Installed footprint | 467.3 MiB, 81 files |
+| Installed `node:sqlite` / three-second host smoke | Passed / passed |
+| Exact signed setup uninstall | Exit 0; host and registration absent |
+| Updater/cache residue after signed uninstall | 4.3 MiB |
 
 Windows reported `UnknownError` for trust status because the self-signed root was
 deliberately not added to the runner's trusted-root store. This proves the packaging
