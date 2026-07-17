@@ -75,9 +75,10 @@ instanceGuard.listen(pipeName, () => {
   fs.mkdirSync(dataDirectory, { recursive: true });
   fs.mkdirSync(path.join(dataDirectory, 'media'), { recursive: true });
   store = new SqliteStore(path.join(dataDirectory, 'apiarylens.sqlite'), { authRootSecret });
+  const mediaStore = new FilesystemMediaStore(path.join(dataDirectory, 'media'));
   const app = createApi({
     store,
-    mediaStore: new FilesystemMediaStore(path.join(dataDirectory, 'media')),
+    mediaStore,
     secureCookies: false,
     bootstrapToken,
     authRootSecret,
@@ -97,6 +98,83 @@ instanceGuard.listen(pipeName, () => {
       setImmediate(() => stop(0));
       return Response.json({ stopping: true }, { status: 202 });
     }
+    if (
+      request.method === 'POST' &&
+      new URL(request.url).pathname === '/__desktop/research/seed-foreign'
+    ) {
+      const timestamp = new Date().toISOString();
+      const organizationId = crypto.randomUUID();
+      const userId = crypto.randomUUID();
+      const membershipId = crypto.randomUUID();
+      const apiaryId = crypto.randomUUID();
+      const mediaId = crypto.randomUUID();
+      const mediaBytes = new Uint8Array([0xff, 0xd8, 0xff, 0x01]);
+      store.database
+        .prepare(
+          `INSERT INTO organizations(id, name, timezone, created_at, updated_at)
+           VALUES (?, 'Foreign family', 'UTC', ?, ?)`,
+        )
+        .run(organizationId, timestamp, timestamp);
+      store.database
+        .prepare(
+          `INSERT INTO users(id, identifier, display_name, password_hash, created_at, updated_at)
+           VALUES (?, ?, 'Foreign user', 'disabled', ?, ?)`,
+        )
+        .run(userId, `foreign-${userId}@example.test`, timestamp, timestamp);
+      store.database
+        .prepare(
+          `INSERT INTO memberships(id, organization_id, user_id, role, status, created_at, updated_at)
+           VALUES (?, ?, ?, 'viewer', 'active', ?, ?)`,
+        )
+        .run(membershipId, organizationId, userId, timestamp, timestamp);
+      store.applyOperation(organizationId, userId, {
+        operationId: crypto.randomUUID(),
+        clientId: crypto.randomUUID(),
+        entityType: 'apiary',
+        entityId: apiaryId,
+        action: 'create',
+        baseVersion: 0,
+        payload: { name: 'Private foreign apiary' },
+        queuedAt: timestamp,
+      });
+      store.applyOperation(organizationId, userId, {
+        operationId: crypto.randomUUID(),
+        clientId: crypto.randomUUID(),
+        entityType: 'mediaAsset',
+        entityId: mediaId,
+        action: 'create',
+        baseVersion: 0,
+        payload: {
+          hiveId: crypto.randomUUID(),
+          fileName: 'foreign.jpg',
+          mediaType: 'image/jpeg',
+          byteSize: mediaBytes.byteLength,
+          sha256: crypto.createHash('sha256').update(mediaBytes).digest('hex'),
+          state: 'ready',
+        },
+        queuedAt: timestamp,
+      });
+      await mediaStore.put(organizationId, mediaId, mediaBytes);
+      return Response.json({ organizationId, apiaryId, mediaId }, { status: 201 });
+    }
+    if (
+      request.method === 'POST' &&
+      new URL(request.url).pathname === '/__desktop/research/check-foreign'
+    ) {
+      const input = await request.json();
+      const apiary = store.getResource(input.organizationId, 'apiary', input.apiaryId);
+      const mediaBytes = await mediaStore.get(input.organizationId, input.mediaId);
+      return Response.json({
+        apiaryUnchanged: apiary?.name === 'Private foreign apiary',
+        mediaUnchanged:
+          mediaBytes?.byteLength === 4 &&
+          crypto.createHash('sha256').update(mediaBytes).digest('hex') ===
+            crypto
+              .createHash('sha256')
+              .update(new Uint8Array([0xff, 0xd8, 0xff, 0x01]))
+              .digest('hex'),
+      });
+    }
     return app.fetch(request);
   };
 
@@ -108,6 +186,10 @@ instanceGuard.listen(pipeName, () => {
         address: address.address,
         port: address.port,
         serviceProtocolVersion: 1,
+        migrationVersions: store.database
+          .prepare('SELECT version FROM migrations ORDER BY version')
+          .all()
+          .map(({ version }) => version),
       }),
       { encoding: 'utf8', mode: 0o600 },
     );

@@ -126,8 +126,10 @@ let serviceOutput = "";
 
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-async function startRealService() {
-  serviceLab = fs.mkdtempSync(path.join(os.tmpdir(), "apiarylens-win003-electron-service-"));
+async function startRealService(reuseLab = false) {
+  if (!reuseLab) {
+    serviceLab = fs.mkdtempSync(path.join(os.tmpdir(), "apiarylens-win003-electron-service-"));
+  }
   const readyFile = path.join(serviceLab, "ready.json");
   const serverRoot = path.join(process.resourcesPath, "server");
   const serviceScript = path.join(serverRoot, "desktop-wrapper.mjs");
@@ -178,6 +180,15 @@ async function stopRealService() {
   if (serviceProcess.exitCode === null) serviceProcess.kill();
 }
 
+async function restartRealService() {
+  await stopRealService();
+  await startRealService(true);
+  return Object.freeze({
+    endpoint: serviceEndpoint,
+    migrationVersions: serviceReady.migrationVersions
+  });
+}
+
 ipcMain.handle("apiarylens:desktop-health", async (event, ...args) => {
   bridgeArgumentCount += args.length;
   if (event.senderFrame.url !== trustedDocumentUrl) throw new Error("untrusted-sender");
@@ -206,6 +217,18 @@ const bridgeProbeIndex = process.argv.indexOf("--win003-bridge-output");
 if (bridgeProbeIndex >= 0) {
   app.whenReady().then(async () => {
     await startRealService();
+    const serverRoot = path.join(process.resourcesPath, "server");
+    const acceptanceModule = await import(
+      `${pathToFileURL(path.join(serverRoot, "desktop-acceptance.mjs")).href}?run=${crypto.randomUUID()}`
+    );
+    const apiAcceptance = await acceptanceModule.runApiAcceptance({
+      endpoint: serviceEndpoint,
+      controlToken,
+      allowedOrigin,
+      bootstrapToken,
+      migrationVersions: serviceReady.migrationVersions,
+      restartService: restartRealService
+    });
     const consoleMessages = [];
     const trustedWindow = new BrowserWindow({
       width: 800,
@@ -280,6 +303,7 @@ if (bridgeProbeIndex >= 0) {
       realServiceDatabaseCreated: fs.existsSync(databasePath),
       realServiceMediaDirectoryCreated: fs.existsSync(mediaPath),
       realServiceExitCode: serviceProcess.exitCode,
+      apiAcceptance,
       localStorageEntryCount: rendererResult.localStorage.length,
       sessionStorageEntryCount: rendererResult.sessionStorage.length
     };
@@ -330,6 +354,7 @@ Set-Content -LiteralPath (Join-Path $labPath 'forge.config.js') -Value $forgeCon
 Set-Content -LiteralPath (Join-Path $labPath 'preload.cjs') -Value $preload -Encoding utf8NoBOM
 Set-Content -LiteralPath (Join-Path $labPath 'main.cjs') -Value $main -Encoding utf8NoBOM
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'win003-electron-real-service-fixture.mjs') -Destination (Join-Path $serverDeployPath 'desktop-wrapper.mjs') -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'win003-electron-api-acceptance.mjs') -Destination (Join-Path $serverDeployPath 'desktop-acceptance.mjs') -Force
 
 Push-Location $labPath
 try {
@@ -356,7 +381,8 @@ if (-not $packageDirectory -or -not $hostExecutable -or -not $installer -or -not
 }
 $packagedServer = Join-Path $packageDirectory.FullName 'resources/server'
 if (-not (Test-Path -LiteralPath (Join-Path $packagedServer 'dist/app.js')) -or
-    -not (Test-Path -LiteralPath (Join-Path $packagedServer 'desktop-wrapper.mjs'))) {
+    -not (Test-Path -LiteralPath (Join-Path $packagedServer 'desktop-wrapper.mjs')) -or
+    -not (Test-Path -LiteralPath (Join-Path $packagedServer 'desktop-acceptance.mjs'))) {
     throw 'Electron package does not contain the deployed real ApiaryLens server resource'
 }
 
@@ -437,6 +463,16 @@ $bridgePassed =
     $bridgeResult.realServiceDatabaseCreated -and
     $bridgeResult.realServiceMediaDirectoryCreated -and
     $bridgeResult.realServiceExitCode -eq 0 -and
+    $bridgeResult.apiAcceptance.passed -and
+    $bridgeResult.apiAcceptance.checkCount -ge 40 -and
+    @($bridgeResult.apiAcceptance.migrationVersions).Count -eq 4 -and
+    $bridgeResult.apiAcceptance.bootstrapProtected -and
+    $bridgeResult.apiAcceptance.csrfAndDeduplicationPassed -and
+    $bridgeResult.apiAcceptance.organizationIsolationPassed -and
+    $bridgeResult.apiAcceptance.sessionRotationAndRecoveryPassed -and
+    $bridgeResult.apiAcceptance.viewerAuthorizationPassed -and
+    $bridgeResult.apiAcceptance.mediaOriginalThumbnailExportDeletePassed -and
+    $bridgeResult.apiAcceptance.restartPersistencePassed -and
     $bridgeResult.localStorageEntryCount -eq 0 -and
     $bridgeResult.sessionStorageEntryCount -eq 0
 if (-not $bridgePassed) { throw 'Packaged Electron bridge isolation acceptance checks failed' }
@@ -511,6 +547,12 @@ $measurement = [ordered]@{
     bridgeRealServiceDatabaseCreated = $bridgeResult.realServiceDatabaseCreated
     bridgeRealServiceMediaDirectoryCreated = $bridgeResult.realServiceMediaDirectoryCreated
     bridgeRealServiceExitCode = $bridgeResult.realServiceExitCode
+    packagedApiAcceptancePassed = $bridgeResult.apiAcceptance.passed
+    packagedApiAcceptanceCheckCount = $bridgeResult.apiAcceptance.checkCount
+    packagedApiAcceptanceMigrationVersions = @($bridgeResult.apiAcceptance.migrationVersions)
+    packagedApiOrganizationIsolationPassed = $bridgeResult.apiAcceptance.organizationIsolationPassed
+    packagedApiMediaLifecyclePassed = $bridgeResult.apiAcceptance.mediaOriginalThumbnailExportDeletePassed
+    packagedApiRestartPersistencePassed = $bridgeResult.apiAcceptance.restartPersistencePassed
     runs = $runs
     meanRendererReadyMs = [math]::Round(($runs.rendererReadyMs | Measure-Object -Average).Average, 1)
     medianRendererReadyMs = ($runs.rendererReadyMs | Sort-Object)[2]

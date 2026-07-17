@@ -169,6 +169,16 @@ $installedRealServiceBridgeProbePassed =
     $bridgeProbeResult.realServiceDatabaseCreated -and
     $bridgeProbeResult.realServiceMediaDirectoryCreated -and
     $bridgeProbeResult.realServiceExitCode -eq 0 -and
+    $bridgeProbeResult.apiAcceptance.passed -and
+    $bridgeProbeResult.apiAcceptance.checkCount -ge 40 -and
+    @($bridgeProbeResult.apiAcceptance.migrationVersions).Count -eq 4 -and
+    $bridgeProbeResult.apiAcceptance.bootstrapProtected -and
+    $bridgeProbeResult.apiAcceptance.csrfAndDeduplicationPassed -and
+    $bridgeProbeResult.apiAcceptance.organizationIsolationPassed -and
+    $bridgeProbeResult.apiAcceptance.sessionRotationAndRecoveryPassed -and
+    $bridgeProbeResult.apiAcceptance.viewerAuthorizationPassed -and
+    $bridgeProbeResult.apiAcceptance.mediaOriginalThumbnailExportDeletePassed -and
+    $bridgeProbeResult.apiAcceptance.restartPersistencePassed -and
     $bridgeProbeResult.localStorageEntryCount -eq 0 -and
     $bridgeProbeResult.sessionStorageEntryCount -eq 0
 if (-not $installedRealServiceBridgeProbePassed) {
@@ -306,6 +316,12 @@ $result = [ordered]@{
     installedRealServiceMediaDirectoryCreated = $bridgeProbeResult.realServiceMediaDirectoryCreated
     installedRealServiceExitCode = $bridgeProbeResult.realServiceExitCode
     installedBridgeUntrustedSenderRejected = $bridgeProbeResult.untrustedSenderRejected
+    installedApiAcceptancePassed = $bridgeProbeResult.apiAcceptance.passed
+    installedApiAcceptanceCheckCount = $bridgeProbeResult.apiAcceptance.checkCount
+    installedApiAcceptanceMigrationVersions = @($bridgeProbeResult.apiAcceptance.migrationVersions)
+    installedApiOrganizationIsolationPassed = $bridgeProbeResult.apiAcceptance.organizationIsolationPassed
+    installedApiMediaLifecyclePassed = $bridgeProbeResult.apiAcceptance.mediaOriginalThumbnailExportDeletePassed
+    installedApiRestartPersistencePassed = $bridgeProbeResult.apiAcceptance.restartPersistencePassed
     installedBridgeTokenPresentInRendererStorageGlobalsConsoleArgumentsReadinessOrServiceOutput =
         $bridgeProbeResult.tokenPresentInRendererSnapshot -or
         $bridgeProbeResult.tokenPresentInConsoleMessages -or
