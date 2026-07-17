@@ -214,7 +214,17 @@ if (-not $uninstall.WaitForExit(60000)) {
     throw 'Electron Squirrel uninstall exceeded 60 seconds'
 }
 if ($uninstall.ExitCode -ne 0) { throw "Electron Squirrel uninstall failed with exit code $($uninstall.ExitCode)" }
-Start-Sleep -Seconds 3
+$uninstallConvergenceMs = $null
+$uninstallClock = [Diagnostics.Stopwatch]::StartNew()
+foreach ($attempt in 1..60) {
+    $entryRemains = $null -ne (Get-UninstallEntry)
+    $hostRemains = $null -ne (Get-ChildItem -LiteralPath $installDirectory -Recurse -Filter 'ApiaryLensElectronResearch.exe' -ErrorAction SilentlyContinue | Select-Object -First 1)
+    if (-not $entryRemains -and -not $hostRemains) {
+        $uninstallConvergenceMs = $uninstallClock.ElapsedMilliseconds
+        break
+    }
+    Start-Sleep -Milliseconds 500
+}
 $entryRemains = $null -ne (Get-UninstallEntry)
 $hostRemains = $null -ne (Get-ChildItem -LiteralPath $installDirectory -Recurse -Filter 'ApiaryLensElectronResearch.exe' -ErrorAction SilentlyContinue | Select-Object -First 1)
 $directoryRemains = Test-Path -LiteralPath $installDirectory
@@ -247,6 +257,7 @@ $result = [ordered]@{
     hostSmoke = $hostSmoke
     installedProcessCountBeforeUninstall = $installedProcessCountBeforeUninstall
     uninstallExitCode = $uninstall.ExitCode
+    uninstallConvergenceMs = $uninstallConvergenceMs
     uninstallEntryRemains = $entryRemains
     installedHostRemains = $hostRemains
     installDirectoryRemains = $directoryRemains
