@@ -92,6 +92,11 @@ runs the same evidence on `windows-latest` with Node 24 and locked dependencies.
 checked-in harness and workflow are research evidence only; the eventual protocol
 must be implemented behind accepted ADRs and authorization boundaries.
 
+GitHub Actions run
+[`29550672120`](https://github.com/ApiaryLens/apiarylens/actions/runs/29550672120)
+passed all steps on the Windows hosted runner and retained the sanitized
+`win006-migration-evidence` artifact for 14 days.
+
 ## Proposed migration protocol
 
 ### Durable objects
@@ -198,7 +203,6 @@ installation ID, accepted hashes, and outcome.
 
 ## Further evidence required to close WIN-006
 
-- Run the checked-in workflow and retain the sanitized artifact URL.
 - Scale testing with the maximum supported record and 25 MiB media sizes, thumbnails,
   tombstones, conflicts, and a non-empty outbox.
 - Inject process termination, disk-full, access-denied, database-busy, corrupt backup,
