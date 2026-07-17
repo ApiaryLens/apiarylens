@@ -1069,7 +1069,10 @@ implementations in parallel.
    installed run `29571215352` additionally proves two trusted windows share one
    service PID, an untrusted window remains rejected, IPv6 loopback cannot reach the
    explicit IPv4 listener, and black-hole environment proxy variables do not divert
-   the host-owned local request.
+   the host-owned local request. Clean-install replay `29571914796` additionally
+   proves the same bridge under an enabled black-hole Windows per-user proxy policy,
+   restores the prior registry state, and finds no installer-created Windows Firewall
+   application rule for the installed host.
 3. Verify Windows 11 and the chosen Windows 10 baseline in clean user profiles with
    no developer tools. Include a profile where WebView2 is absent or its updater is
    policy-disabled.

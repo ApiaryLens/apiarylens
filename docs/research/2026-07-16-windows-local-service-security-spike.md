@@ -304,9 +304,21 @@ report an explicit `127.0.0.1` readiness address. Setting black-hole `HTTP_PROXY
 authenticated loopback endpoint.
 
 This is evidence for the selected host transport, not a claim about every Windows
-network policy. A managed Windows system proxy/PAC configuration, firewall policy,
-IPv6-only device policy, VPN/filter driver, Remote Desktop, and retail-device matrix
-remain physical-profile work.
+network policy. Follow-up clean-install replay
+[29571914796](https://github.com/ApiaryLens/apiarylens/actions/runs/29571914796)
+at source commit `3073929620376bdce7530f8b92830a53faa61e1d` then enabled the
+current user's Windows Internet Settings proxy with a black-hole `127.0.0.1:1`
+server and an empty bypass list during the packaged bridge probe. The full bridge
+and API acceptance remained green, the prior registry values were restored, and
+the installed executable had zero associated Windows Firewall application rules.
+The downloaded evidence records
+`installedWinInetProxyPolicyConfiguredForBridgeProbe: true`,
+`installedWinInetProxyPolicyRestored: true`, and
+`installedFirewallRuleCount: 0`.
+
+A managed PAC script, explicit restrictive firewall rule, IPv6-only device policy,
+VPN/filter driver, Remote Desktop, and retail-device matrix remain physical-profile
+work.
 
 ## Threat analysis
 
@@ -425,9 +437,11 @@ release gate.
 5. Testing multiple windows, IPv6 loopback, local proxy settings, and firewall policy
    restrictions. Two trusted windows sharing one service, untrusted-window rejection,
    IPv6-loopback rejection, environment-proxy non-interception, rapid competing
-   launch, and stale-readiness replacement are proven. Managed Windows system-proxy,
-   PAC, firewall, VPN/filter-driver, and IPv6-only policy profiles remain; the
-   operating-system-assigned port design avoids selecting a colliding fixed port.
+   launch, stale-readiness replacement, a black-hole Windows per-user proxy policy,
+   registry restoration, and absence of installer-created firewall rules are proven.
+   Managed PAC, restrictive firewall, VPN/filter-driver, and IPv6-only policy
+   profiles remain; the operating-system-assigned port design avoids selecting a
+   colliding fixed port.
 6. Threat-reviewing the selected host bridge and documenting the accepted local
    adversary boundary in the Windows security design and follow-on ADR.
 
