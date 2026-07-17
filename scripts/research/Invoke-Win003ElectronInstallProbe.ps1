@@ -188,6 +188,13 @@ $installedRealServiceBridgeProbePassed =
     $bridgeProbeResult.forcedWriteRecovery.databaseFullTransactionRolledBack -and
     $bridgeProbeResult.forcedWriteRecovery.integrityAfterDatabaseFull -and
     $bridgeProbeResult.corruptDatabaseStartup.rejectedBeforeReadiness -and
+    $bridgeProbeResult.startupFailurePolicy.timeoutRejectedBeforeReadiness -and
+    $bridgeProbeResult.startupFailurePolicy.timeoutChildExited -and
+    $bridgeProbeResult.startupFailurePolicy.restartBudget -eq 3 -and
+    $bridgeProbeResult.startupFailurePolicy.failedAttempts -eq 3 -and
+    $bridgeProbeResult.startupFailurePolicy.restartBudgetCapped -and
+    $bridgeProbeResult.startupFailurePolicy.recoveredAfterOperatorRetry -and
+    $bridgeProbeResult.startupFailurePolicy.recoveryShutdownRemovedReadiness -and
     $bridgeProbeResult.nativeCredentialProtection.encryptionAvailable -and
     $bridgeProbeResult.nativeCredentialProtection.initialRoundTrip -and
     $bridgeProbeResult.nativeCredentialProtection.initialCiphertextExcludesPlaintext -and
@@ -595,6 +602,14 @@ $result = [ordered]@{
         $bridgeProbeResult.forcedWriteRecovery.databaseFullTransactionRolledBack -and
         $bridgeProbeResult.forcedWriteRecovery.integrityAfterDatabaseFull
     installedCorruptDatabaseRejectedBeforeReadiness = $bridgeProbeResult.corruptDatabaseStartup.rejectedBeforeReadiness
+    installedStartupFailurePolicyPassed =
+        $bridgeProbeResult.startupFailurePolicy.timeoutRejectedBeforeReadiness -and
+        $bridgeProbeResult.startupFailurePolicy.timeoutChildExited -and
+        $bridgeProbeResult.startupFailurePolicy.restartBudget -eq 3 -and
+        $bridgeProbeResult.startupFailurePolicy.failedAttempts -eq 3 -and
+        $bridgeProbeResult.startupFailurePolicy.restartBudgetCapped -and
+        $bridgeProbeResult.startupFailurePolicy.recoveredAfterOperatorRetry -and
+        $bridgeProbeResult.startupFailurePolicy.recoveryShutdownRemovedReadiness
     installedReadOnlyDirectoryRejectedBeforeReadiness = $installedReadOnlyDirectoryRejectedBeforeReadiness
     installedNativeCredentialProtectionPassed =
         $bridgeProbeResult.nativeCredentialProtection.encryptionAvailable -and

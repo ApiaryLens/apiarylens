@@ -24,8 +24,12 @@ const instanceName = required('APIARYLENS_INSTANCE_NAME').replace(/[^a-zA-Z0-9_.
 const bootstrapToken = required('APIARYLENS_BOOTSTRAP_TOKEN');
 const authRootSecret = required('APIARYLENS_AUTH_ROOT_SECRET');
 const pipeName = `\\\\.\\pipe\\${instanceName}`;
+const startupDelayMs = Number.parseInt(process.env.APIARYLENS_RESEARCH_STARTUP_DELAY_MS ?? '0', 10);
 
 if (!Number.isSafeInteger(parentPid) || parentPid < 1) throw new Error('invalid-parent-pid');
+if (!Number.isSafeInteger(startupDelayMs) || startupDelayMs < 0 || startupDelayMs > 30_000) {
+  throw new Error('invalid-research-startup-delay');
+}
 if (process.argv.some((argument) => argument.includes(controlToken))) {
   throw new Error('control-token-present-in-arguments');
 }
@@ -70,6 +74,11 @@ instanceGuard.once('error', (error) => {
   if (error.code === 'EADDRINUSE') process.exit(73);
   throw error;
 });
+
+if (process.env.APIARYLENS_RESEARCH_CRASH_BEFORE_READY === '1') process.exit(75);
+if (startupDelayMs > 0) {
+  await new Promise((resolve) => setTimeout(resolve, startupDelayMs));
+}
 
 instanceGuard.listen(pipeName, () => {
   fs.mkdirSync(dataDirectory, { recursive: true });

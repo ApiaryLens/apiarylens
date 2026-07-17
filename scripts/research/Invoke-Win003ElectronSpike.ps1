@@ -125,11 +125,21 @@ let serviceReady;
 let serviceProcess;
 let serviceLab;
 let serviceOutput = "";
+let cumulativeServiceOutput = "";
+const cumulativeServiceArguments = [];
 let lastStartRemovedStaleReadiness = false;
 
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-async function startRealService(reuseLab = false, requestedLab) {
+async function waitForServiceExit(target, timeoutMs = 5000) {
+  const deadline = Date.now() + timeoutMs;
+  while (target?.exitCode === null && target?.signalCode === null && Date.now() < deadline) {
+    await delay(25);
+  }
+  return target?.exitCode !== null || target?.signalCode !== null;
+}
+
+async function startRealService(reuseLab = false, requestedLab, behavior = {}) {
   if (requestedLab) {
     serviceLab = path.resolve(requestedLab);
   } else if (!reuseLab) {
@@ -155,6 +165,9 @@ async function startRealService(reuseLab = false, requestedLab) {
   }
   const serverRoot = path.join(process.resourcesPath, "server");
   const serviceScript = path.join(serverRoot, "desktop-wrapper.mjs");
+  serviceOutput = "";
+  serviceReady = undefined;
+  serviceEndpoint = undefined;
   serviceProcess = spawn(process.execPath, [serviceScript], {
     cwd: serverRoot,
     windowsHide: true,
@@ -169,13 +182,23 @@ async function startRealService(reuseLab = false, requestedLab) {
       APIARYLENS_PARENT_PID: String(process.pid),
       APIARYLENS_INSTANCE_NAME: `ApiaryLens-WIN003-Electron-${crypto.randomUUID()}`,
       APIARYLENS_BOOTSTRAP_TOKEN: bootstrapToken,
-      APIARYLENS_AUTH_ROOT_SECRET: authRootSecret
+      APIARYLENS_AUTH_ROOT_SECRET: authRootSecret,
+      APIARYLENS_RESEARCH_STARTUP_DELAY_MS: String(behavior.startupDelayMs ?? 0),
+      APIARYLENS_RESEARCH_CRASH_BEFORE_READY: behavior.crashBeforeReady ? "1" : "0"
     }
   });
-  serviceProcess.stdout.on("data", (chunk) => { serviceOutput += chunk.toString(); });
-  serviceProcess.stderr.on("data", (chunk) => { serviceOutput += chunk.toString(); });
+  cumulativeServiceArguments.push(...serviceProcess.spawnargs);
+  serviceProcess.stdout.on("data", (chunk) => {
+    serviceOutput += chunk.toString();
+    cumulativeServiceOutput += chunk.toString();
+  });
+  serviceProcess.stderr.on("data", (chunk) => {
+    serviceOutput += chunk.toString();
+    cumulativeServiceOutput += chunk.toString();
+  });
 
-  for (let attempt = 0; attempt < 150; attempt += 1) {
+  const readinessDeadline = Date.now() + (behavior.readinessTimeoutMs ?? 15000);
+  while (Date.now() < readinessDeadline) {
     if (fs.existsSync(readyFile)) {
       serviceReady = JSON.parse(fs.readFileSync(readyFile, "utf8"));
       serviceEndpoint = `http://127.0.0.1:${serviceReady.port}`;
@@ -186,7 +209,10 @@ async function startRealService(reuseLab = false, requestedLab) {
     }
     await delay(100);
   }
-  serviceProcess.kill();
+  serviceProcess.kill("SIGKILL");
+  if (!(await waitForServiceExit(serviceProcess))) {
+    throw new Error("real-service-timeout-process-survived");
+  }
   throw new Error("real-service-readiness-timeout");
 }
 
@@ -284,6 +310,79 @@ async function corruptDatabaseStartupProbe() {
     serviceLab = previousLab;
   }
   return Object.freeze({ rejectedBeforeReadiness });
+}
+
+async function startupFailurePolicyProbe() {
+  const previousLab = serviceLab;
+  const timeoutLab = fs.mkdtempSync(path.join(os.tmpdir(), "apiarylens-win003-timeout-"));
+  let timeoutRejectedBeforeReadiness = false;
+  let timeoutChildExited = false;
+  try {
+    await startRealService(false, timeoutLab, {
+      startupDelayMs: 3000,
+      readinessTimeoutMs: 400
+    });
+  } catch (error) {
+    if (error.message !== "real-service-readiness-timeout") throw error;
+    timeoutChildExited = await waitForServiceExit(serviceProcess);
+    timeoutRejectedBeforeReadiness =
+      error.message === "real-service-readiness-timeout" &&
+      timeoutChildExited &&
+      !fs.existsSync(path.join(timeoutLab, "ready.json"));
+  } finally {
+    if (serviceProcess?.exitCode === null && serviceProcess?.signalCode === null) {
+      serviceProcess.kill("SIGKILL");
+      await waitForServiceExit(serviceProcess);
+    }
+    fs.rmSync(timeoutLab, { recursive: true, force: true });
+  }
+
+  const crashLab = fs.mkdtempSync(path.join(os.tmpdir(), "apiarylens-win003-crash-loop-"));
+  const restartBudget = 3;
+  let failedAttempts = 0;
+  try {
+    for (let attempt = 0; attempt < restartBudget; attempt += 1) {
+      try {
+        await startRealService(attempt > 0, crashLab, {
+          crashBeforeReady: true,
+          readinessTimeoutMs: 1000
+        });
+        await stopRealService();
+        throw new Error("crash-loop-attempt-unexpectedly-ready");
+      } catch (error) {
+        if (/^real-service-exited-75:/.test(error.message)) {
+          failedAttempts += 1;
+        } else {
+          throw error;
+        }
+      }
+    }
+    const restartBudgetCapped =
+      failedAttempts === restartBudget &&
+      !fs.existsSync(path.join(crashLab, "ready.json")) &&
+      (await waitForServiceExit(serviceProcess));
+    await startRealService(false, crashLab);
+    const recoveredAfterOperatorRetry =
+      serviceReady?.address === "127.0.0.1" && fs.existsSync(path.join(crashLab, "ready.json"));
+    await stopRealService();
+    const recoveryShutdownRemovedReadiness = !fs.existsSync(path.join(crashLab, "ready.json"));
+    return Object.freeze({
+      timeoutRejectedBeforeReadiness,
+      timeoutChildExited,
+      restartBudget,
+      failedAttempts,
+      restartBudgetCapped,
+      recoveredAfterOperatorRetry,
+      recoveryShutdownRemovedReadiness
+    });
+  } finally {
+    if (serviceProcess?.exitCode === null && serviceProcess?.signalCode === null) {
+      serviceProcess.kill("SIGKILL");
+      await waitForServiceExit(serviceProcess);
+    }
+    fs.rmSync(crashLab, { recursive: true, force: true });
+    serviceLab = previousLab;
+  }
 }
 
 ipcMain.handle("apiarylens:desktop-health", async (event, ...args) => {
@@ -792,13 +891,14 @@ if (!hasSingleInstanceLock) {
       rendererSnapshot.includes(secret) ||
       consoleMessages.some((message) => message.includes(secret)) ||
       process.argv.some((argument) => argument.includes(secret)) ||
-      serviceProcess.spawnargs.some((argument) => argument.includes(secret)) ||
+      cumulativeServiceArguments.some((argument) => argument.includes(secret)) ||
       JSON.stringify(serviceReady).includes(secret) ||
-      serviceOutput.includes(secret)
+      cumulativeServiceOutput.includes(secret)
     );
     await stopRealService();
     const healthyServiceExitCode = serviceProcess.exitCode;
     const corruptDatabaseStartup = await corruptDatabaseStartupProbe();
+    const startupFailurePolicy = await startupFailurePolicyProbe();
     const databasePath = path.join(serviceLab, "data", "apiarylens.sqlite");
     const mediaPath = path.join(serviceLab, "data", "media");
     const result = {
@@ -813,9 +913,10 @@ if (!hasSingleInstanceLock) {
       tokenPresentInRendererSnapshot: rendererSnapshot.includes(controlToken),
       tokenPresentInConsoleMessages: consoleMessages.some((message) => message.includes(controlToken)),
       tokenPresentInArguments: process.argv.some((argument) => argument.includes(controlToken)),
-      tokenPresentInServiceArguments: serviceProcess.spawnargs.some((argument) => argument.includes(controlToken)),
+      tokenPresentInServiceArguments: cumulativeServiceArguments.some((argument) => argument.includes(controlToken)),
       tokenPresentInReadinessOrServiceOutput:
-        JSON.stringify(serviceReady).includes(controlToken) || serviceOutput.includes(controlToken),
+        JSON.stringify(serviceReady).includes(controlToken) ||
+        cumulativeServiceOutput.includes(controlToken),
       realServiceAddress: serviceReady.address,
       realServiceDatabaseCreated: fs.existsSync(databasePath),
       realServiceMediaDirectoryCreated: fs.existsSync(mediaPath),
@@ -823,6 +924,7 @@ if (!hasSingleInstanceLock) {
       apiAcceptance,
       forcedWriteRecovery,
       corruptDatabaseStartup,
+      startupFailurePolicy,
       nativeCredentialProtection: credentialProbe.evidence,
       serverSessionCredentialLifecyclePassed:
         apiAcceptance.serverSessionCredentialLifecyclePassed,
@@ -1005,6 +1107,13 @@ $bridgePassed =
     $bridgeResult.forcedWriteRecovery.databaseFullTransactionRolledBack -and
     $bridgeResult.forcedWriteRecovery.integrityAfterDatabaseFull -and
     $bridgeResult.corruptDatabaseStartup.rejectedBeforeReadiness -and
+    $bridgeResult.startupFailurePolicy.timeoutRejectedBeforeReadiness -and
+    $bridgeResult.startupFailurePolicy.timeoutChildExited -and
+    $bridgeResult.startupFailurePolicy.restartBudget -eq 3 -and
+    $bridgeResult.startupFailurePolicy.failedAttempts -eq 3 -and
+    $bridgeResult.startupFailurePolicy.restartBudgetCapped -and
+    $bridgeResult.startupFailurePolicy.recoveredAfterOperatorRetry -and
+    $bridgeResult.startupFailurePolicy.recoveryShutdownRemovedReadiness -and
     $bridgeResult.nativeCredentialProtection.encryptionAvailable -and
     $bridgeResult.nativeCredentialProtection.initialRoundTrip -and
     $bridgeResult.nativeCredentialProtection.initialCiphertextExcludesPlaintext -and
@@ -1228,6 +1337,14 @@ $measurement = [ordered]@{
         $bridgeResult.forcedWriteRecovery.databaseFullTransactionRolledBack -and
         $bridgeResult.forcedWriteRecovery.integrityAfterDatabaseFull
     packagedCorruptDatabaseRejectedBeforeReadiness = $bridgeResult.corruptDatabaseStartup.rejectedBeforeReadiness
+    packagedStartupFailurePolicyPassed =
+        $bridgeResult.startupFailurePolicy.timeoutRejectedBeforeReadiness -and
+        $bridgeResult.startupFailurePolicy.timeoutChildExited -and
+        $bridgeResult.startupFailurePolicy.restartBudget -eq 3 -and
+        $bridgeResult.startupFailurePolicy.failedAttempts -eq 3 -and
+        $bridgeResult.startupFailurePolicy.restartBudgetCapped -and
+        $bridgeResult.startupFailurePolicy.recoveredAfterOperatorRetry -and
+        $bridgeResult.startupFailurePolicy.recoveryShutdownRemovedReadiness
     packagedReadOnlyDirectoryRejectedBeforeReadiness = $readOnlyDirectoryRejectedBeforeReadiness
     packagedNativeCredentialProtectionPassed =
         $bridgeResult.nativeCredentialProtection.encryptionAvailable -and
