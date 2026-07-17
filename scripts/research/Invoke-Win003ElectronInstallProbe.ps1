@@ -185,6 +185,42 @@ if (-not $installedRealServiceBridgeProbePassed) {
     throw 'Installed Electron real-service bridge acceptance checks failed'
 }
 
+$crashProbePath = Join-Path $runnerTemp 'win003-electron-installed-crash-probe.json'
+$duplicateProbePath = Join-Path $runnerTemp 'win003-electron-installed-duplicate-probe.json'
+$crashProbeArguments = "--win003-crash-probe-output `"$crashProbePath`""
+$crashProbe = Start-Process -FilePath $installedHost.FullName -ArgumentList $crashProbeArguments -WorkingDirectory $appDirectory.FullName -PassThru -WindowStyle Hidden
+$crashDeadline = [DateTimeOffset]::UtcNow.AddSeconds(15)
+while (-not $crashProbe.HasExited -and -not (Test-Path -LiteralPath $crashProbePath) -and [DateTimeOffset]::UtcNow -lt $crashDeadline) {
+    Start-Sleep -Milliseconds 50
+    $crashProbe.Refresh()
+}
+if (-not (Test-Path -LiteralPath $crashProbePath)) {
+    Stop-Process -Id $crashProbe.Id -Force -ErrorAction SilentlyContinue
+    throw 'Installed Electron crash probe did not become ready'
+}
+$crashState = Get-Content -Raw -LiteralPath $crashProbePath | ConvertFrom-Json
+$duplicateProbeArguments = "--win003-probe-output `"$duplicateProbePath`""
+$duplicateProbe = Start-Process -FilePath $installedHost.FullName -ArgumentList $duplicateProbeArguments -WorkingDirectory $appDirectory.FullName -PassThru -WindowStyle Hidden
+if (-not $duplicateProbe.WaitForExit(10000)) {
+    Stop-Process -Id $duplicateProbe.Id -Force -ErrorAction SilentlyContinue
+    throw 'Installed Electron duplicate instance did not exit'
+}
+$installedSingleInstancePassed = -not (Test-Path -LiteralPath $duplicateProbePath)
+Stop-Process -Id ([int] $crashState.hostProcessId) -Force -ErrorAction Stop
+$installedServiceExitedAfterHostCrash = $false
+foreach ($attempt in 1..100) {
+    if (-not (Get-Process -Id ([int] $crashState.serviceProcessId) -ErrorAction SilentlyContinue)) {
+        $installedServiceExitedAfterHostCrash = $true
+        break
+    }
+    Start-Sleep -Milliseconds 100
+}
+$installedReadyFileRemovedAfterHostCrash = -not (Test-Path -LiteralPath ([string] $crashState.serviceReadyFile))
+if (-not $installedSingleInstancePassed -or -not $installedServiceExitedAfterHostCrash -or -not $installedReadyFileRemovedAfterHostCrash) {
+    Stop-Process -Id ([int] $crashState.serviceProcessId) -Force -ErrorAction SilentlyContinue
+    throw 'Installed Electron single-instance or parent-death acceptance failed'
+}
+
 $process = Start-Process -FilePath $installedHost.FullName -PassThru -WindowStyle Hidden
 Start-Sleep -Seconds 3
 $process.Refresh()
@@ -322,6 +358,9 @@ $result = [ordered]@{
     installedApiOrganizationIsolationPassed = $bridgeProbeResult.apiAcceptance.organizationIsolationPassed
     installedApiMediaLifecyclePassed = $bridgeProbeResult.apiAcceptance.mediaOriginalThumbnailExportDeletePassed
     installedApiRestartPersistencePassed = $bridgeProbeResult.apiAcceptance.restartPersistencePassed
+    installedSingleInstancePassed = $installedSingleInstancePassed
+    installedServiceExitedAfterHostCrash = $installedServiceExitedAfterHostCrash
+    installedReadyFileRemovedAfterHostCrash = $installedReadyFileRemovedAfterHostCrash
     installedBridgeTokenPresentInRendererStorageGlobalsConsoleArgumentsReadinessOrServiceOutput =
         $bridgeProbeResult.tokenPresentInRendererSnapshot -or
         $bridgeProbeResult.tokenPresentInConsoleMessages -or

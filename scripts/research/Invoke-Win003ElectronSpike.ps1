@@ -109,6 +109,8 @@ const { pathToFileURL } = require("node:url");
 const { app, BrowserWindow, ipcMain } = require("electron");
 
 if (require("electron-squirrel-startup")) app.quit();
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) app.quit();
 
 const indexPath = path.join(__dirname, "web", "index.html");
 const trustedDocumentUrl = pathToFileURL(indexPath).toString();
@@ -214,7 +216,21 @@ function sqliteProbe() {
 
 const probeIndex = process.argv.indexOf("--win003-probe-output");
 const bridgeProbeIndex = process.argv.indexOf("--win003-bridge-output");
-if (bridgeProbeIndex >= 0) {
+const crashProbeIndex = process.argv.indexOf("--win003-crash-probe-output");
+if (crashProbeIndex >= 0) {
+  app.whenReady().then(async () => {
+    await startRealService();
+    fs.writeFileSync(process.argv[crashProbeIndex + 1], JSON.stringify({
+      hostProcessId: process.pid,
+      serviceProcessId: serviceProcess.pid,
+      serviceReadyFile: path.join(serviceLab, "ready.json")
+    }));
+  }).catch((error) => {
+    console.error(`crash-probe-failed:${error.message}`);
+    if (serviceProcess?.exitCode === null) serviceProcess.kill();
+    app.exit(71);
+  });
+} else if (bridgeProbeIndex >= 0) {
   app.whenReady().then(async () => {
     await startRealService();
     const serverRoot = path.join(process.resourcesPath, "server");
@@ -477,6 +493,40 @@ $bridgePassed =
     $bridgeResult.sessionStorageEntryCount -eq 0
 if (-not $bridgePassed) { throw 'Packaged Electron bridge isolation acceptance checks failed' }
 
+$crashProbePath = Join-Path $runnerTemp 'win003-electron-package-crash-probe.json'
+$duplicateProbePath = Join-Path $runnerTemp 'win003-electron-package-duplicate-probe.json'
+$crashProbe = Start-Process -FilePath $hostExecutable.FullName -ArgumentList @('--win003-crash-probe-output', "`"$crashProbePath`"") -PassThru -WindowStyle Hidden
+$crashDeadline = [DateTimeOffset]::UtcNow.AddSeconds(15)
+while (-not $crashProbe.HasExited -and -not (Test-Path -LiteralPath $crashProbePath) -and [DateTimeOffset]::UtcNow -lt $crashDeadline) {
+    Start-Sleep -Milliseconds 50
+    $crashProbe.Refresh()
+}
+if (-not (Test-Path -LiteralPath $crashProbePath)) {
+    Stop-Process -Id $crashProbe.Id -Force -ErrorAction SilentlyContinue
+    throw 'Packaged Electron crash probe did not become ready'
+}
+$crashState = Get-Content -Raw -LiteralPath $crashProbePath | ConvertFrom-Json
+$duplicateProbe = Start-Process -FilePath $hostExecutable.FullName -ArgumentList @('--win003-probe-output', "`"$duplicateProbePath`"") -PassThru -WindowStyle Hidden
+if (-not $duplicateProbe.WaitForExit(10000)) {
+    Stop-Process -Id $duplicateProbe.Id -Force -ErrorAction SilentlyContinue
+    throw 'Packaged Electron duplicate instance did not exit'
+}
+$singleInstancePassed = -not (Test-Path -LiteralPath $duplicateProbePath)
+Stop-Process -Id ([int] $crashState.hostProcessId) -Force -ErrorAction Stop
+$serviceExitedAfterHostCrash = $false
+foreach ($attempt in 1..100) {
+    if (-not (Get-Process -Id ([int] $crashState.serviceProcessId) -ErrorAction SilentlyContinue)) {
+        $serviceExitedAfterHostCrash = $true
+        break
+    }
+    Start-Sleep -Milliseconds 100
+}
+$readyFileRemovedAfterHostCrash = -not (Test-Path -LiteralPath ([string] $crashState.serviceReadyFile))
+if (-not $singleInstancePassed -or -not $serviceExitedAfterHostCrash -or -not $readyFileRemovedAfterHostCrash) {
+    Stop-Process -Id ([int] $crashState.serviceProcessId) -Force -ErrorAction SilentlyContinue
+    throw 'Packaged Electron single-instance or parent-death acceptance failed'
+}
+
 $runs = @()
 foreach ($run in 1..5) {
     $readyPath = Join-Path $runnerTemp "win003-electron-ready-$run.json"
@@ -553,6 +603,9 @@ $measurement = [ordered]@{
     packagedApiOrganizationIsolationPassed = $bridgeResult.apiAcceptance.organizationIsolationPassed
     packagedApiMediaLifecyclePassed = $bridgeResult.apiAcceptance.mediaOriginalThumbnailExportDeletePassed
     packagedApiRestartPersistencePassed = $bridgeResult.apiAcceptance.restartPersistencePassed
+    packagedSingleInstancePassed = $singleInstancePassed
+    packagedServiceExitedAfterHostCrash = $serviceExitedAfterHostCrash
+    packagedReadyFileRemovedAfterHostCrash = $readyFileRemovedAfterHostCrash
     runs = $runs
     meanRendererReadyMs = [math]::Round(($runs.rendererReadyMs | Measure-Object -Average).Average, 1)
     medianRendererReadyMs = ($runs.rendererReadyMs | Sort-Object)[2]
