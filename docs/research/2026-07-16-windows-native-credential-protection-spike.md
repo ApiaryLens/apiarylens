@@ -287,6 +287,17 @@ keep-data/reinstall/remove-all mechanics. Final user-facing choice and confirmat
 UX, backup/restore, account-change, retail-profile, and production-signing evidence
 remain open.
 
+Protected-backup follow-on run
+[`29558987057`](https://github.com/ApiaryLens/apiarylens/actions/runs/29558987057)
+at commit `5d59989274fd5bfa763fb48d70d6374785c7e1c0` repeated the exact
+installed lifecycle, deleted the active root after reinstall, restored the retained
+DPAPI-protected ciphertext backup, and decrypted the same versioned purpose envelope
+before remove-all. No plaintext, ciphertext, entropy, or secret hash entered
+evidence. This closes same-user/same-computer protected backup restore mechanics;
+the existing separate-machine DPAPI run proves denial, while guided cross-machine
+UX, Windows-account changes, final UI, retail profiles, and production signing
+remain open.
+
 Primary source:
 
 - [Electron `safeStorage`](https://www.electronjs.org/docs/latest/api/safe-storage)
@@ -354,8 +365,8 @@ Primary sources:
    keep-data, and remove-all state machine now passes. The real API
    issue/refresh/revocation/restart/sign-out lifecycle also passes. Restore,
    account-change, and final installer-choice UX evidence remain. Exact default
-   keep-data, same-user reinstall/decrypt, explicit remove-all, and second-uninstall
-   mechanics now pass.
+   keep-data, same-user reinstall/decrypt, protected backup restore, explicit
+   remove-all, and second-uninstall mechanics now pass.
 5. Recording ACL, roaming-profile, Remote Desktop, multiple Windows session, and
    locked-workstation behavior on supported retail Windows profiles.
 6. Completing the supported Electron API, protected-file, dependency, license, and

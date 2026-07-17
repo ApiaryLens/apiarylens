@@ -118,6 +118,14 @@ second uninstall removed its registration and host. This advances conditions 4 a
 6. Final user-facing choice/confirmation UX and updater/cache cleanup policy remain
 open.
 
+Run
+[`29558987057`](https://github.com/ApiaryLens/apiarylens/actions/runs/29558987057)
+then deleted the active protected standalone root after reinstall, restored it from
+the retained DPAPI-protected backup, and decrypted the same purpose/version envelope
+before remove-all. This closes same-user protected-backup mechanics; guided
+cross-user/computer failure, Windows-account changes, final UX, retail profiles, and
+production signing remain open.
+
 ## Proposed Decision
 
 Use **Electron** as the initial Windows Preview host. Use a **signed per-user
@@ -273,8 +281,8 @@ must replace it.
    revocation, sign-out, keep-data, and remove-all state machine now pass. Real
    server issue/refresh/revocation/restart/sign-out now passes as well. Restore and
    account-change behavior, final installer-choice UX, and owner acceptance stay
-   open. Exact default keep-data, same-user reinstall/decrypt, explicit remove-all,
-   and second-uninstall mechanics now pass.
+   open. Exact default keep-data, same-user reinstall/decrypt, protected backup
+   restore, explicit remove-all, and second-uninstall mechanics now pass.
 5. Resolve or reject the Forge/Squirrel exotic dependency under the repository
    supply-chain policy; reconcile every runtime/build component to an allowlisted
    license and install complete Apache-2.0 and third-party notices.

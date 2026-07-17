@@ -514,6 +514,15 @@ user-facing choice, warning, confirmation, cancellation, accessibility, or recov
 UX. Updater/cache residue outside product data remains a separately measured cleanup
 and policy gate.
 
+Protected-backup follow-on run
+[`29558987057`](https://github.com/ApiaryLens/apiarylens/actions/runs/29558987057)
+repeated the two-cycle lifecycle, deleted the active standalone root after reinstall,
+restored it from the retained DPAPI-protected backup, and decrypted the same
+versioned purpose envelope before remove-all. The exact setup SHA-256 was
+`083882BBD26DE553CB6EFBB4F3049825B86949682F6475A1E59E7B7AC036EA05`.
+All existing API, host-recovery, credential, retention, remove-all, and uninstall
+checks remained green.
+
 ### Electron package-transition evidence
 
 Exact-artifact replay
