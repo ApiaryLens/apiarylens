@@ -267,7 +267,7 @@ $measurement = [ordered]@{
     meanPeakWorkingSetMiB = [math]::Round(($runs.peakWorkingSetMiB | Measure-Object -Average).Average, 1)
     meanPeakPrivateMiB = [math]::Round(($runs.peakPrivateMiB | Measure-Object -Average).Average, 1)
     limitations = @(
-        'Unsigned research build; not a release artifact',
+        $(if ($env:WIN003_CERT_THUMBPRINT) { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research build; not a release artifact' }),
         'WebView process creation is a startup proxy, not a DOM-ready event',
         'Hosted runner has a warm shared WebView2 runtime',
         'Installer was built but not installed in this pass',

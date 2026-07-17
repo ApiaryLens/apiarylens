@@ -253,7 +253,7 @@ $measurement = [ordered]@{
     meanWorkingSetMiB = [math]::Round(($runs.workingSetMiB | Measure-Object -Average).Average, 1)
     meanPrivateMiB = [math]::Round(($runs.privateMiB | Measure-Object -Average).Average, 1)
     limitations = @(
-        'Unsigned research build; not a release artifact',
+        $(if ($env:WINDOWS_CERTIFICATE_FILE) { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research build; not a release artifact' }),
         'Hosted Windows runner, not a retail family computer',
         'No real embedded ApiaryLens service or user data',
         'Warm filesystem/runtime effects after the first launch'

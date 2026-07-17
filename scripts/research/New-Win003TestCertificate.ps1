@@ -29,9 +29,16 @@ $certificate = $request.CreateSelfSigned([DateTimeOffset]::UtcNow.AddMinutes(-5)
 [System.IO.File]::WriteAllBytes($cerPath, $certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert))
 
 $myStore = [System.Security.Cryptography.X509Certificates.X509Store]::new('My', [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser)
+$persistedCertificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
+    $pfxPath,
+    $passwordText,
+    [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::UserKeySet -bor
+        [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::PersistKeySet -bor
+        [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable
+)
 try {
     $myStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
-    $myStore.Add($certificate)
+    $myStore.Add($persistedCertificate)
 } finally {
     $myStore.Close()
 }
