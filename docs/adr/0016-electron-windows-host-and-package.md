@@ -152,6 +152,25 @@ administrator reset, local-to-Microsoft-account, domain/Entra, retail-profile,
 guided recovery, and production-signing evidence remain open.
 
 Run
+[`29567849241`](https://github.com/ApiaryLens/apiarylens/actions/runs/29567849241)
+then reset the same disposable account's password through the administrator path
+after the normal password-change round trip. The same SID was denied decryption of
+its prior `safeStorage` fixture, different-user denial remained intact, and complete
+account/profile/lab cleanup passed. Setup SHA-256 was
+`80EB4E9FE5117107EC0E54786FEC612E9FA3E802BB13EE80E65832902EC2D41C`.
+The implementation consequence is explicit: preserve local hive data and require
+guided reauthentication or recovery when protected credentials become unreadable;
+never convert credential loss into data deletion or weaker authorization. Windows
+Hello PIN, Microsoft-account/domain/Entra transitions, retail profiles, final UX,
+and production signing remain open.
+
+The exact commit's first attempt
+[`29567508045`](https://github.com/ApiaryLens/apiarylens/actions/runs/29567508045)
+timed out in the unchanged packaged bridge probe before credential execution; the
+exact rerun passed. This remains input to the open startup-timeout/crash-loop and
+retail-profile gates rather than acceptance evidence for them.
+
+Run
 [`29563619105`](https://github.com/ApiaryLens/apiarylens/actions/runs/29563619105)
 then forced `@electron/rebuild` 4.2.0 through an integrity-pinned npm registry lock
 entry and failed the release path for any `git+ssh` or `git+https` reference. The

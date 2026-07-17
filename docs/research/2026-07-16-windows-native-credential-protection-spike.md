@@ -346,6 +346,32 @@ local-to-Microsoft-account conversion, administrator password reset, domain or
 Entra account transitions, roaming profiles, a new computer, guided recovery UX,
 retail-device UAT, or production signing.
 
+Installed administrator-reset follow-on run
+[`29567849241`](https://github.com/ApiaryLens/apiarylens/actions/runs/29567849241)
+at commit `ff997f6b3f2d57c036df453d39763b832ff58ad8` repeated the exact
+clean-installed lifecycle. After the normal password-change round trip passed, the
+runner reset the same disposable local account's password through the administrator
+`Set-LocalUser` path. The same SID could no longer decrypt the existing
+`safeStorage` fixture, while different-user denial and complete account, profile,
+copied-host, fixture, and log cleanup still passed. The setup SHA-256 was
+`80EB4E9FE5117107EC0E54786FEC612E9FA3E802BB13EE80E65832902EC2D41C`.
+
+This proves that a normal password change and an administrator reset are distinct
+recovery events. The selected design must preserve hive data, discard or quarantine
+the unreadable protected credential, and guide the user through reauthentication or
+an appropriate recovery path. It must not interpret credential loss as permission
+to delete local data or weaken server authorization. This hosted result does not
+replace Windows Hello PIN, Microsoft-account, domain/Entra, retail-device, or final
+guided-recovery UAT.
+
+The immediately preceding attempt
+[`29567508045`](https://github.com/ApiaryLens/apiarylens/actions/runs/29567508045)
+produced the installer but the unchanged packaged bridge probe exceeded its
+30-second startup bound before the credential test ran. The exact-commit rerun
+passed that bridge and the complete lifecycle. The isolated timeout remains evidence
+for the open startup-timeout/crash-loop and retail-profile gates rather than being
+treated as a credential-test failure.
+
 Primary source:
 
 - [Electron `safeStorage`](https://www.electronjs.org/docs/latest/api/safe-storage)
@@ -415,9 +441,10 @@ Primary sources:
    account-change, and final installer-choice UX evidence remain. Exact default
    keep-data, same-user reinstall/decrypt, protected backup restore, installed
    different-user denial, explicit remove-all, and second-uninstall mechanics now
-   pass. A normal local password change under the same SID now passes. Windows Hello
-   PIN, administrator password reset, local-to-Microsoft-account transitions, and
-   the guided recovery UX remain open.
+   pass. A normal local password change under the same SID now passes; an
+   administrator reset now proves decryption denial under that same SID. Windows
+   Hello PIN and local-to-Microsoft-account transitions plus the guided reset-
+   recovery UX remain open.
 5. Recording ACL, roaming-profile, Remote Desktop, multiple Windows session, and
    locked-workstation behavior on supported retail Windows profiles.
 6. Completing the supported Electron API, protected-file, dependency, license, and
