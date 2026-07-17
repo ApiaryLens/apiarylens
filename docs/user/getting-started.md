@@ -121,6 +121,14 @@ SSH key, deployment secret, or recovery code. Authentication happens in the Wind
 client after import. Returning to standalone mode preserves the prior standalone
 data; it does not silently copy newer remote-only records back into that database.
 
+An owner using Windows standalone can choose **Account and build → Create Windows
+backup**. Select a destination for the `.albackup` file and keep it somewhere other
+than the computer running ApiaryLens. The application briefly restarts its private
+local service so the SQLite database and original photos form one consistent,
+checksum-verified archive. Windows-protected application credentials are excluded.
+Restore remains a deliberate recovery operation because it replaces current data
+and signs existing sessions out.
+
 ## Photos
 
 Selected photos and thumbnails are staged locally first. ApiaryLens uploads them

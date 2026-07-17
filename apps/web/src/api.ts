@@ -10,6 +10,9 @@ type DesktopBootstrapBridge = {
     organizationName: string;
     timezone: string;
   }): Promise<BootstrapSession>;
+  createStandaloneBackup?(): Promise<
+    { status: 'canceled' } | { status: 'saved'; path: string; createdAt: string; files: number }
+  >;
 };
 
 function desktopBridge(): DesktopBootstrapBridge | undefined {
@@ -37,6 +40,12 @@ async function noContent(url: string, init?: RequestInit): Promise<void> {
 }
 
 export const api = {
+  standaloneBackupAvailable: () => typeof desktopBridge()?.createStandaloneBackup === 'function',
+  createStandaloneBackup: async () => {
+    const create = desktopBridge()?.createStandaloneBackup;
+    if (!create) throw new Error('Standalone backup is available only in ApiaryLens for Windows');
+    return create();
+  },
   bootstrapStatus: async () => {
     const status = await json<{ available: boolean; requiresToken?: boolean }>(
       '/api/v1/bootstrap/status',

@@ -2764,6 +2764,9 @@ function VersionView({
   onClear: () => void;
 }) {
   const [backendBuild, setBackendBuild] = useState<BuildIdentity>();
+  const [backupWorking, setBackupWorking] = useState(false);
+  const [backupMessage, setBackupMessage] = useState('');
+  const standaloneBackup = api.standaloneBackupAvailable();
   useEffect(() => {
     void fetch('/health', { cache: 'no-store' })
       .then((response) => (response.ok ? response.json() : undefined))
@@ -2855,15 +2858,19 @@ function VersionView({
             <p className="eyebrow">Data protection</p>
             <h2>Backup and recovery</h2>
             <p>
-              This device's offline working copy is not a server backup. A full export gives you a
-              portable copy of family records and original photos. A verified server backup and
-              restore are performed through Scout Bee for the{' '}
-              {backendBuild?.deploymentProfile ?? 'current'} deployment profile.
+              {standaloneBackup
+                ? 'Create a verified portable backup of this Windows database and its original photos. Protected credentials are never added to the archive.'
+                : `This device's offline working copy is not a server backup. A full export gives you a portable copy of family records and original photos. Verified backup and restore are performed through Scout Bee for the ${backendBuild?.deploymentProfile ?? 'current'} deployment profile.`}
             </p>
           </div>
           <dl>
             <dt>Last verified server backup</dt>
-            <dd>Open Scout Bee on the operator computer to see its protected operation history.</dd>
+            <dd>
+              {backupMessage ||
+                (standaloneBackup
+                  ? 'No backup has been created during this app session.'
+                  : 'Open Scout Bee on the operator computer to see its protected operation history.')}
+            </dd>
             <dt>Restore prerequisites</dt>
             <dd>
               Compatible verified archive, a pre-restore recovery backup, maintenance access, and a
@@ -2872,6 +2879,33 @@ function VersionView({
             </dd>
           </dl>
           <div className="button-row">
+            {standaloneBackup && (
+              <button
+                className="button primary"
+                disabled={backupWorking}
+                onClick={() => {
+                  setBackupWorking(true);
+                  setBackupMessage('');
+                  void api
+                    .createStandaloneBackup()
+                    .then((result) => {
+                      if (result.status === 'saved') {
+                        setBackupMessage(
+                          `Verified ${result.files} files and saved the backup at ${new Date(result.createdAt).toLocaleString()}.`,
+                        );
+                      }
+                    })
+                    .catch((caught: unknown) =>
+                      setBackupMessage(
+                        caught instanceof Error ? caught.message : 'Backup could not be created.',
+                      ),
+                    )
+                    .finally(() => setBackupWorking(false));
+                }}
+              >
+                {backupWorking ? 'Creating verified backup…' : 'Create Windows backup'}
+              </button>
+            )}
             <a className="button primary link-button" href="/api/v1/export/full">
               Download full export
             </a>

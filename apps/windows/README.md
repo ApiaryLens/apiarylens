@@ -12,6 +12,8 @@ client. It is no longer an empty placeholder. The current implementation provide
 - exact-origin navigation, popup/webview denial, permission denial, and a narrow preload bridge;
 - graceful service shutdown, parent-death supervision, stale-readiness handling, and bounded kill;
 - native owner bootstrap, so the deployment bootstrap credential never enters renderer JavaScript;
+- an owner-initiated verified standalone backup containing SQLite and original media,
+  with per-file SHA-256 checks and no protected credential material;
 - focused contract, path, credential, and renderer-boundary tests; and
 - a noninteractive smoke mode that starts the real service and records secret-free evidence.
 
@@ -31,6 +33,8 @@ application window; the smoke command does not.
 
 This is production application code, not a signed release. ADR 0016 remains Proposed
 until its owner and physical-device gates pass. Packaging, signing, attestation,
-update/rollback, retail Windows profiles, backup/restore UX, connected mode, and
-standalone-to-connected migration remain release-blocking work. The research scripts
+update/rollback, retail Windows profiles, verified restore UX, and
+standalone-to-connected data migration remain release-blocking work. Connected-mode
+profile import and verified standalone backup are implemented but still require
+released-artifact physical UAT. The research scripts
 under `scripts/research` remain evidence inputs and are not shipped by this workspace.

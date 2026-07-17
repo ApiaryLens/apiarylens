@@ -4,14 +4,16 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import {
   app,
   BrowserWindow,
+  dialog,
   ipcMain,
   safeStorage,
   session,
   type OnBeforeSendHeadersListenerDetails,
 } from 'electron';
-import { bootstrapRequestSchema } from '@apiarylens/contracts';
+import { bootstrapRequestSchema, createBuildIdentity } from '@apiarylens/contracts';
 import {
   desktopBridgeVersion,
+  type DesktopBackupResult,
   type DesktopBootstrapSession,
   type DesktopRuntimeStatus,
 } from './contracts.js';
@@ -31,6 +33,7 @@ import {
   saveConnectionProfile,
   verifyConnectedBackend,
 } from './connected-profile.js';
+import { createStandaloneBackup } from './standalone-backup.js';
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
 const preloadPath = join(currentDirectory, 'preload.cjs');
@@ -135,21 +138,23 @@ async function start(): Promise<void> {
   const smokeArgument = process.argv.find((argument) => argument.startsWith('--desktop-smoke='));
   const desktopSession = session.fromPartition('persist:apiarylens-windows');
   desktopSession.webRequest.onBeforeSendHeaders(
-    { urls: [`${running.endpoint}/*`] },
+    { urls: ['http://127.0.0.1:*/*'] },
     (details, callback) => {
       const typedDetails = details as OnBeforeSendHeadersListenerDetails & {
         webContentsId?: number;
       };
       const requestHeaders = { ...details.requestHeaders };
+      const active = supervisor?.running;
       if (
+        active &&
         shouldInjectControlHeader(
           details.url,
-          running.endpoint,
+          active.endpoint,
           typedDetails.webContentsId,
           trustedWebContents,
         )
       ) {
-        requestHeaders[desktopControlHeader] = running.controlToken;
+        requestHeaders[desktopControlHeader] = active.controlToken;
       }
       callback({ requestHeaders });
     },
@@ -159,18 +164,22 @@ async function start(): Promise<void> {
     const senderFrame = event.senderFrame;
     if (!senderFrame) throw new Error('Desktop operation has no sender frame');
     const senderUrl = senderFrame.url;
+    const active = supervisor?.running;
     if (
+      !active ||
       !trustedWebContents.has(event.sender.id) ||
       senderFrame !== event.sender.mainFrame ||
-      !isTrustedRendererUrl(senderUrl, running.endpoint)
+      !isTrustedRendererUrl(senderUrl, active.endpoint)
     ) {
       throw new Error('Untrusted renderer requested a desktop operation');
     }
   };
   ipcMain.handle('apiarylens:runtime-status', async (event): Promise<DesktopRuntimeStatus> => {
     assertTrustedSender(event);
-    const response = await fetch(`${running.endpoint}/health`, {
-      headers: { [desktopControlHeader]: running.controlToken, origin: running.endpoint },
+    const active = supervisor?.running;
+    if (!active) throw new Error('Standalone service is unavailable');
+    const response = await fetch(`${active.endpoint}/health`, {
+      headers: { [desktopControlHeader]: active.controlToken, origin: active.endpoint },
       signal: AbortSignal.timeout(2_000),
     });
     if (!response.ok) throw new Error(`Standalone service health failed (${response.status})`);
@@ -185,13 +194,15 @@ async function start(): Promise<void> {
     'apiarylens:bootstrap-owner',
     async (event, untrustedInput: unknown): Promise<DesktopBootstrapSession> => {
       assertTrustedSender(event);
+      const active = supervisor?.running;
+      if (!active) throw new Error('Standalone service is unavailable');
       const input = bootstrapRequestSchema.omit({ bootstrapToken: true }).parse(untrustedInput);
-      const response = await desktopSession.fetch(`${running.endpoint}/api/v1/bootstrap`, {
+      const response = await desktopSession.fetch(`${active.endpoint}/api/v1/bootstrap`, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          [desktopControlHeader]: running.controlToken,
-          origin: running.endpoint,
+          [desktopControlHeader]: active.controlToken,
+          origin: active.endpoint,
         },
         body: JSON.stringify({ ...input, bootstrapToken: secrets.bootstrapToken }),
       });
@@ -200,6 +211,42 @@ async function start(): Promise<void> {
         throw new Error('message' in body && body.message ? body.message : 'Owner setup failed');
       }
       return body as DesktopBootstrapSession;
+    },
+  );
+  ipcMain.handle(
+    'apiarylens:create-standalone-backup',
+    async (event): Promise<DesktopBackupResult> => {
+      assertTrustedSender(event);
+      if (!primaryWindow || !supervisor) throw new Error('Standalone host is unavailable');
+      const selected = await dialog.showSaveDialog(primaryWindow, {
+        title: 'Save verified ApiaryLens backup',
+        defaultPath: join(
+          paths.backups,
+          `apiarylens-${new Date().toISOString().replaceAll(':', '-').replaceAll('.', '-')}.albackup`,
+        ),
+        filters: [{ name: 'ApiaryLens backup', extensions: ['albackup'] }],
+        properties: ['createDirectory', 'showOverwriteConfirmation'],
+      });
+      if (selected.canceled || !selected.filePath) return { status: 'canceled' };
+      await supervisor.stop();
+      let result: DesktopBackupResult;
+      try {
+        const identity = createBuildIdentity({ deploymentProfile: 'development' });
+        const manifest = createStandaloneBackup(paths, selected.filePath, {
+          productVersion: identity.productVersion,
+          databaseMigration: identity.databaseMigration,
+        });
+        result = {
+          status: 'saved',
+          path: selected.filePath,
+          createdAt: manifest.createdAt,
+          files: manifest.files.length,
+        };
+      } finally {
+        const restarted = await supervisor.start();
+        setTimeout(() => void primaryWindow?.loadURL(restarted.endpoint), 250);
+      }
+      return result;
     },
   );
 
