@@ -139,6 +139,11 @@ Follow-up run
 passed idempotent tombstone replay and the full accumulated scenario set on the
 Windows hosted runner.
 
+Follow-up run
+[`29551569039`](https://github.com/ApiaryLens/apiarylens/actions/runs/29551569039)
+passed the 20,000-record annual reference workload, 200 bounded batches, and the full
+accumulated suite on the Windows hosted runner in 66 seconds.
+
 ## Proposed migration protocol
 
 ### Durable objects
