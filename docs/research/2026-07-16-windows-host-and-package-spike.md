@@ -11,7 +11,8 @@ SQLite recovery, SBOM inventory, and automated shared-UI accessibility baselines
 are complete. Packaged and clean-installed Electron preload/main-process isolation
 now starts the real portable ApiaryLens service for a protected health probe and
 disposable SQLite/media creation. Exact API, organization-isolation, media,
-credential, recovery, and current-user uninstall/reinstall replay now passes.
+credential, recovery, current-user uninstall/reinstall, shared-window service,
+IPv6-loopback rejection, and environment-proxy non-interception replay now passes.
 Retail Windows profiles, host accessibility, integrated power-loss behavior,
 migration-ledger checksum rejection, production signing and attestation, final
 binary license review, and owner ADR acceptance remain required before the spike
@@ -1064,7 +1065,11 @@ implementations in parallel.
    `SQLITE_FULL`, ACL-denied startup, bounded readiness timeout, three-attempt crash
    budget, and explicit-retry recovery now pass. Production timeout/backoff values,
    recovery UX, physical-volume-full behavior, Job Object policy, and the broader
-   Windows lifecycle matrix remain open in the actual host.
+   Windows lifecycle matrix remain open in the actual host. Exact packaged and
+   installed run `29571215352` additionally proves two trusted windows share one
+   service PID, an untrusted window remains rejected, IPv6 loopback cannot reach the
+   explicit IPv4 listener, and black-hole environment proxy variables do not divert
+   the host-owned local request.
 3. Verify Windows 11 and the chosen Windows 10 baseline in clean user profiles with
    no developer tools. Include a profile where WebView2 is absent or its updater is
    policy-disabled.

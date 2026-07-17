@@ -12,11 +12,13 @@ release-blocking listener defect: the current server binds to the wildcard inter
 while logging a loopback URL. Credential protection and migration failure recovery
 now have separate measured evidence, and Windows path-security evidence proves a
 current-user-plus-SYSTEM ACL, cross-user access denial, traversal rejection, and
-junction/reparse rejection. Host-to-renderer secret delivery, host-specific bridge
-validation, Job Object and Windows lifecycle behavior, the remaining failure matrix,
-and threat review remain before the research gate can close. A disposable wrapper
-around the real API proves the generic loopback, authentication, ownership, and
-parent-supervision shape.
+junction/reparse rejection. Exact packaged and installed Electron evidence now also
+proves that two trusted windows share one service process, IPv6 loopback cannot reach
+the IPv4-only listener, and a black-hole `HTTP_PROXY`/`HTTPS_PROXY` environment does
+not intercept the host-owned loopback fetch. Windows system-proxy/firewall policy,
+retail lifecycle behavior, the remaining failure matrix, and final threat review
+remain before the research gate can close. A disposable wrapper around the real API
+proves the generic loopback, authentication, ownership, and parent-supervision shape.
 
 ## Decision question
 
@@ -274,6 +276,38 @@ before writing data, that every media/database operation uses the safe resolver,
 that roaming profiles, Remote Desktop, locked workstations, sign-out, and shutdown
 preserve the intended behavior. Those are integration and lifecycle gates.
 
+### Shared-window and loopback-network evidence
+
+Core commit `60cd0ea` added packaged and clean-installed assertions for the remaining
+multi-window and basic loopback-network questions. Exact workflow
+[29571215352](https://github.com/ApiaryLens/apiarylens/actions/runs/29571215352)
+passed both the installer build and clean-install lifecycle jobs on a fresh hosted
+Windows runner.
+
+The downloaded `win003-electron-clean-install-evidence/lifecycle.json` identifies
+source commit `60cd0eabfee586a05b4aaf12a2f400a801b5bd84` and records all of the
+following as `true`:
+
+- `installedRealServiceBridgeProbePassed`;
+- `installedBridgeTrustedWindowsShareOneService`;
+- `installedBridgeIpv6LoopbackRejected`;
+- `installedBridgeEnvironmentProxyDoesNotInterceptLoopbackFetch`;
+- `installedSingleInstancePassed`; and
+- `installedApiAcceptancePassed`.
+
+The host opened two separately sandboxed, context-isolated trusted windows. Both
+received a typed health result through the narrow preload bridge while the service
+PID remained unchanged; the separate untrusted document remained rejected. A direct
+request to `[::1]` on the assigned service port failed while the service continued to
+report an explicit `127.0.0.1` readiness address. Setting black-hole `HTTP_PROXY` and
+`HTTPS_PROXY` values after startup did not divert the host-owned Node fetch from the
+authenticated loopback endpoint.
+
+This is evidence for the selected host transport, not a claim about every Windows
+network policy. A managed Windows system proxy/PAC configuration, firewall policy,
+IPv6-only device policy, VPN/filter driver, Remote Desktop, and retail-device matrix
+remain physical-profile work.
+
 ## Threat analysis
 
 | Threat | Required control | Current evidence / gap |
@@ -389,8 +423,11 @@ release gate.
    recovery controls; do not add a native binding absent a reproduced orphan or a
    maintained package-native containment primitive.
 5. Testing multiple windows, IPv6 loopback, local proxy settings, and firewall policy
-   restrictions. Rapid competing launch and stale-readiness replacement are proven;
-   the operating-system-assigned port design avoids selecting a colliding fixed port.
+   restrictions. Two trusted windows sharing one service, untrusted-window rejection,
+   IPv6-loopback rejection, environment-proxy non-interception, rapid competing
+   launch, and stale-readiness replacement are proven. Managed Windows system-proxy,
+   PAC, firewall, VPN/filter-driver, and IPv6-only policy profiles remain; the
+   operating-system-assigned port design avoids selecting a colliding fixed port.
 6. Threat-reviewing the selected host bridge and documenting the accepted local
    adversary boundary in the Windows security design and follow-on ADR.
 
