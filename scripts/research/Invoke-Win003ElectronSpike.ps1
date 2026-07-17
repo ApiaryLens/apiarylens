@@ -4,6 +4,9 @@ param(
     [string] $WebDist,
 
     [Parameter(Mandatory)]
+    [string] $ServerDeploy,
+
+    [Parameter(Mandatory)]
     [string] $OutputDirectory,
 
     [ValidatePattern('^\d+\.\d+\.\d+$')]
@@ -17,6 +20,10 @@ Set-StrictMode -Version Latest
 # under the hosted runner's temporary directory and is never a product scaffold.
 
 $webDistPath = (Resolve-Path -LiteralPath $WebDist).Path
+$serverDeployPath = (Resolve-Path -LiteralPath $ServerDeploy).Path
+if ((Split-Path -Leaf $serverDeployPath) -ne 'server') {
+    throw 'The disposable portable-server deployment directory must be named server'
+}
 $outputPath = [System.IO.Path]::GetFullPath($OutputDirectory)
 $runnerTemp = [System.IO.Path]::GetFullPath($env:RUNNER_TEMP)
 if (-not $outputPath.StartsWith($runnerTemp, [System.StringComparison]::OrdinalIgnoreCase)) {
@@ -63,6 +70,7 @@ module.exports = {
   packagerConfig: {
     asar: true,
     executableName: "ApiaryLensElectronResearch",
+    extraResource: [process.env.WIN003_SERVER_DEPLOY],
     windowsSign: process.env.WINDOWS_CERTIFICATE_FILE ? true : false
   },
   makers: [
@@ -93,7 +101,9 @@ contextBridge.exposeInMainWorld(
 
 $main = @'
 const crypto = require("node:crypto");
+const { spawn } = require("node:child_process");
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const { app, BrowserWindow, ipcMain } = require("electron");
@@ -103,20 +113,84 @@ if (require("electron-squirrel-startup")) app.quit();
 const indexPath = path.join(__dirname, "web", "index.html");
 const trustedDocumentUrl = pathToFileURL(indexPath).toString();
 const controlToken = crypto.randomBytes(32).toString("base64url");
+const bootstrapToken = crypto.randomBytes(32).toString("base64url");
+const authRootSecret = crypto.randomBytes(48).toString("base64url");
+const allowedOrigin = "file://apiarylens-electron-research";
 let bridgeInvocationCount = 0;
 let bridgeArgumentCount = 0;
+let serviceEndpoint;
+let serviceReady;
+let serviceProcess;
+let serviceLab;
+let serviceOutput = "";
+
+const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function startRealService() {
+  serviceLab = fs.mkdtempSync(path.join(os.tmpdir(), "apiarylens-win003-electron-service-"));
+  const readyFile = path.join(serviceLab, "ready.json");
+  const serverRoot = path.join(process.resourcesPath, "server");
+  const serviceScript = path.join(serverRoot, "desktop-wrapper.mjs");
+  serviceProcess = spawn(process.execPath, [serviceScript], {
+    cwd: serverRoot,
+    windowsHide: true,
+    stdio: ["ignore", "pipe", "pipe"],
+    env: {
+      ...process.env,
+      ELECTRON_RUN_AS_NODE: "1",
+      APIARYLENS_CONTROL_TOKEN: controlToken,
+      APIARYLENS_ALLOWED_ORIGIN: allowedOrigin,
+      APIARYLENS_DATA_DIRECTORY: path.join(serviceLab, "data"),
+      APIARYLENS_READY_FILE: readyFile,
+      APIARYLENS_PARENT_PID: String(process.pid),
+      APIARYLENS_INSTANCE_NAME: `ApiaryLens-WIN003-Electron-${crypto.randomUUID()}`,
+      APIARYLENS_BOOTSTRAP_TOKEN: bootstrapToken,
+      APIARYLENS_AUTH_ROOT_SECRET: authRootSecret
+    }
+  });
+  serviceProcess.stdout.on("data", (chunk) => { serviceOutput += chunk.toString(); });
+  serviceProcess.stderr.on("data", (chunk) => { serviceOutput += chunk.toString(); });
+
+  for (let attempt = 0; attempt < 150; attempt += 1) {
+    if (fs.existsSync(readyFile)) {
+      serviceReady = JSON.parse(fs.readFileSync(readyFile, "utf8"));
+      serviceEndpoint = `http://127.0.0.1:${serviceReady.port}`;
+      return;
+    }
+    if (serviceProcess.exitCode !== null) {
+      throw new Error(`real-service-exited-${serviceProcess.exitCode}:${serviceOutput}`);
+    }
+    await delay(100);
+  }
+  serviceProcess.kill();
+  throw new Error("real-service-readiness-timeout");
+}
+
+async function stopRealService() {
+  if (!serviceProcess || serviceProcess.exitCode !== null) return;
+  await fetch(`${serviceEndpoint}/__desktop/shutdown`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${controlToken}`, origin: allowedOrigin }
+  });
+  for (let attempt = 0; attempt < 100 && serviceProcess.exitCode === null; attempt += 1) {
+    await delay(50);
+  }
+  if (serviceProcess.exitCode === null) serviceProcess.kill();
+}
 
 ipcMain.handle("apiarylens:desktop-health", async (event, ...args) => {
   bridgeArgumentCount += args.length;
   if (event.senderFrame.url !== trustedDocumentUrl) throw new Error("untrusted-sender");
   bridgeInvocationCount += 1;
 
-  // Models the main process attaching its process-scoped service credential. The
-  // renderer sends no argument and receives only a typed, non-secret result.
-  const attached = Buffer.from(controlToken, "utf8");
-  const expected = Buffer.from(controlToken, "utf8");
-  if (!crypto.timingSafeEqual(attached, expected)) throw new Error("internal-auth-failed");
-  return Object.freeze({ status: 200, serviceProtocolVersion: 1 });
+  if (!serviceEndpoint) throw new Error("real-service-not-ready");
+  const response = await fetch(`${serviceEndpoint}/health`, {
+    headers: { authorization: `Bearer ${controlToken}`, origin: allowedOrigin }
+  });
+  return Object.freeze({
+    status: response.status,
+    serviceProtocolVersion: serviceReady.serviceProtocolVersion
+  });
 });
 
 function sqliteProbe() {
@@ -131,6 +205,7 @@ const probeIndex = process.argv.indexOf("--win003-probe-output");
 const bridgeProbeIndex = process.argv.indexOf("--win003-bridge-output");
 if (bridgeProbeIndex >= 0) {
   app.whenReady().then(async () => {
+    await startRealService();
     const consoleMessages = [];
     const trustedWindow = new BrowserWindow({
       width: 800,
@@ -183,6 +258,9 @@ if (bridgeProbeIndex >= 0) {
     `);
 
     const rendererSnapshot = JSON.stringify(rendererResult);
+    await stopRealService();
+    const databasePath = path.join(serviceLab, "data", "apiarylens.sqlite");
+    const mediaPath = path.join(serviceLab, "data", "media");
     const result = {
       sandboxedRendererHasNoNodeProcess: rendererResult.nodeType === "undefined",
       sandboxedRendererHasNoRequire: rendererResult.requireType === "undefined",
@@ -195,15 +273,25 @@ if (bridgeProbeIndex >= 0) {
       tokenPresentInRendererSnapshot: rendererSnapshot.includes(controlToken),
       tokenPresentInConsoleMessages: consoleMessages.some((message) => message.includes(controlToken)),
       tokenPresentInArguments: process.argv.some((argument) => argument.includes(controlToken)),
+      tokenPresentInServiceArguments: serviceProcess.spawnargs.some((argument) => argument.includes(controlToken)),
+      tokenPresentInReadinessOrServiceOutput:
+        JSON.stringify(serviceReady).includes(controlToken) || serviceOutput.includes(controlToken),
+      realServiceAddress: serviceReady.address,
+      realServiceDatabaseCreated: fs.existsSync(databasePath),
+      realServiceMediaDirectoryCreated: fs.existsSync(mediaPath),
+      realServiceExitCode: serviceProcess.exitCode,
       localStorageEntryCount: rendererResult.localStorage.length,
       sessionStorageEntryCount: rendererResult.sessionStorage.length
     };
     fs.writeFileSync(process.argv[bridgeProbeIndex + 1], JSON.stringify(result));
     trustedWindow.destroy();
     untrustedWindow.destroy();
+    fs.rmSync(serviceLab, { recursive: true, force: true });
     app.quit();
   }).catch((error) => {
     console.error(`bridge-probe-failed:${error.message}`);
+    if (serviceProcess?.exitCode === null) serviceProcess.kill();
+    if (serviceLab) fs.rmSync(serviceLab, { recursive: true, force: true });
     app.exit(70);
   });
 } else if (probeIndex >= 0) {
@@ -241,14 +329,17 @@ Set-Content -LiteralPath (Join-Path $labPath 'package.json') -Value $packageJson
 Set-Content -LiteralPath (Join-Path $labPath 'forge.config.js') -Value $forgeConfig -Encoding utf8NoBOM
 Set-Content -LiteralPath (Join-Path $labPath 'preload.cjs') -Value $preload -Encoding utf8NoBOM
 Set-Content -LiteralPath (Join-Path $labPath 'main.cjs') -Value $main -Encoding utf8NoBOM
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'win003-electron-real-service-fixture.mjs') -Destination (Join-Path $serverDeployPath 'desktop-wrapper.mjs') -Force
 
 Push-Location $labPath
 try {
     npm install --no-audit --no-fund
     if ($LASTEXITCODE -ne 0) { throw "Electron lab dependency install failed with exit code $LASTEXITCODE" }
+    $env:WIN003_SERVER_DEPLOY = $serverDeployPath
     npx --no-install electron-forge make --arch=x64
     if ($LASTEXITCODE -ne 0) { throw "Electron Forge make failed with exit code $LASTEXITCODE" }
 } finally {
+    Remove-Item Env:WIN003_SERVER_DEPLOY -ErrorAction SilentlyContinue
     Pop-Location
 }
 
@@ -262,6 +353,11 @@ $nupkg = Get-ChildItem -LiteralPath $makeDirectory -Filter '*-full.nupkg' | Sele
 $releases = Join-Path $makeDirectory 'RELEASES'
 if (-not $packageDirectory -or -not $hostExecutable -or -not $installer -or -not $nupkg -or -not (Test-Path -LiteralPath $releases)) {
     throw 'Electron Forge did not produce the expected package and Squirrel artifacts'
+}
+$packagedServer = Join-Path $packageDirectory.FullName 'resources/server'
+if (-not (Test-Path -LiteralPath (Join-Path $packagedServer 'dist/app.js')) -or
+    -not (Test-Path -LiteralPath (Join-Path $packagedServer 'desktop-wrapper.mjs'))) {
+    throw 'Electron package does not contain the deployed real ApiaryLens server resource'
 }
 
 if ($env:WINDOWS_CERTIFICATE_FILE) {
@@ -314,9 +410,9 @@ if ($probeResult.sqlite -ne 'electron-node-sqlite-ok') { throw "Packaged Electro
 
 $bridgeProbePath = Join-Path $runnerTemp 'win003-electron-bridge-probe.json'
 $bridgeProbe = Start-Process -FilePath $hostExecutable.FullName -ArgumentList @('--win003-bridge-output', "`"$bridgeProbePath`"") -PassThru -WindowStyle Hidden
-if (-not $bridgeProbe.WaitForExit(15000)) {
+if (-not $bridgeProbe.WaitForExit(30000)) {
     Stop-Process -Id $bridgeProbe.Id -Force -ErrorAction SilentlyContinue
-    throw 'Packaged Electron bridge probe exceeded 15 seconds'
+    throw 'Packaged Electron bridge probe exceeded 30 seconds'
 }
 if ($bridgeProbe.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $bridgeProbePath)) {
     throw 'Packaged Electron bridge probe failed'
@@ -335,6 +431,12 @@ $bridgePassed =
     -not $bridgeResult.tokenPresentInRendererSnapshot -and
     -not $bridgeResult.tokenPresentInConsoleMessages -and
     -not $bridgeResult.tokenPresentInArguments -and
+    -not $bridgeResult.tokenPresentInServiceArguments -and
+    -not $bridgeResult.tokenPresentInReadinessOrServiceOutput -and
+    $bridgeResult.realServiceAddress -eq '127.0.0.1' -and
+    $bridgeResult.realServiceDatabaseCreated -and
+    $bridgeResult.realServiceMediaDirectoryCreated -and
+    $bridgeResult.realServiceExitCode -eq 0 -and
     $bridgeResult.localStorageEntryCount -eq 0 -and
     $bridgeResult.sessionStorageEntryCount -eq 0
 if (-not $bridgePassed) { throw 'Packaged Electron bridge isolation acceptance checks failed' }
@@ -393,6 +495,8 @@ $measurement = [ordered]@{
     setupSignatureSubject = if ($setupSignature.SignerCertificate) { $setupSignature.SignerCertificate.Subject } else { $null }
     setupSignatureThumbprint = if ($setupSignature.SignerCertificate) { $setupSignature.SignerCertificate.Thumbprint } else { $null }
     packagedNodeSqliteProbe = $probeResult.sqlite
+    packagedRealServerBytes = (Get-ChildItem -LiteralPath $packagedServer -Recurse -File | Measure-Object Length -Sum).Sum
+    packagedRealServerFileCount = @(Get-ChildItem -LiteralPath $packagedServer -Recurse -File).Count
     packagedBridgeIsolationPassed = $bridgePassed
     bridgeSurfaceKeys = @($bridgeResult.exposedBridgeKeys)
     bridgeRendererToMainArgumentCount = $bridgeResult.rendererToMainArgumentCount
@@ -400,7 +504,13 @@ $measurement = [ordered]@{
     bridgeTokenPresentInRendererStorageGlobalsConsoleOrArguments =
         $bridgeResult.tokenPresentInRendererSnapshot -or
         $bridgeResult.tokenPresentInConsoleMessages -or
-        $bridgeResult.tokenPresentInArguments
+        $bridgeResult.tokenPresentInArguments -or
+        $bridgeResult.tokenPresentInServiceArguments -or
+        $bridgeResult.tokenPresentInReadinessOrServiceOutput
+    bridgeRealServiceAddress = $bridgeResult.realServiceAddress
+    bridgeRealServiceDatabaseCreated = $bridgeResult.realServiceDatabaseCreated
+    bridgeRealServiceMediaDirectoryCreated = $bridgeResult.realServiceMediaDirectoryCreated
+    bridgeRealServiceExitCode = $bridgeResult.realServiceExitCode
     runs = $runs
     meanRendererReadyMs = [math]::Round(($runs.rendererReadyMs | Measure-Object -Average).Average, 1)
     medianRendererReadyMs = ($runs.rendererReadyMs | Sort-Object)[2]
@@ -409,7 +519,7 @@ $measurement = [ordered]@{
     limitations = @(
         $(if ($env:WINDOWS_CERTIFICATE_FILE) { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research build; not a release artifact' }),
         'Hosted Windows runner, not a retail family computer',
-        'No real embedded ApiaryLens service or user data',
+        'Real packaged ApiaryLens service health only; full typed API and user lifecycle remain open',
         'Warm filesystem/runtime effects after the first launch'
     )
 }

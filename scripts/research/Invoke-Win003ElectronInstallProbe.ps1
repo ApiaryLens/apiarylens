@@ -129,6 +129,52 @@ if (-not $probeSucceeded) {
 $probeResult = Get-Content -Raw -LiteralPath $probePath | ConvertFrom-Json
 if ($probeResult.sqlite -ne 'electron-node-sqlite-ok') { throw 'Installed Electron node:sqlite probe returned the wrong result' }
 
+$bridgeProbePath = Join-Path $runnerTemp 'win003-electron-installed-bridge-probe.json'
+$bridgeProbeStdout = Join-Path $outputPath 'installed-bridge-probe.stdout.log'
+$bridgeProbeStderr = Join-Path $outputPath 'installed-bridge-probe.stderr.log'
+$bridgeProbeArguments = "--win003-bridge-output `"$bridgeProbePath`""
+$bridgeProbe = Start-Process -FilePath $installedHost.FullName -ArgumentList $bridgeProbeArguments -WorkingDirectory $appDirectory.FullName -PassThru -WindowStyle Hidden -RedirectStandardOutput $bridgeProbeStdout -RedirectStandardError $bridgeProbeStderr
+if (-not $bridgeProbe.WaitForExit(30000)) {
+    Stop-Process -Id $bridgeProbe.Id -Force -ErrorAction SilentlyContinue
+    throw 'Installed Electron real-service bridge probe exceeded 30 seconds'
+}
+if ($bridgeProbe.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $bridgeProbePath)) {
+    $bridgeDiagnostic = [ordered]@{
+        measuredAtUtc = [DateTimeOffset]::UtcNow.ToString('o')
+        exitCode = $bridgeProbe.ExitCode
+        probeFileExists = Test-Path -LiteralPath $bridgeProbePath
+        stdout = if (Test-Path -LiteralPath $bridgeProbeStdout) { Get-Content -Raw -LiteralPath $bridgeProbeStdout } else { $null }
+        stderr = if (Test-Path -LiteralPath $bridgeProbeStderr) { Get-Content -Raw -LiteralPath $bridgeProbeStderr } else { $null }
+    }
+    $bridgeDiagnostic | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $outputPath 'bridge-probe-failure.json') -Encoding utf8NoBOM
+    throw 'Installed Electron real-service bridge probe failed'
+}
+$bridgeProbeResult = Get-Content -Raw -LiteralPath $bridgeProbePath | ConvertFrom-Json
+$installedRealServiceBridgeProbePassed =
+    $bridgeProbeResult.sandboxedRendererHasNoNodeProcess -and
+    $bridgeProbeResult.sandboxedRendererHasNoRequire -and
+    @($bridgeProbeResult.exposedBridgeKeys).Count -eq 1 -and
+    $bridgeProbeResult.exposedBridgeKeys[0] -eq 'health' -and
+    $bridgeProbeResult.typedHealthStatus -eq 200 -and
+    $bridgeProbeResult.typedHealthProtocolVersion -eq 1 -and
+    $bridgeProbeResult.bridgeInvocationCount -eq 1 -and
+    $bridgeProbeResult.rendererToMainArgumentCount -eq 0 -and
+    $bridgeProbeResult.untrustedSenderRejected -and
+    -not $bridgeProbeResult.tokenPresentInRendererSnapshot -and
+    -not $bridgeProbeResult.tokenPresentInConsoleMessages -and
+    -not $bridgeProbeResult.tokenPresentInArguments -and
+    -not $bridgeProbeResult.tokenPresentInServiceArguments -and
+    -not $bridgeProbeResult.tokenPresentInReadinessOrServiceOutput -and
+    $bridgeProbeResult.realServiceAddress -eq '127.0.0.1' -and
+    $bridgeProbeResult.realServiceDatabaseCreated -and
+    $bridgeProbeResult.realServiceMediaDirectoryCreated -and
+    $bridgeProbeResult.realServiceExitCode -eq 0 -and
+    $bridgeProbeResult.localStorageEntryCount -eq 0 -and
+    $bridgeProbeResult.sessionStorageEntryCount -eq 0
+if (-not $installedRealServiceBridgeProbePassed) {
+    throw 'Installed Electron real-service bridge acceptance checks failed'
+}
+
 $process = Start-Process -FilePath $installedHost.FullName -PassThru -WindowStyle Hidden
 Start-Sleep -Seconds 3
 $process.Refresh()
@@ -254,6 +300,18 @@ $result = [ordered]@{
     installedNodeSqliteProbe = $probeResult.sqlite
     bundledElectronVersion = $probeResult.electron
     bundledNodeVersion = $probeResult.node
+    installedRealServiceBridgeProbePassed = $installedRealServiceBridgeProbePassed
+    installedRealServiceAddress = $bridgeProbeResult.realServiceAddress
+    installedRealServiceDatabaseCreated = $bridgeProbeResult.realServiceDatabaseCreated
+    installedRealServiceMediaDirectoryCreated = $bridgeProbeResult.realServiceMediaDirectoryCreated
+    installedRealServiceExitCode = $bridgeProbeResult.realServiceExitCode
+    installedBridgeUntrustedSenderRejected = $bridgeProbeResult.untrustedSenderRejected
+    installedBridgeTokenPresentInRendererStorageGlobalsConsoleArgumentsReadinessOrServiceOutput =
+        $bridgeProbeResult.tokenPresentInRendererSnapshot -or
+        $bridgeProbeResult.tokenPresentInConsoleMessages -or
+        $bridgeProbeResult.tokenPresentInArguments -or
+        $bridgeProbeResult.tokenPresentInServiceArguments -or
+        $bridgeProbeResult.tokenPresentInReadinessOrServiceOutput
     hostSmoke = $hostSmoke
     installedProcessCountBeforeUninstall = $installedProcessCountBeforeUninstall
     uninstallExitCode = $uninstall.ExitCode
@@ -265,7 +323,7 @@ $result = [ordered]@{
     limitations = @(
         'Fresh hosted runner profile, not a retail Windows image',
         $(if ($measurement.signingMode -eq 'ephemeral-test-signing') { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research artifact' }),
-        'No real ApiaryLens local service or user data was installed'
+        'Real ApiaryLens service health and disposable database/media creation were exercised; full typed API and user lifecycle remain open'
     )
 }
 

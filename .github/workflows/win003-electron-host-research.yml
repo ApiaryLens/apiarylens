@@ -28,14 +28,21 @@ jobs:
       - name: Install repository dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build current React client and dependencies
-        run: pnpm --filter @apiarylens/web... build
+      - name: Build current React client and portable server dependencies
+        run: |
+          pnpm --filter @apiarylens/web... build
+          pnpm --filter @apiarylens/server... build
+
+      - name: Create production portable-server deployment tree
+        shell: pwsh
+        run: pnpm --filter @apiarylens/server deploy --prod --legacy "$env:RUNNER_TEMP/server"
 
       - name: Build and measure isolated Electron installer
         shell: pwsh
         run: >-
           ./scripts/research/Invoke-Win003ElectronSpike.ps1
           -WebDist ./apps/web/dist
+          -ServerDeploy "$env:RUNNER_TEMP/server"
           -OutputDirectory "$env:RUNNER_TEMP/win003-electron-evidence"
 
       - name: Upload exact Electron evidence
