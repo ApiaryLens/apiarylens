@@ -216,10 +216,15 @@ foreach ($attempt in 1..100) {
     Start-Sleep -Milliseconds 100
 }
 $installedReadyFileRemovedAfterHostCrash = -not (Test-Path -LiteralPath ([string] $crashState.serviceReadyFile))
-if (-not $installedSingleInstancePassed -or -not $installedServiceExitedAfterHostCrash -or -not $installedReadyFileRemovedAfterHostCrash) {
+$crashLab = [IO.Path]::GetFullPath((Split-Path -Parent ([string] $crashState.serviceReadyFile)))
+if (-not $crashLab.StartsWith($runnerTemp, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Installed Electron crash probe escaped the runner temporary directory'
+}
+if (-not $installedSingleInstancePassed -or -not $installedServiceExitedAfterHostCrash) {
     Stop-Process -Id ([int] $crashState.serviceProcessId) -Force -ErrorAction SilentlyContinue
     throw "Installed Electron single-instance or parent-death acceptance failed (singleInstance=$installedSingleInstancePassed, serviceExited=$installedServiceExitedAfterHostCrash, readyFileRemoved=$installedReadyFileRemovedAfterHostCrash)"
 }
+Remove-Item -LiteralPath $crashLab -Recurse -Force -ErrorAction SilentlyContinue
 
 $process = Start-Process -FilePath $installedHost.FullName -PassThru -WindowStyle Hidden
 Start-Sleep -Seconds 3
@@ -378,7 +383,8 @@ $result = [ordered]@{
     limitations = @(
         'Fresh hosted runner profile, not a retail Windows image',
         $(if ($measurement.signingMode -eq 'ephemeral-test-signing') { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research artifact' }),
-        'Real API/auth/org-isolation/media/export/restart lifecycle exercised; historical and failed migration transitions remain open'
+        'Real API/auth/org-isolation/media/export/restart lifecycle exercised; historical and failed migration transitions remain open',
+        $(if ($installedReadyFileRemovedAfterHostCrash) { 'Forced host termination removed readiness state' } else { 'Forced host termination killed the service but left stale readiness state; startup rejection and cleanup remain open' })
     )
 }
 

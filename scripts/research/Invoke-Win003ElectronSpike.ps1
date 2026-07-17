@@ -524,10 +524,15 @@ foreach ($attempt in 1..100) {
     Start-Sleep -Milliseconds 100
 }
 $readyFileRemovedAfterHostCrash = -not (Test-Path -LiteralPath ([string] $crashState.serviceReadyFile))
-if (-not $singleInstancePassed -or -not $serviceExitedAfterHostCrash -or -not $readyFileRemovedAfterHostCrash) {
+$crashLab = [IO.Path]::GetFullPath((Split-Path -Parent ([string] $crashState.serviceReadyFile)))
+if (-not $crashLab.StartsWith($runnerTemp, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Packaged Electron crash probe escaped the runner temporary directory'
+}
+if (-not $singleInstancePassed -or -not $serviceExitedAfterHostCrash) {
     Stop-Process -Id ([int] $crashState.serviceProcessId) -Force -ErrorAction SilentlyContinue
     throw "Packaged Electron single-instance or parent-death acceptance failed (singleInstance=$singleInstancePassed, serviceExited=$serviceExitedAfterHostCrash, readyFileRemoved=$readyFileRemovedAfterHostCrash)"
 }
+Remove-Item -LiteralPath $crashLab -Recurse -Force -ErrorAction SilentlyContinue
 
 $runs = @()
 foreach ($run in 1..5) {
@@ -617,6 +622,7 @@ $measurement = [ordered]@{
         $(if ($env:WINDOWS_CERTIFICATE_FILE) { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research build; not a release artifact' }),
         'Hosted Windows runner, not a retail family computer',
         'Real packaged API/auth/org-isolation/media/export/restart lifecycle exercised; historical and failed migration transitions remain open',
+        $(if ($readyFileRemovedAfterHostCrash) { 'Forced host termination removed readiness state' } else { 'Forced host termination killed the service but left stale readiness state; startup rejection and cleanup remain open' }),
         'Warm filesystem/runtime effects after the first launch'
     )
 }
