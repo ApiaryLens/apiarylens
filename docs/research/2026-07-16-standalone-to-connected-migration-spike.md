@@ -2,7 +2,7 @@
 
 - **Backlog:** WIN-006
 - **Date:** 2026-07-16
-- **Status:** Research in progress; implementation is not authorized
+- **Status:** Research complete; implementation is not authorized
 - **Scope:** Windows standalone client to a connected ApiaryLens family deployment
 
 ## Decision sought
@@ -168,6 +168,27 @@ Follow-up run
 passed real child-process termination after a target write, exact-once resume, and the
 accumulated suite on the Windows hosted runner in 49 seconds.
 
+## WIN-006 acceptance mapping
+
+WIN-006 asks for a prototype—not the later product or exact-artifact UAT. Its stated
+outcomes are satisfied as follows:
+
+| Research outcome | Evidence |
+|---|---|
+| Exact-once record transfer | Stable operation IDs, real idempotency receipts, every record-boundary interruption, and real child-process termination resume |
+| Exact-once media transfer | Original/thumbnail journal entries, byte-size and SHA-256 reconciliation, repeat overwrite, and maximum 25 MiB original |
+| Conflict preview | Colliding target create records both hashes and blocks cutover |
+| Interruption and resume | Synthetic boundary injection, locked-database recovery, and terminated child-process recovery |
+| Compatibility | Unsupported sync-contract version is rejected before target mutation |
+| Backup | Database/media copy, restore equivalence, manifest hashes, and corrupt-backup rejection |
+| Completion evidence | Source inventory, target receipts, counts, hashes, cursor, migration ID, and secret-free report |
+| Rollback | Pre-remote-write rollback succeeds; remote-only writes make destructive rollback ineligible |
+
+This closes the research gate. It does not authorize implementation and does not
+claim that a packaged Windows client, migration API, D1/R2 target, or released
+artifact has passed. Those remain downstream design, implementation, WIN-018, and
+release-UAT requirements.
+
 ## Proposed migration protocol
 
 ### Durable objects
@@ -273,7 +294,7 @@ installation ID, accepted hashes, and outcome.
 10. Diagnostics and support bundles that redact credentials, tokens, paths containing
     account names, and private hive content by default.
 
-## Further evidence required to close WIN-006
+## Downstream implementation and UAT evidence
 
 - Durable packaged migration at the 20,000-record annual family reference workload
   after the SQLite journal and bounded bulk-import contract exist. The record model
