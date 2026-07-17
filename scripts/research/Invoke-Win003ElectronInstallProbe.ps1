@@ -87,6 +87,13 @@ $updateExecutable = Join-Path $installDirectory 'Update.exe'
 if (-not $installedHost -or -not (Test-Path -LiteralPath $updateExecutable)) {
     throw 'Electron installed host or Squirrel Update.exe was not found'
 }
+$installedSignature = Get-AuthenticodeSignature -LiteralPath $installedHost.FullName
+if ($measurement.signingMode -eq 'ephemeral-test-signing' -and (
+    -not $installedSignature.SignerCertificate -or
+    $installedSignature.SignerCertificate.Thumbprint -ne $measurement.hostSignatureThumbprint
+)) {
+    throw 'Installed Electron host did not retain the expected Authenticode signer'
+}
 
 $probePath = Join-Path $runnerTemp 'win003-electron-installed-probe.json'
 $probeStdout = Join-Path $outputPath 'installed-probe.stdout.log'
@@ -178,6 +185,9 @@ $result = [ordered]@{
     installedBytes = $installedBytes
     installedFileCount = $installedFileCount
     installedHostBytes = $installedHostBytes
+    installedHostSignatureStatus = [string] $installedSignature.Status
+    installedHostSignatureSubject = if ($installedSignature.SignerCertificate) { $installedSignature.SignerCertificate.Subject } else { $null }
+    installedHostSignatureThumbprint = if ($installedSignature.SignerCertificate) { $installedSignature.SignerCertificate.Thumbprint } else { $null }
     installedNodeSqliteProbe = $probeResult.sqlite
     bundledElectronVersion = $probeResult.electron
     bundledNodeVersion = $probeResult.node
@@ -189,7 +199,7 @@ $result = [ordered]@{
     residualBytes = $residualBytes
     limitations = @(
         'Fresh hosted runner profile, not a retail Windows image',
-        'Unsigned research artifact',
+        $(if ($measurement.signingMode -eq 'ephemeral-test-signing') { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research artifact' }),
         'No real ApiaryLens local service or user data was installed'
     )
 }

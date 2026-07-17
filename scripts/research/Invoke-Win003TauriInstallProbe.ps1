@@ -97,6 +97,13 @@ $installedHost = if ($displayIconPath -and (Test-Path -LiteralPath $displayIconP
 $installedSidecar = Get-ChildItem -LiteralPath $installDirectory -Recurse -Filter 'apiarylens-node-sidecar*.exe' | Select-Object -First 1
 if (-not $installedHost) { throw 'Installed Tauri host executable not found' }
 if (-not $installedSidecar) { throw 'Installed packaged Node sidecar not found' }
+$installedSignature = Get-AuthenticodeSignature -LiteralPath $installedHost.FullName
+if ($measurement.signingMode -eq 'ephemeral-test-signing' -and (
+    -not $installedSignature.SignerCertificate -or
+    $installedSignature.SignerCertificate.Thumbprint -ne $measurement.hostSignatureThumbprint
+)) {
+    throw 'Installed Tauri host did not retain the expected Authenticode signer'
+}
 
 $sqliteProbe = & $installedSidecar.FullName -e "const { DatabaseSync } = require('node:sqlite'); const db = new DatabaseSync(':memory:'); db.exec('create table probe(value text)'); db.close(); process.stdout.write('installed-node-sqlite-ok')"
 if ($LASTEXITCODE -ne 0 -or $sqliteProbe -ne 'installed-node-sqlite-ok') {
@@ -168,6 +175,9 @@ $result = [ordered]@{
     installedBytes = $installedBytes
     installedFileCount = $installedFileCount
     installedHostBytes = $installedHost.Length
+    installedHostSignatureStatus = [string] $installedSignature.Status
+    installedHostSignatureSubject = if ($installedSignature.SignerCertificate) { $installedSignature.SignerCertificate.Subject } else { $null }
+    installedHostSignatureThumbprint = if ($installedSignature.SignerCertificate) { $installedSignature.SignerCertificate.Thumbprint } else { $null }
     installedNodeSidecarBytes = $installedSidecar.Length
     installedNodeSqliteProbe = $sqliteProbe
     hostSmoke = $hostSmoke
@@ -176,7 +186,7 @@ $result = [ordered]@{
     uninstallEntryRemains = $uninstallEntryRemains
     limitations = @(
         'Fresh hosted runner profile, not a retail Windows image',
-        'Unsigned research artifact',
+        $(if ($measurement.signingMode -eq 'ephemeral-test-signing') { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research artifact' }),
         'WebView2 was already present on the runner',
         'No real ApiaryLens local service or user data was installed',
         'Detailed startup and memory sampling comes from the build job; this job only verifies a three-second installed-host smoke test'
