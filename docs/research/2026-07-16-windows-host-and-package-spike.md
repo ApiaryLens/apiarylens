@@ -461,6 +461,34 @@ historical schema, interrupted or failed migration recovery, a production-signed
 artifact, complete SBOM/notices, retail Windows profiles, host accessibility, or
 the explicit keep-data/remove-all cleanup policy.
 
+Host-failure follow-on run
+[`29557057421`](https://github.com/ApiaryLens/apiarylens/actions/runs/29557057421)
+at commit `361852b78798fcae7b66bc6b21a0ac7a1ce5988b` repeated the full
+50-check matrix and added actual Electron primary-instance, forced-parent-death,
+and same-directory recovery checks to both the packaged and clean-installed
+artifact. The exact setup SHA-256 was
+`7767FAD62F10CD40EB83103C9B94A0D6DE7045D424DE447C6281BE9CA57198CE`.
+
+| Host failure and recovery check | Packaged | Clean installed |
+|---|---:|---:|
+| Second Electron instance rejected | Passed | Passed |
+| Embedded service exited after forced host death | Passed | Passed |
+| Abrupt process-tree death left a stale readiness file | Yes | Yes |
+| Next host rejected and removed the dead-PID readiness record | Passed | Passed |
+| Service restarted in the same SQLite/media directory | Passed | Passed |
+| Recovered service replaced readiness with its live PID | Passed | Passed |
+| Recovered service shut down cleanly and removed readiness | Passed | Passed |
+| Existing API acceptance matrix | 50 / 50 | 50 / 50 |
+| Uninstall | Not applicable | Exit 0 |
+
+This is a load-bearing recovery result rather than a claim that forced termination
+can run cleanup code. Windows terminated the child process tree before the service
+could remove readiness. The next host therefore treated readiness as advisory,
+verified that its recorded PID was dead, removed it, restarted against the same
+local directory, replaced readiness only after the service was live, and then
+removed it during clean shutdown. Forced-write, disk-full, read-only-directory,
+sleep/resume, sign-out, Job Object policy, and retail-device matrices remain open.
+
 ### Electron package-transition evidence
 
 Exact-artifact replay
@@ -832,8 +860,9 @@ implementations in parallel.
    complete uninstall for Electron and Tauri.
 2. Exercise local-service startup, crash, restart, duplicate-instance prevention,
    clean shutdown, data lock, and orphan cleanup. Packaged and clean-installed
-   restart persistence now pass; crash/data-lock/orphan behavior remains open in
-   the actual host.
+   single-instance, forced-parent-death, stale-readiness recovery, restart
+   persistence, and clean shutdown now pass. Forced-write/data-lock faults and the
+   broader Windows lifecycle matrix remain open in the actual host.
 3. Verify Windows 11 and the chosen Windows 10 baseline in clean user profiles with
    no developer tools. Include a profile where WebView2 is absent or its updater is
    policy-disabled.

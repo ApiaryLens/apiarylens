@@ -65,6 +65,17 @@ closes the current-schema installed API and organization-isolation portion of
 condition 1. Historical and failed migration transitions, complete host crash and
 recovery integration, and the other conditions below remain open.
 
+Run
+[`29557057421`](https://github.com/ApiaryLens/apiarylens/actions/runs/29557057421)
+then integrated host ownership and failure recovery into both artifact forms. The
+packaged and clean-installed host rejected a second instance, lost its embedded
+service when the primary host was forcibly killed, rejected and removed the
+resulting dead-PID readiness record on the next launch, restarted in the same local
+directory, replaced readiness only after recovery, and shut down cleanly. Both
+artifacts retained the 50-check API matrix. This materially advances condition 3;
+forced-write/data-lock faults, Job Object policy, and the broader Windows lifecycle
+matrix remain open.
+
 ## Proposed Decision
 
 Use **Electron** as the initial Windows Preview host. Use a **signed per-user
@@ -204,7 +215,10 @@ must replace it.
    arguments, logs, diagnostics, and crash evidence.
 3. Integrate and replay the `WIN-004` loopback, ownership, ACL/reparse, stale-
    readiness, corrupt-database, crash, shutdown, and recovery matrix in the actual
-   Electron host; complete Job Object and Windows lifecycle evaluation.
+   Electron host; complete forced-write/data-lock faults, Job Object policy, and the
+   broader Windows lifecycle evaluation. Single-instance, parent-death,
+   stale-readiness recovery, and clean shutdown now pass in packaged and installed
+   artifacts.
 4. Integrate and replay the `WIN-005` Credential Manager, DPAPI, rotation/crash,
    revocation, restore, sign-out, keep-data, and remove-all behavior through the
    actual main-process adapter.

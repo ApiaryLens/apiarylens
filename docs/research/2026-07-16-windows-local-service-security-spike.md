@@ -197,6 +197,17 @@ research now proves the Windows filesystem boundary, but the selected host must
 integrate and repeat that contract. Those host-specific controls remain required
 before the host/service ADR can be accepted.
 
+Selected-host run
+[`29557057421`](https://github.com/ApiaryLens/apiarylens/actions/runs/29557057421)
+subsequently integrated the ownership and parent-death portions into the actual
+packaged and clean-installed Electron host. Both artifacts rejected a second host,
+terminated the embedded service after forced host death, detected the resulting
+dead-PID readiness record on the next launch, removed and replaced it only after a
+same-directory restart, and removed readiness on clean shutdown. Both also retained
+the 50-check installed API and organization-isolation matrix. Job Object policy,
+forced-write/WAL faults, disk-full and read-only paths, sleep/sign-out/shutdown, and
+retail Windows behavior remain open.
+
 ## Windows path-security evidence
 
 GitHub Actions run
@@ -236,7 +247,7 @@ preserve the intended behavior. Those are integration and lifecycle gates.
 | Token exposed in process discovery or diagnostics | Never put token in arguments/files/logs; redact structured diagnostics | Arguments and evidence clean; production redaction not yet exercised |
 | Compromised packaged renderer steals full authority | Local-only content, strict CSP, sandbox/isolation, narrow host bridge, no token in ordinary page JavaScript | Not yet proven; highest remaining design risk |
 | Two hosts write one SQLite database | Per-user operating-system ownership guard | Duplicate prototype rejected |
-| Child outlives host | Parent liveness watch plus host job/process ownership where available | Parent-death prototype passed; Windows Job Object option remains to compare |
+| Child outlives host | Parent liveness watch plus host job/process ownership where available | Packaged and installed Electron service exited after forced host death; Job Object policy remains to document |
 | Crash corrupts or loses data | WAL, transactions, backup-before-update, integrity/health checks | One forced crash preserved a committed record; fault matrix remains |
 | Local non-loopback exposure | Explicit IPv4/IPv6 loopback bind and listener assertion | Disposable wrapper passed IPv4; exact portable server failed with `::` wildcard |
 | Another Windows account or hostile filesystem redirect reaches local data | Protected current-user/SYSTEM ACL plus canonical child paths that reject traversal and reparse points | Hosted probe denied a second account and rejected traversal/junction paths; retail-host integration remains |
@@ -294,7 +305,9 @@ preserve the intended behavior. Those are integration and lifecycle gates.
    WAL recovery, `integrity_check`, disk-full, and read-only directories in the real
    wrapper. Corrupt-database startup now fails before readiness; the separate SQLite
    recovery probe covers migration failure, backup restore, incompatible versions,
-   and health-triggered rollback, but those cases still require real-wrapper replay.
+   and health-triggered rollback. Actual Electron parent death, stale-readiness
+   rejection, same-directory restart, and clean shutdown now pass; the remaining
+   storage-fault cases still require real-host replay.
 4. Integrating the proven current-user/SYSTEM directory ACL and traversal/reparse
    rejection into each finalist, then measuring Windows Job Object versus parent
    polling, sleep/resume, sign-out, shutdown, roaming profiles, Remote Desktop, and
