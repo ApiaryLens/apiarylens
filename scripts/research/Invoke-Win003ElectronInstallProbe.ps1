@@ -561,6 +561,38 @@ $installedHostBytes = $installedHost.Length
 $licenseNoticeFiles = @($installedFiles | Where-Object Name -Match '(?i)(license|notice|copying)' | ForEach-Object {
     $_.FullName.Substring($installDirectory.Length).TrimStart('\')
 })
+$installedSupplyChain = Join-Path $appDirectory.FullName 'resources/supply-chain'
+$installedReconciliationPath = Join-Path $installedSupplyChain 'notice-reconciliation.json'
+$installedRuntimeSbomPath = Join-Path $installedSupplyChain 'runtime.cdx.json'
+$installedBuildSbomPath = Join-Path $installedSupplyChain 'build-inputs.cdx.json'
+foreach ($requiredPath in @($installedReconciliationPath, $installedRuntimeSbomPath, $installedBuildSbomPath, (Join-Path $installedSupplyChain 'THIRD-PARTY-NOTICES.md'))) {
+    if (-not (Test-Path -LiteralPath $requiredPath)) {
+        throw "Installed Electron supply-chain evidence is missing: $requiredPath"
+    }
+}
+$installedReconciliation = Get-Content -Raw -LiteralPath $installedReconciliationPath | ConvertFrom-Json
+$installedRuntimeSbom = Get-Content -Raw -LiteralPath $installedRuntimeSbomPath | ConvertFrom-Json
+$installedBuildSbom = Get-Content -Raw -LiteralPath $installedBuildSbomPath | ConvertFrom-Json
+if (@($installedRuntimeSbom.components).Count -ne $installedReconciliation.runtimeComponentCount -or
+    @($installedBuildSbom.components).Count -ne $installedReconciliation.buildComponentCount -or
+    $installedReconciliation.runtimeComponentsWithNoticeCoverage -ne $installedReconciliation.runtimeComponentCount -or
+    $installedReconciliation.buildComponentsWithDeclaredLicense -ne $installedReconciliation.buildComponentCount -or
+    $installedReconciliation.buildComponentsWithRegistryIntegrity -ne $installedReconciliation.buildComponentCount) {
+    throw 'Installed Electron SBOM and notice reconciliation counts do not agree'
+}
+foreach ($notice in @($installedReconciliation.notices)) {
+    $noticePath = Join-Path $installedSupplyChain $notice.path
+    if (-not (Test-Path -LiteralPath $noticePath)) {
+        throw "Installed Electron notice is missing: $($notice.path)"
+    }
+    $noticeHash = (Get-FileHash -LiteralPath $noticePath -Algorithm SHA256).Hash
+    if ($noticeHash -ne $notice.sha256) {
+        throw "Installed Electron notice hash does not match reconciliation: $($notice.path)"
+    }
+}
+$installedSupplyChainReconciliationPassed = $true
+$installedBuildSbomSha256 = (Get-FileHash -LiteralPath $installedBuildSbomPath -Algorithm SHA256).Hash
+$installedRuntimeSbomSha256 = (Get-FileHash -LiteralPath $installedRuntimeSbomPath -Algorithm SHA256).Hash
 $runtimeSbom = $null
 if ($SbomToolPath -or $SbomOutputPath) {
     if (-not $SbomToolPath -or -not $SbomOutputPath) { throw 'Both SbomToolPath and SbomOutputPath are required together' }
@@ -715,12 +747,20 @@ $result = [ordered]@{
     installedFileCount = $installedFileCount
     installedHostBytes = $installedHostBytes
     licenseNoticeFiles = $licenseNoticeFiles
+    installedSupplyChainReconciliationPassed = $installedSupplyChainReconciliationPassed
+    installedBuildSupplyChainComponentCount = $installedReconciliation.buildComponentCount
+    installedRuntimeSupplyChainComponentCount = $installedReconciliation.runtimeComponentCount
+    installedRuntimeNoticeCoverageCount = $installedReconciliation.runtimeComponentsWithNoticeCoverage
+    installedNoticeBundleFileCount = @($installedReconciliation.notices).Count
+    installedBuildSbomSha256 = $installedBuildSbomSha256
+    installedRuntimeSbomSha256 = $installedRuntimeSbomSha256
     runtimeSbom = $runtimeSbom
     installedHostSignatureStatus = [string] $installedSignature.Status
     installedHostSignatureSubject = if ($installedSignature.SignerCertificate) { $installedSignature.SignerCertificate.Subject } else { $null }
     installedHostSignatureThumbprint = if ($installedSignature.SignerCertificate) { $installedSignature.SignerCertificate.Thumbprint } else { $null }
     installedNodeSqliteProbe = $probeResult.sqlite
     bundledElectronVersion = $probeResult.electron
+    bundledChromiumVersion = $probeResult.chrome
     bundledNodeVersion = $probeResult.node
     installedRealServiceBridgeProbePassed = $installedRealServiceBridgeProbePassed
     installedRealServiceAddress = $bridgeProbeResult.realServiceAddress

@@ -21,6 +21,7 @@ Set-StrictMode -Version Latest
 
 $webDistPath = (Resolve-Path -LiteralPath $WebDist).Path
 $serverDeployPath = (Resolve-Path -LiteralPath $ServerDeploy).Path
+$repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 if ((Split-Path -Leaf $serverDeployPath) -ne 'server') {
     throw 'The disposable portable-server deployment directory must be named server'
 }
@@ -73,7 +74,7 @@ module.exports = {
   packagerConfig: {
     asar: true,
     executableName: "ApiaryLensElectronResearch",
-    extraResource: [process.env.WIN003_SERVER_DEPLOY],
+    extraResource: [process.env.WIN003_SERVER_DEPLOY, process.env.WIN003_SUPPLY_CHAIN],
     windowsSign: process.env.WINDOWS_CERTIFICATE_FILE ? true : false
   },
   makers: [
@@ -1000,7 +1001,7 @@ if (!hasSingleInstanceLock) {
   });
 } else if (probeIndex >= 0) {
   app.whenReady().then(() => {
-    fs.writeFileSync(process.argv[probeIndex + 1], JSON.stringify({ sqlite: sqliteProbe(), electron: process.versions.electron, node: process.versions.node }));
+    fs.writeFileSync(process.argv[probeIndex + 1], JSON.stringify({ sqlite: sqliteProbe(), electron: process.versions.electron, chrome: process.versions.chrome, node: process.versions.node }));
     app.quit();
   });
 } else {
@@ -1053,11 +1054,21 @@ try {
         -not $electronRebuildLock.integrity) {
         throw 'Electron rebuild override did not resolve to the expected integrity-pinned registry artifact'
     }
+    $runtimeVersionsPath = Join-Path $labPath 'runtime-versions.json'
+    & (Join-Path $labPath 'node_modules/electron/dist/electron.exe') (Join-Path $labPath 'main.cjs') '--apiarylens-packaged-probe' $runtimeVersionsPath
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $runtimeVersionsPath)) {
+        throw 'Electron runtime-version probe failed before supply-chain reconciliation'
+    }
+    $supplyChainPath = Join-Path $labPath 'supply-chain'
+    node (Join-Path $PSScriptRoot 'Build-Win003ElectronSupplyChain.mjs') $repositoryRoot $labPath $serverDeployPath $supplyChainPath $runtimeVersionsPath
+    if ($LASTEXITCODE -ne 0) { throw "Electron supply-chain reconciliation failed with exit code $LASTEXITCODE" }
     $env:WIN003_SERVER_DEPLOY = $serverDeployPath
+    $env:WIN003_SUPPLY_CHAIN = $supplyChainPath
     npx --no-install electron-forge make --arch=x64
     if ($LASTEXITCODE -ne 0) { throw "Electron Forge make failed with exit code $LASTEXITCODE" }
 } finally {
     Remove-Item Env:WIN003_SERVER_DEPLOY -ErrorAction SilentlyContinue
+    Remove-Item Env:WIN003_SUPPLY_CHAIN -ErrorAction SilentlyContinue
     Pop-Location
 }
 
@@ -1078,6 +1089,25 @@ if (-not (Test-Path -LiteralPath (Join-Path $packagedServer 'dist/app.js')) -or
     -not (Test-Path -LiteralPath (Join-Path $packagedServer 'desktop-acceptance.mjs'))) {
     throw 'Electron package does not contain the deployed real ApiaryLens server resource'
 }
+$packagedSupplyChain = Join-Path $packageDirectory.FullName 'resources/supply-chain'
+$requiredSupplyChainFiles = @(
+    'build-inputs.cdx.json',
+    'runtime.cdx.json',
+    'notice-reconciliation.json',
+    'THIRD-PARTY-NOTICES.md',
+    'notices/APIARYLENS-LICENSE.txt',
+    'notices/APIARYLENS-NOTICE.txt',
+    'notices/ELECTRON-LICENSE.txt',
+    'notices/ELECTRON-CHROMIUM-THIRD-PARTY-NOTICES.html',
+    'notices/SQUIRREL-WINDOWS-LICENSE.txt'
+)
+$missingSupplyChainFiles = @($requiredSupplyChainFiles | Where-Object {
+    -not (Test-Path -LiteralPath (Join-Path $packagedSupplyChain $_))
+})
+if ($missingSupplyChainFiles.Count -ne 0) {
+    throw "Electron package is missing supply-chain file(s): $($missingSupplyChainFiles -join ', ')"
+}
+$supplyChainReconciliation = Get-Content -Raw -LiteralPath (Join-Path $packagedSupplyChain 'notice-reconciliation.json') | ConvertFrom-Json
 
 if ($env:WINDOWS_CERTIFICATE_FILE) {
     $signTool = Get-ChildItem -LiteralPath "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter 'signtool.exe' |
@@ -1360,6 +1390,13 @@ $measurement = [ordered]@{
     electronRebuildVersion = $electronRebuildLock.version
     electronRebuildRegistryIntegrityPresent = [bool] $electronRebuildLock.integrity
     exoticGitDependencyCount = $exoticGitDependencyCount
+    chromiumVersion = (Get-Content -Raw -LiteralPath $runtimeVersionsPath | ConvertFrom-Json).chrome
+    buildSupplyChainComponentCount = $supplyChainReconciliation.buildComponentCount
+    buildSupplyChainLicenseCoverageCount = $supplyChainReconciliation.buildComponentsWithDeclaredLicense
+    buildSupplyChainRegistryIntegrityCount = $supplyChainReconciliation.buildComponentsWithRegistryIntegrity
+    runtimeSupplyChainComponentCount = $supplyChainReconciliation.runtimeComponentCount
+    runtimeSupplyChainNoticeCoverageCount = $supplyChainReconciliation.runtimeComponentsWithNoticeCoverage
+    installedNoticeBundleFileCount = @($supplyChainReconciliation.notices).Count
     webBundleBytes = (Get-ChildItem -LiteralPath (Join-Path $labPath 'web') -Recurse -File | Measure-Object Length -Sum).Sum
     packageDirectoryBytes = ($packageFiles | Measure-Object Length -Sum).Sum
     packageFileCount = $packageFiles.Count
@@ -1452,5 +1489,6 @@ Copy-Item -LiteralPath $installer.FullName -Destination (Join-Path $outputPath '
 Copy-Item -LiteralPath $nupkg.FullName -Destination (Join-Path $outputPath $nupkg.Name)
 Copy-Item -LiteralPath $releases -Destination (Join-Path $outputPath 'RELEASES')
 Copy-Item -LiteralPath (Join-Path $labPath 'package-lock.json') -Destination (Join-Path $outputPath 'package-lock.json')
+Copy-Item -LiteralPath $supplyChainPath -Destination (Join-Path $outputPath 'supply-chain') -Recurse
 
 $measurement | ConvertTo-Json -Depth 8
