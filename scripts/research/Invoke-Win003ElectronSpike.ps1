@@ -1191,15 +1191,37 @@ if (!hasSingleInstanceLock) {
     for (const factor of [1, 2, 4]) {
       trustedWindow.webContents.setZoomFactor(factor);
       await delay(100);
-      hostZoomProfiles.push(await trustedWindow.webContents.executeJavaScript(`(() => ({
-        factor: ${factor},
-        expectedInnerWidth: ${1280 / factor},
-        innerWidth: window.innerWidth,
-        mainCount: document.querySelectorAll("main").length,
-        h1Count: document.querySelectorAll("h1").length,
-        horizontalOverflow:
-          document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
-      }))()`));
+      hostZoomProfiles.push(await trustedWindow.webContents.executeJavaScript(`(() => {
+        const clientWidth = document.documentElement.clientWidth;
+        const scrollWidth = document.documentElement.scrollWidth;
+        const overflowingElements = [...document.querySelectorAll("body *")]
+          .map((element) => {
+            const rectangle = element.getBoundingClientRect();
+            return {
+              tag: element.tagName.toLowerCase(),
+              id: element.id || null,
+              className: typeof element.className === "string" ? element.className : null,
+              role: element.getAttribute("role"),
+              left: Math.round(rectangle.left * 10) / 10,
+              right: Math.round(rectangle.right * 10) / 10,
+              width: Math.round(rectangle.width * 10) / 10
+            };
+          })
+          .filter((element) => element.left < -1 || element.right > clientWidth + 1)
+          .slice(0, 12);
+        return {
+          factor: ${factor},
+          expectedInnerWidth: ${1280 / factor},
+          innerWidth: window.innerWidth,
+          clientWidth,
+          scrollWidth,
+          overflowPixels: Math.max(0, scrollWidth - clientWidth),
+          overflowingElements,
+          mainCount: document.querySelectorAll("main").length,
+          h1Count: document.querySelectorAll("h1").length,
+          horizontalOverflow: scrollWidth > clientWidth + 1
+        };
+      })()`));
     }
     trustedWindow.webContents.setZoomFactor(1);
     const hostZoomReflowPassed = hostZoomProfiles.every((profile) =>
