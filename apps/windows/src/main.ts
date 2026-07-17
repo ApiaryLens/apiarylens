@@ -43,6 +43,12 @@ import {
   rollbackStandaloneData,
   restoreStandaloneBackupToStaging,
 } from './standalone-backup.js';
+import {
+  acquireHeadlessLifecycleLock,
+  readHeadlessLifecycleRequest,
+  runHeadlessLifecycle,
+  writeHeadlessLifecycleEvidence,
+} from './headless-lifecycle.js';
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -114,11 +120,24 @@ async function start(): Promise<void> {
   app.setAccessibilitySupportEnabled(true);
   const userData = app.getPath('userData');
   mkdirSync(userData, { recursive: true, mode: 0o700 });
+  const lifecycleRequestArgument = process.argv.find((argument) =>
+    argument.startsWith('--desktop-lifecycle-request='),
+  );
+  const lifecycleEvidenceArgument = process.argv.find((argument) =>
+    argument.startsWith('--desktop-lifecycle-evidence='),
+  );
   const profilePath = resolve(userData, 'connection-profile.v1.json');
-  if (process.argv.includes('--desktop-standalone')) removeConnectionProfile(profilePath);
+  if (
+    !lifecycleRequestArgument &&
+    !lifecycleEvidenceArgument &&
+    process.argv.includes('--desktop-standalone')
+  )
+    removeConnectionProfile(profilePath);
   const profileArgument = process.argv.find((argument) =>
     argument.startsWith('--desktop-profile='),
   );
+  if ((lifecycleRequestArgument || lifecycleEvidenceArgument) && profileArgument)
+    throw new Error('Headless lifecycle cannot import a connected profile');
   if (profileArgument && process.argv.includes('--desktop-standalone'))
     throw new Error('Choose either connected profile import or standalone mode, not both');
   if (profileArgument) {
@@ -126,7 +145,10 @@ async function start(): Promise<void> {
     await verifyConnectedBackend(imported);
     saveConnectionProfile(profilePath, imported);
   }
-  const connection = loadSavedConnectionProfile(profilePath);
+  const connection =
+    lifecycleRequestArgument || lifecycleEvidenceArgument
+      ? undefined
+      : loadSavedConnectionProfile(profilePath);
   if (connection) {
     // Remote content receives no preload or IPC bridge. Authentication cookies,
     // IndexedDB, service workers, and the offline outbox stay in this isolated partition.
@@ -146,6 +168,55 @@ async function start(): Promise<void> {
       if (!shutdownStarted) app.exit(71);
     },
   });
+  if (lifecycleRequestArgument || lifecycleEvidenceArgument) {
+    if (!lifecycleRequestArgument || !lifecycleEvidenceArgument) {
+      throw new Error('Headless lifecycle requires both request and evidence files');
+    }
+    const requestPath = lifecycleRequestArgument.slice('--desktop-lifecycle-request='.length);
+    const evidencePath = lifecycleEvidenceArgument.slice('--desktop-lifecycle-evidence='.length);
+    const parsed = readHeadlessLifecycleRequest(requestPath, evidencePath);
+    const identity = createBuildIdentity({ deploymentProfile: 'development' });
+    const releaseLifecycleLock = acquireHeadlessLifecycleLock(paths.runtime);
+    try {
+      await supervisor.start();
+      await supervisor.stop();
+      const evidence = await runHeadlessLifecycle({
+        requestPath,
+        evidencePath,
+        paths,
+        authRootSecret: secrets.authRootSecret,
+        identity: {
+          productVersion: identity.productVersion,
+          databaseMigration: identity.databaseMigration,
+        },
+        hooks: {
+          verifyServiceHealth: async () => {
+            if (!supervisor) throw new Error('Standalone service is unavailable');
+            const active = await supervisor.start();
+            try {
+              const response = await fetch(`${active.endpoint}/health`, {
+                headers: {
+                  [desktopControlHeader]: active.controlToken,
+                  origin: active.endpoint,
+                },
+                cache: 'no-store',
+                signal: AbortSignal.timeout(5_000),
+              });
+              if (!response.ok) throw new Error('Standalone health verification failed');
+            } finally {
+              await supervisor.stop();
+            }
+          },
+        },
+      });
+      writeHeadlessLifecycleEvidence(parsed.evidencePath, evidence);
+      shutdownStarted = true;
+      app.exit(evidence.status === 'passed' ? 0 : 72);
+      return;
+    } finally {
+      releaseLifecycleLock();
+    }
+  }
   const running = await supervisor.start();
   const smokeArgument = process.argv.find((argument) => argument.startsWith('--desktop-smoke='));
   const desktopSession = session.fromPartition('persist:apiarylens-windows');
