@@ -1,0 +1,77 @@
+name: WIN-003 signed lifecycle replay
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Signing workflow run containing the exact candidate artifact
+        required: true
+        type: string
+      candidate:
+        description: Candidate lifecycle to replay
+        required: true
+        type: choice
+        options:
+          - electron
+          - tauri
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  electron-lifecycle:
+    if: inputs.candidate == 'electron'
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download exact signed Electron evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: win003-electron-test-signed-evidence
+          path: ${{ runner.temp }}/signed-input
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.source_run_id }}
+      - name: Replay signed Electron lifecycle
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003ElectronInstallProbe.ps1
+          -EvidenceDirectory "$env:RUNNER_TEMP/signed-input/win003-electron-signed-evidence"
+          -OutputDirectory "$env:RUNNER_TEMP/signed-replay"
+      - name: Upload replay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: win003-electron-signed-lifecycle-replay
+          path: ${{ runner.temp }}/signed-replay
+          if-no-files-found: warn
+          retention-days: 14
+
+  tauri-lifecycle:
+    if: inputs.candidate == 'tauri'
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download exact signed Tauri evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: win003-tauri-test-signed-evidence
+          path: ${{ runner.temp }}/signed-input
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.source_run_id }}
+      - name: Replay signed Tauri lifecycle
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003TauriInstallProbe.ps1
+          -EvidenceDirectory "$env:RUNNER_TEMP/signed-input/win003-tauri-signed-evidence"
+          -OutputDirectory "$env:RUNNER_TEMP/signed-replay"
+      - name: Upload replay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: win003-tauri-signed-lifecycle-replay
+          path: ${{ runner.temp }}/signed-replay
+          if-no-files-found: warn
+          retention-days: 14
