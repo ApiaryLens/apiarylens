@@ -81,6 +81,14 @@ describe('SqliteStore', () => {
     expect(store.getSession(session.sessionToken)?.user.identifier).toBe('owner@example.test');
   });
 
+  it('revokes every other session for the user while preserving the current session', () => {
+    const current = bootstrap();
+    const other = store.createSession(current.view.user.id, current.view.organization.id);
+    expect(store.revokeOtherSessions(current.sessionToken, current.view.user.id)).toBe(1);
+    expect(store.getSession(current.sessionToken)?.user.id).toBe(current.view.user.id);
+    expect(store.getSession(other.sessionToken)).toBeUndefined();
+  });
+
   it('applies and deduplicates a client operation', () => {
     const session = bootstrap();
     const operation = createApiary(session.view.organization.id);

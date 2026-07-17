@@ -377,6 +377,22 @@ app.post('/api/v1/auth/sign-out', requireSession, requireCsrf, async (c) => {
   return c.body(null, 204);
 });
 
+app.post('/api/v1/session/revoke-others', requireSession, requireCsrf, async (c) => {
+  const session = c.get('session');
+  const result = await c.env.DB.prepare(
+    `UPDATE sessions SET revoked_at = ?
+     WHERE user_id = ? AND revoked_at IS NULL AND id_hash NOT IN (?, ?)`,
+  )
+    .bind(
+      now(),
+      session.userId,
+      await keyedHash(session.token, authRoot(c)),
+      await sha256(session.token),
+    )
+    .run();
+  return c.json({ revoked: Number(result.meta.changes ?? 0) });
+});
+
 app.get('/api/v1/members', requireSession, async (c) => {
   if (!rolePermissions[c.get('session').role].includes('members:read'))
     return apiError(c, 403, 'permission_denied', 'You do not have permission for this action');

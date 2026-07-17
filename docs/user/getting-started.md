@@ -94,6 +94,24 @@ Invitation links and recovery codes are secrets; share them through a private ch
 An invited person creates their own password when accepting the link; the owner never
 chooses or sees that password.
 
+## Sign-in and devices
+
+Each browser or installed PWA has its own server session in a secure, HttpOnly
+cookie; ApiaryLens application code cannot read or copy that cookie. The offline
+cache contains non-secret account context and synchronized family records, not the
+session token or CSRF credential. Open **Account and build** to see the current
+browser/device type, whether it is an installed app, the server-session expiry, and
+the expected reconnect behavior.
+
+ApiaryLens remains usable with synchronized data while offline. On reconnect it
+validates the secure cookie and synchronizes automatically. Sign-in is required only
+when that server session expired or was revoked. **Sign out other devices** revokes
+all other sessions for the current account while preserving the current one; it does
+not delete records already cached on those devices. Removing a family member or
+using account recovery also revokes that person's sessions. Signing out locally now
+removes the cached account context even when the device is offline, while leaving
+family records in place until **Clear local data** is explicitly selected.
+
 ## Photos
 
 Selected photos and thumbnails are staged locally first. ApiaryLens uploads them

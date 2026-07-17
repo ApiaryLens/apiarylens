@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  clearCachedSession,
   clearLocalWorkspace,
   db,
   queueCreate,
@@ -31,6 +32,15 @@ describe('offline workspace', () => {
     expect(record?.data.name).toBe('Back field');
     expect(operations).toHaveLength(1);
     expect(operations[0]?.entityId).toBe(id);
+  });
+
+  it('forgets cached account context on local offline sign-out without deleting records', async () => {
+    const organizationId = crypto.randomUUID();
+    await queueCreate(organizationId, 'apiary', { name: 'Offline yard' });
+    await db.settings.put({ key: 'session', value: { organization: { id: organizationId } } });
+    await clearCachedSession();
+    expect(await db.settings.get('session')).toBeUndefined();
+    expect(await db.resources.count()).toBe(1);
   });
 
   it('announces a committed local save so an online client can synchronize immediately', async () => {

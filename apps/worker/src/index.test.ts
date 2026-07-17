@@ -116,6 +116,69 @@ describe('Cloudflare build identity', () => {
   });
 });
 
+describe('Cloudflare session transparency', () => {
+  it('revokes other devices while preserving the current opaque session', async () => {
+    const db = new TestD1Database();
+    const environment = {
+      DB: db as unknown as D1Database,
+      MEDIA: new TestR2Bucket() as unknown as R2Bucket,
+      AUTH_ROOT_SECRET: 'test-authentication-root-secret-at-least-32-characters',
+    };
+    try {
+      const bootstrap = await app.request(
+        '/api/v1/bootstrap',
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            identifier: 'owner@example.test',
+            displayName: 'Family Owner',
+            password: 'correct horse battery staple',
+            organizationName: 'Owner family',
+            timezone: 'America/New_York',
+          }),
+        },
+        environment,
+      );
+      const owner = (await bootstrap.json()) as { csrfToken: string };
+      const currentCookie = bootstrap.headers.get('set-cookie')?.split(';')[0] ?? '';
+      const other = await app.request(
+        '/api/v1/auth/sign-in',
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            identifier: 'owner@example.test',
+            password: 'correct horse battery staple',
+          }),
+        },
+        environment,
+      );
+      const otherCookie = other.headers.get('set-cookie')?.split(';')[0] ?? '';
+      const revoked = await app.request(
+        '/api/v1/session/revoke-others',
+        {
+          method: 'POST',
+          headers: { cookie: currentCookie, 'x-csrf-token': owner.csrfToken },
+        },
+        environment,
+      );
+      expect(revoked.status).toBe(200);
+      expect(await revoked.json()).toEqual({ revoked: 1 });
+      expect(
+        (await app.request('/api/v1/session', { headers: { cookie: otherCookie } }, environment))
+          .status,
+      ).toBe(401);
+      expect(
+        (await app.request('/api/v1/session', { headers: { cookie: currentCookie } }, environment))
+          .status,
+      ).toBe(200);
+    } finally {
+      db.close();
+    }
+  });
+});
+
 describe('Cloudflare operator boundary', () => {
   for (const [method, path] of [
     ['GET', '/api/v1/operator/backup'],

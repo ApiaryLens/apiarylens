@@ -134,6 +134,10 @@ export async function cachedSession(): Promise<Omit<SessionView, 'csrfToken'> | 
   return (await db.settings.get('session'))?.value as Omit<SessionView, 'csrfToken'> | undefined;
 }
 
+export async function clearCachedSession(): Promise<void> {
+  await db.settings.delete('session');
+}
+
 export async function clearLocalWorkspace(): Promise<void> {
   await db.transaction('rw', db.resources, db.outbox, db.settings, db.media, async () => {
     await Promise.all([

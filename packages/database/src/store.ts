@@ -662,6 +662,16 @@ export class SqliteStore {
       .run(now(), ...this.sessionHashes(sessionToken));
   }
 
+  revokeOtherSessions(sessionToken: string, userId: string): number {
+    const result = this.database
+      .prepare(
+        `UPDATE sessions SET revoked_at = ?
+         WHERE user_id = ? AND revoked_at IS NULL AND id_hash NOT IN (?, ?)`,
+      )
+      .run(now(), userId, ...this.sessionHashes(sessionToken));
+    return Number(result.changes);
+  }
+
   listResources(organizationId: string, entityType: ResourceType): ResourceRecord[] {
     const rows = this.database
       .prepare(

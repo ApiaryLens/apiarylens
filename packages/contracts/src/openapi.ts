@@ -74,6 +74,18 @@ export function buildOpenApiDocument() {
           },
         },
       },
+      '/session/revoke-others': {
+        post: {
+          tags: ['Identity'],
+          summary: 'Revoke every other session for the current user',
+          security: [{ browserSession: [], csrf: [] }],
+          responses: {
+            '200': { description: 'Other sessions revoked' },
+            '401': { description: 'Authentication required', content: json(apiErrorSchema) },
+            '403': { description: 'Request verification failed', content: json(apiErrorSchema) },
+          },
+        },
+      },
       '/auth/sign-out': {
         post: {
           tags: ['Identity'],

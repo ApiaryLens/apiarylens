@@ -134,4 +134,9 @@ export const api = {
       credentials: 'same-origin',
       headers: { 'x-csrf-token': csrfToken },
     }),
+  revokeOtherSessions: (csrfToken: string) =>
+    json<{ revoked: number }>('/api/v1/session/revoke-others', {
+      method: 'POST',
+      headers: { 'x-csrf-token': csrfToken },
+    }),
 };

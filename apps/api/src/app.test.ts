@@ -359,6 +359,27 @@ describe('ApiaryLens API', () => {
     ).toBe(200);
   });
 
+  it('lets a user revoke other devices without revoking the current session', async () => {
+    const owner = await bootstrap();
+    const other = store.createSession(owner.body.user.id, owner.body.organization.id);
+    const response = await app.request('/api/v1/session/revoke-others', {
+      method: 'POST',
+      headers: { cookie: owner.cookie, 'x-csrf-token': owner.body.csrfToken },
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ revoked: 1 });
+    expect(
+      (await app.request('/api/v1/session', { headers: { cookie: owner.cookie } })).status,
+    ).toBe(200);
+    expect(
+      (
+        await app.request('/api/v1/session', {
+          headers: { cookie: `apiarylens-session=${other.sessionToken}` },
+        })
+      ).status,
+    ).toBe(401);
+  });
+
   it('enrolls a viewer who cannot write protected records', async () => {
     const owner = await bootstrap();
     const invitationResponse = await app.request('/api/v1/invitations', {

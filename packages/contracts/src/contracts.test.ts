@@ -18,6 +18,7 @@ describe('contracts', () => {
         '/bootstrap/status',
         '/auth/recover',
         '/session',
+        '/session/revoke-others',
         '/auth/sign-out',
         '/members',
         '/resources/{type}/{id}',

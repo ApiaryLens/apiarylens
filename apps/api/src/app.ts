@@ -268,6 +268,12 @@ export function createApi(options: ApiOptions) {
     return c.body(null, 204);
   });
 
+  app.post('/api/v1/session/revoke-others', requireSession, requireCsrf, (c) => {
+    const session = c.get('session');
+    const revoked = store.revokeOtherSessions(c.get('sessionToken'), session.user.id);
+    return c.json({ revoked });
+  });
+
   app.get('/api/v1/members', requireSession, permit('members:read'), (c) =>
     c.json({ items: store.listMemberships(c.get('session').organization.id) }),
   );
