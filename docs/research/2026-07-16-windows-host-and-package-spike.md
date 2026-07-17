@@ -8,12 +8,14 @@
 Official-source review plus comparable Electron and Tauri/WebView2 packaging,
 test-signing, exact-artifact clean-install and package-transition lifecycle,
 SQLite recovery, SBOM inventory, and automated shared-UI accessibility baselines
-are complete. A packaged Electron preload/main-process isolation baseline also
-passed, while its lifecycle replay exposed nondeterministic Squirrel uninstall
-cleanup that remains a package-selection risk. Retail Windows profile and host
-accessibility evidence, integrated power-loss behavior, distribution-license
-closure, and the final ADR remain required before the spike can close. Authenticated
-local-service supervision is being validated separately under `WIN-004`.
+are complete. Packaged and clean-installed Electron preload/main-process isolation
+now starts the real portable ApiaryLens service for a protected health probe and
+disposable SQLite/media creation. Earlier lifecycle replay exposed nondeterministic
+Squirrel uninstall cleanup that remains a package-selection risk. Full API and
+organization-isolation replay, retail Windows profiles, host accessibility,
+integrated power-loss behavior, distribution-license closure, and the final ADR
+remain required before the spike can close. Authenticated local-service supervision
+continues separately under `WIN-004`.
 
 ## Question
 
@@ -377,6 +379,49 @@ has four consecutive passing replays. Cache retention remains variable (3.8 MB i
 the first pass and 10.0 MB in the next three), so explicit cache ownership,
 diagnostics, cleanup, keep-data, and remove-all behavior remain open.
 
+### Exact packaged and installed real-service evidence
+
+The first exact-server build run
+[`29554542783`](https://github.com/ApiaryLens/apiarylens/actions/runs/29554542783)
+failed during Squirrel construction. The portable-server deployment tree contained
+pnpm junctions, and NuGet rejected access to the first linked package (`fflate`).
+This failure is retained as packaging evidence. The workflow was corrected to use a
+hoisted physical deployment tree rather than weakening permissions or excluding
+runtime files.
+
+Run
+[`29554694681`](https://github.com/ApiaryLens/apiarylens/actions/runs/29554694681)
+at commit `a384154c5b2d6082c607ac4f7392cb0d37f876b3` then built, packaged,
+installed, exercised, and uninstalled that physical tree on two fresh hosted
+Windows jobs. The exact setup SHA-256 was
+`0B1F3FEB53A1CDE1390C89C2D14DA073654201BBF6BB2A7082ED46FD0B6F644C`.
+
+| Exact real-service check | Packaged result | Clean-installed result |
+|---|---:|---:|
+| Portable-server tree | 6.82 MiB, 1,415 files | Present inside exact installed artifact |
+| Setup / installed footprint | 135.4 MiB setup | 475.9 MiB, 1,496 files |
+| External Node / Rust / .NET SDK | Not required by package | All absent from restricted `PATH` |
+| Renderer privilege surface | No Node `process` or `require`; `health` only | Same bridge probe passed |
+| Renderer-to-main arguments | 0 | 0 |
+| Untrusted sender | Rejected | Rejected |
+| Real service bind | `127.0.0.1` | `127.0.0.1` |
+| Real SQLite / media creation | Passed / passed | Passed / passed |
+| Real service exit | 0 | 0 |
+| Control token in tested renderer, storage, console, arguments, readiness, or service output | No | No |
+| Five renderer-ready launches | 249 ms mean; 250 ms median | Installed three-second smoke passed |
+| Uninstall | N/A in build job | Exit 0; host and registration removed in 315 ms |
+| Residual updater/cache files | N/A in build job | 3.6 MiB |
+
+The probe imports the production `@apiarylens/server`, contracts, database, and
+media packages and uses the real `SqliteStore`, `FilesystemMediaStore`, and Hono
+application behind the main-process credential boundary. It proves packaging,
+startup, protected health, storage initialization, shutdown, and the narrow bridge
+primitive. It does **not** satisfy the full typed API, user/authentication,
+organization-isolation, media-content, migration, backup, crash-report redaction,
+production-signing, or retail-device acceptance conditions. The artifact is an
+unsigned research build and its license files are incomplete; those facts remain
+release blockers rather than being hidden by the green workflow.
+
 ### Electron package-transition evidence
 
 Exact-artifact replay
@@ -714,8 +759,9 @@ The recommendation is based on delivery risk, not framework preference:
   the current React application, and avoids making WebView2 acquisition or servicing
   part of the normal installation path.
 - The exact Electron research artifact already installed, launched, exercised
-  `node:sqlite`, upgraded, downgraded, repaired, and uninstalled without external
-  Node, Rust, .NET, WSL, or Linux tooling.
+  the real portable service's protected health/storage startup plus `node:sqlite`,
+  upgraded, downgraded, repaired, and uninstalled without external Node, Rust,
+  .NET, WSL, or Linux tooling.
 - Tauri's 24.3 MiB online installer and 96.7 MiB installed footprint are compelling,
   but the current probe packages only the Node executable. It has not yet packaged
   and supervised the exact ApiaryLens server application and dependency graph.

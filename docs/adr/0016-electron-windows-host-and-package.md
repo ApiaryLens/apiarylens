@@ -42,6 +42,18 @@ complete third-party notice bundle. Host-specific token isolation, Credential
 Manager integration, retail Windows accessibility, and physical lifecycle tests
 also remain open.
 
+Subsequent research run
+[`29554694681`](https://github.com/ApiaryLens/apiarylens/actions/runs/29554694681)
+packaged the real portable ApiaryLens server, database, and media adapters in a
+physical 1,415-file runtime tree. Both the loose packaged application and a clean
+current-user installation started the real service on `127.0.0.1`, created
+disposable SQLite/media state, served protected health through a one-method
+sandboxed bridge, rejected an untrusted sender, exposed no control token through
+the tested renderer/storage/console/argument/readiness/output surfaces, and shut
+down with exit 0. This materially advances conditions 1 through 3 but does not
+complete their full API, organization-isolation, migration, crash/recovery, or
+credential-adapter matrices.
+
 ## Proposed Decision
 
 Use **Electron** as the initial Windows Preview host. Use a **signed per-user
