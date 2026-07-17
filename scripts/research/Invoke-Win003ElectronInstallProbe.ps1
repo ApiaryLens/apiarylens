@@ -102,12 +102,19 @@ if ($measurement.signingMode -eq 'ephemeral-test-signing' -and (
 $crossUserSameUserRoundTrip = $false
 $crossUserCiphertextExcludesPlaintext = $false
 $crossUserDifferentUserDenied = $false
+$passwordTransitionCreatedBeforeChange = $false
+$passwordTransitionCiphertextExcludesPlaintext = $false
+$sameUserDecryptsAfterPasswordChange = $false
+$passwordChangeApiSucceeded = $false
 $crossUserCleanupPassed = $false
 $crossUserLab = $null
 $temporaryUserName = $null
 $temporaryUserSid = $null
 $temporaryPassword = $null
 $temporaryPasswordText = $null
+$replacementPassword = $null
+$replacementPasswordText = $null
+$replacementRandomBytes = $null
 $randomBytes = $null
 $credential = $null
 try {
@@ -143,7 +150,7 @@ try {
     $temporaryPasswordText = "W5E-$([Convert]::ToHexString($randomBytes))!"
     [Array]::Clear($randomBytes, 0, $randomBytes.Length)
     $temporaryPassword = ConvertTo-SecureString -String $temporaryPasswordText -AsPlainText -Force
-    New-LocalUser -Name $temporaryUserName -Password $temporaryPassword -AccountNeverExpires -PasswordNeverExpires -UserMayNotChangePassword | Out-Null
+    New-LocalUser -Name $temporaryUserName -Password $temporaryPassword -AccountNeverExpires -PasswordNeverExpires | Out-Null
     $temporaryUserSid = (Get-LocalUser -Name $temporaryUserName).SID.Value
     $temporarySid = [Security.Principal.SecurityIdentifier]::new($temporaryUserSid)
     $labAcl = Get-Acl -LiteralPath $crossUserLab
@@ -169,6 +176,100 @@ try {
     Set-Acl -LiteralPath $verifyOutput -AclObject $verifyOutputAcl
     $crossUserChildScript = Join-Path $crossUserLab 'cross-user-child.ps1'
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'win005-electron-cross-user-child.ps1') -Destination $crossUserChildScript
+
+    $passwordFixture = Join-Path $crossUserLab 'password-transition-session.bin'
+    $passwordExpectedHash = Join-Path $crossUserLab 'password-transition.expected.sha256'
+    $passwordCreateOutput = Join-Path $crossUserLab 'password-create.json'
+    $passwordVerifyOutput = Join-Path $crossUserLab 'password-verify.json'
+    foreach ($passwordPath in @($passwordFixture, $passwordExpectedHash, $passwordCreateOutput, $passwordVerifyOutput)) {
+        New-Item -ItemType File -Path $passwordPath -Force | Out-Null
+        $passwordPathAcl = Get-Acl -LiteralPath $passwordPath
+        $passwordPathModify = [Security.AccessControl.FileSystemAccessRule]::new(
+            $temporarySid,
+            [Security.AccessControl.FileSystemRights]::Modify,
+            [Security.AccessControl.AccessControlType]::Allow
+        )
+        [void] $passwordPathAcl.AddAccessRule($passwordPathModify)
+        Set-Acl -LiteralPath $passwordPath -AclObject $passwordPathAcl
+    }
+
+    $passwordCreateStdout = Join-Path $crossUserLab 'password-create.stdout.log'
+    $passwordCreateStderr = Join-Path $crossUserLab 'password-create.stderr.log'
+    $passwordCreateArguments = @(
+        '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+        '-File', "`"$crossUserChildScript`"",
+        '-HostPath', "`"$copiedHost`"",
+        '-HostWorkingDirectory', "`"$copiedHostDirectory`"",
+        '-LabDirectory', "`"$crossUserLab`"",
+        '-ResultPath', "`"$passwordCreateOutput`"",
+        '-Action', 'create-password-transition'
+    )
+    $passwordCreate = Start-Process -FilePath (Join-Path $PSHOME 'pwsh.exe') -Credential $credential -ArgumentList $passwordCreateArguments -WorkingDirectory $crossUserLab -PassThru -WindowStyle Hidden -RedirectStandardOutput $passwordCreateStdout -RedirectStandardError $passwordCreateStderr
+    if (-not $passwordCreate.WaitForExit(45000)) {
+        Stop-Process -Id $passwordCreate.Id -Force -ErrorAction SilentlyContinue
+        throw 'Same-user pre-password-change safeStorage creation exceeded 45 seconds'
+    }
+    $passwordCreateWritten = (Get-Item -LiteralPath $passwordCreateOutput).Length -gt 0
+    if ($passwordCreate.ExitCode -ne 0 -or -not $passwordCreateWritten) {
+        throw 'Same-user pre-password-change safeStorage creation failed'
+    }
+    $passwordCreateState = Get-Content -Raw -LiteralPath $passwordCreateOutput | ConvertFrom-Json
+    $passwordTransitionCreatedBeforeChange = [bool] $passwordCreateState.createdBeforePasswordChange
+    $passwordTransitionCiphertextExcludesPlaintext = [bool] $passwordCreateState.ciphertextExcludesPlaintext
+
+    $replacementRandomBytes = [byte[]]::new(24)
+    [Security.Cryptography.RandomNumberGenerator]::Fill($replacementRandomBytes)
+    $replacementPasswordText = "W5E-R-$([Convert]::ToHexString($replacementRandomBytes))!"
+    [Array]::Clear($replacementRandomBytes, 0, $replacementRandomBytes.Length)
+    $replacementPassword = ConvertTo-SecureString -String $replacementPasswordText -AsPlainText -Force
+    if (-not ('Win005NetApi' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System.Runtime.InteropServices;
+public static class Win005NetApi {
+    [DllImport("Netapi32.dll", CharSet = CharSet.Unicode)]
+    public static extern int NetUserChangePassword(
+        string domainname,
+        string username,
+        string oldpassword,
+        string newpassword);
+}
+'@
+    }
+    $passwordChangeResult = [Win005NetApi]::NetUserChangePassword(
+        $env:COMPUTERNAME,
+        $temporaryUserName,
+        $temporaryPasswordText,
+        $replacementPasswordText
+    )
+    if ($passwordChangeResult -ne 0) {
+        throw "Windows local password change failed with status $passwordChangeResult"
+    }
+    $passwordChangeApiSucceeded = $true
+    $credential = [pscredential]::new("$env:COMPUTERNAME\$temporaryUserName", $replacementPassword)
+
+    $passwordVerifyStdout = Join-Path $crossUserLab 'password-verify.stdout.log'
+    $passwordVerifyStderr = Join-Path $crossUserLab 'password-verify.stderr.log'
+    $passwordVerifyArguments = @(
+        '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+        '-File', "`"$crossUserChildScript`"",
+        '-HostPath', "`"$copiedHost`"",
+        '-HostWorkingDirectory', "`"$copiedHostDirectory`"",
+        '-LabDirectory', "`"$crossUserLab`"",
+        '-ResultPath', "`"$passwordVerifyOutput`"",
+        '-Action', 'verify-password-transition'
+    )
+    $passwordVerify = Start-Process -FilePath (Join-Path $PSHOME 'pwsh.exe') -Credential $credential -ArgumentList $passwordVerifyArguments -WorkingDirectory $crossUserLab -PassThru -WindowStyle Hidden -RedirectStandardOutput $passwordVerifyStdout -RedirectStandardError $passwordVerifyStderr
+    if (-not $passwordVerify.WaitForExit(45000)) {
+        Stop-Process -Id $passwordVerify.Id -Force -ErrorAction SilentlyContinue
+        throw 'Same-user post-password-change safeStorage verification exceeded 45 seconds'
+    }
+    $passwordVerifyWritten = (Get-Item -LiteralPath $passwordVerifyOutput).Length -gt 0
+    if ($passwordVerify.ExitCode -ne 0 -or -not $passwordVerifyWritten) {
+        throw 'Same-user post-password-change safeStorage verification failed'
+    }
+    $passwordVerifyState = Get-Content -Raw -LiteralPath $passwordVerifyOutput | ConvertFrom-Json
+    $sameUserDecryptsAfterPasswordChange = [bool] $passwordVerifyState.sameUserDecryptsAfterPasswordChange
+
     $verifyStdout = Join-Path $crossUserLab 'verify.stdout.log'
     $verifyStderr = Join-Path $crossUserLab 'verify.stderr.log'
     $verifyArguments = @(
@@ -177,7 +278,8 @@ try {
         '-HostPath', "`"$copiedHost`"",
         '-HostWorkingDirectory', "`"$copiedHostDirectory`"",
         '-LabDirectory', "`"$crossUserLab`"",
-        '-ResultPath', "`"$verifyOutput`""
+        '-ResultPath', "`"$verifyOutput`"",
+        '-Action', 'verify-denied'
     )
     $verify = Start-Process -FilePath (Join-Path $PSHOME 'pwsh.exe') -Credential $credential -ArgumentList $verifyArguments -WorkingDirectory $crossUserLab -PassThru -WindowStyle Hidden -RedirectStandardOutput $verifyStdout -RedirectStandardError $verifyStderr
     if (-not $verify.WaitForExit(45000)) {
@@ -189,7 +291,7 @@ try {
         $redactDiagnostic = {
             param([string] $Value)
             if ($null -eq $Value) { return $null }
-            foreach ($sensitive in @($temporaryUserName, $temporaryUserSid, $temporaryPasswordText, $env:USERNAME)) {
+            foreach ($sensitive in @($temporaryUserName, $temporaryUserSid, $temporaryPasswordText, $replacementPasswordText, $env:USERNAME)) {
                 if ($sensitive) { $Value = $Value.Replace($sensitive, '[redacted]') }
             }
             return $Value
@@ -208,14 +310,23 @@ try {
     }
     $verifyState = Get-Content -Raw -LiteralPath $verifyOutput | ConvertFrom-Json
     $crossUserDifferentUserDenied = [bool] $verifyState.differentUserDenied
-    if (-not $crossUserSameUserRoundTrip -or -not $crossUserCiphertextExcludesPlaintext -or -not $crossUserDifferentUserDenied) {
+    if (-not $crossUserSameUserRoundTrip -or
+        -not $crossUserCiphertextExcludesPlaintext -or
+        -not $passwordTransitionCreatedBeforeChange -or
+        -not $passwordTransitionCiphertextExcludesPlaintext -or
+        -not $passwordChangeApiSucceeded -or
+        -not $sameUserDecryptsAfterPasswordChange -or
+        -not $crossUserDifferentUserDenied) {
         throw 'Cross-user Electron safeStorage acceptance failed'
     }
 } finally {
     $credential = $null
     if ($randomBytes -is [Array]) { [Array]::Clear($randomBytes, 0, $randomBytes.Length) }
+    if ($replacementRandomBytes -is [Array]) { [Array]::Clear($replacementRandomBytes, 0, $replacementRandomBytes.Length) }
     $temporaryPasswordText = $null
     $temporaryPassword = $null
+    $replacementPasswordText = $null
+    $replacementPassword = $null
     if ($crossUserLab) {
         $crossUserPrefix = [IO.Path]::GetFullPath($crossUserLab).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
         Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
@@ -816,6 +927,10 @@ $result = [ordered]@{
         $bridgeProbeResult.serverSessionCredentialLifecyclePassed -and
         -not $bridgeProbeResult.credentialSecretPresentOutsideMain
     installedSafeStorageDifferentUserDenied = $crossUserDifferentUserDenied
+    installedSafeStorageCreatedBeforePasswordChange = $passwordTransitionCreatedBeforeChange
+    installedSafeStoragePasswordChangeApiSucceeded = $passwordChangeApiSucceeded
+    installedSafeStorageSameUserDecryptsAfterPasswordChange = $sameUserDecryptsAfterPasswordChange
+    installedSafeStoragePasswordTransitionCiphertextExcludesPlaintext = $passwordTransitionCiphertextExcludesPlaintext
     installedSafeStorageCrossUserLabCleanupPassed = $crossUserCleanupPassed
     installedServerSessionCredentialLifecyclePassed = $bridgeProbeResult.serverSessionCredentialLifecyclePassed
     installedCredentialCrashRecoveryPassed = $installedCredentialCrashRecoveryPassed

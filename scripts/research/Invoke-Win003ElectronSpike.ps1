@@ -787,7 +787,12 @@ if (!hasSingleInstanceLock) {
     if (fs.realpathSync.native(path.dirname(output)).toLowerCase() !== lab.toLowerCase()) {
       throw new Error("cross-user-output-outside-lab");
     }
-    const fixture = path.join(lab, "protected-session.bin");
+    const passwordTransition = action === "create-password-transition" || action === "verify-password-transition";
+    const fixture = path.join(
+      lab,
+      passwordTransition ? "password-transition-session.bin" : "protected-session.bin"
+    );
+    const expectedHashFile = path.join(lab, "password-transition.expected.sha256");
     if (action === "create") {
       const value = crypto.randomBytes(48).toString("base64url");
       const ciphertext = safeStorage.encryptString(value);
@@ -805,6 +810,26 @@ if (!hasSingleInstanceLock) {
       }
       if (!differentUserDenied) throw new Error("cross-user-decryption-unexpectedly-succeeded");
       fs.writeFileSync(output, JSON.stringify({ differentUserDenied }));
+    } else if (action === "create-password-transition") {
+      const value = crypto.randomBytes(48).toString("base64url");
+      const ciphertext = safeStorage.encryptString(value);
+      fs.writeFileSync(fixture, ciphertext, { mode: 0o600 });
+      fs.writeFileSync(
+        expectedHashFile,
+        crypto.createHash("sha256").update(value).digest("hex"),
+        { encoding: "utf8", mode: 0o600 }
+      );
+      fs.writeFileSync(output, JSON.stringify({
+        createdBeforePasswordChange: safeStorage.decryptString(ciphertext) === value,
+        ciphertextExcludesPlaintext: !ciphertext.includes(Buffer.from(value, "utf8"))
+      }));
+    } else if (action === "verify-password-transition") {
+      const decrypted = safeStorage.decryptString(fs.readFileSync(fixture));
+      const expectedHash = fs.readFileSync(expectedHashFile, "utf8");
+      fs.writeFileSync(output, JSON.stringify({
+        sameUserDecryptsAfterPasswordChange:
+          crypto.createHash("sha256").update(decrypted).digest("hex") === expectedHash
+      }));
     } else {
       throw new Error("unknown-cross-user-action");
     }

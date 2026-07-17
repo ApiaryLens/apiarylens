@@ -10,7 +10,11 @@ param(
     [string] $LabDirectory,
 
     [Parameter(Mandatory)]
-    [string] $ResultPath
+    [string] $ResultPath,
+
+    [Parameter(Mandatory)]
+    [ValidateSet('verify-denied', 'create-password-transition', 'verify-password-transition')]
+    [string] $Action
 )
 
 $ErrorActionPreference = 'Stop'
@@ -37,7 +41,7 @@ $env:HOMEPATH = $userProfile.Substring([IO.Path]::GetPathRoot($userProfile).Leng
 $env:USERNAME = [Security.Principal.WindowsIdentity]::GetCurrent().Name.Split('\')[-1]
 New-Item -ItemType Directory -Force -Path $env:TEMP | Out-Null
 
-$arguments = "--win003-cross-user-lab `"$LabDirectory`" --win003-cross-user-action verify-denied --win003-cross-user-output `"$ResultPath`""
+$arguments = "--win003-cross-user-lab `"$LabDirectory`" --win003-cross-user-action $Action --win003-cross-user-output `"$ResultPath`""
 $hostProcess = Start-Process -FilePath $HostPath -ArgumentList $arguments -WorkingDirectory $HostWorkingDirectory -PassThru -WindowStyle Hidden
 if (-not $hostProcess.WaitForExit(30000)) {
     Stop-Process -Id $hostProcess.Id -Force -ErrorAction SilentlyContinue
