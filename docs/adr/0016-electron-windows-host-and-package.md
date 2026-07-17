@@ -1,0 +1,217 @@
+# ADR 0016: Electron Windows Host and Current-User Package
+
+## Status
+
+Proposed
+
+## Date
+
+2026-07-16
+
+## Deciders
+
+ApiaryLens project owner after the `WIN-003`, `WIN-004`, and `WIN-005` acceptance
+conditions below are satisfied. This proposal does not authorize product
+implementation.
+
+## Context
+
+ADR 0015 makes a packaged Windows client the default post-Preview family experience
+but intentionally leaves its host and package open. The client must reuse the React
+application and portable Node 24/SQLite backend, operate standalone without Linux or
+cloud services, connect to a compatible remote backend, remain usable offline, and
+install for a normal Windows user without Go, Node, Rust, .NET SDK, WSL, Docker, or a
+Linux shell.
+
+`WIN-003` compared Electron, Tauri 2 with a packaged Node sidecar, a custom WebView2
+host, and native WinUI. Exact hosted-Windows evidence includes packaging, clean
+current-user installation, test signing, `node:sqlite`, upgrade/downgrade/repair,
+uninstall, SQLite recovery algorithms, SBOM generation, and automated shared-UI
+accessibility. The evidence-weighted result is Electron 390/500 and Tauri 380/500.
+
+Electron has the larger footprint, but directly carries the runtime used by the
+existing application and does not add WebView2 acquisition or a second product-
+application packaging boundary. The Tauri probe has a much smaller installer but
+packages only the Node executable; it has not yet packaged and supervised the exact
+ApiaryLens server and dependency graph.
+
+Neither finalist is release-ready. Electron's measured Squirrel package leaves a
+small updater/cache directory and its Forge build reaches an exotic Git dependency
+that conflicts with repository supply-chain policy. Neither candidate installed a
+complete third-party notice bundle. Host-specific token isolation, Credential
+Manager integration, retail Windows accessibility, and physical lifecycle tests
+also remain open.
+
+## Proposed Decision
+
+Use **Electron** as the initial Windows Preview host. Use a **signed per-user
+Squirrel Setup executable and its immutable full-package/update metadata** as the
+initial package format only after the acceptance conditions in this ADR close.
+Scout Bee discovers and verifies the package through the ApiaryLens product release
+manifest and orchestrates installation and lifecycle operations.
+
+The released application:
+
+- bundles its exact Electron/Chromium/Node runtime and the exact ApiaryLens server,
+  migrations, web assets, and required notices;
+- requires no developer runtime or administrator privilege for normal install,
+  launch, update, repair, rollback, or uninstall;
+- loads only packaged local application content in a sandboxed renderer with context
+  isolation and Node integration disabled;
+- exposes a versioned, allowlisted, sender-validated preload API and never exposes a
+  reusable service or connected-session credential to ordinary renderer JavaScript;
+- lets the Electron main process supervise one real local service owner, bind it
+  explicitly to `127.0.0.1` on an operating-system-assigned port, and attach the
+  process-scoped control credential outside renderer code;
+- uses the shared portable API, SQLite store, filesystem media store, contracts, and
+  organization-authorization behavior rather than creating a desktop-only backend;
+- stores durable standalone and connected credentials through the accepted Windows
+  credential-protection adapter owned by the main process; and
+- keeps standalone data, media, backups, cached verified releases, and package
+  residue outside the executable installation directory under documented per-user
+  locations with explicit keep-data and remove-all-data behavior.
+
+The application may detect and announce an available update, but package-manager
+success is not the safety boundary. Scout or the approved local lifecycle
+coordinator must verify release identity, signature, checksum, attestation,
+compatibility, available space, and backup before quiescing the application and
+running Squirrel. It then runs migration and health checks before committing the
+new version. Direct downgrade execution remains blocked unless the manifest and
+verified backup declare it safe.
+
+The initial support baseline is fully patched x64 Windows 11 editions within
+Microsoft servicing. Windows 10 22H2 with applicable ESU and in-lifecycle Windows 10
+LTSC remain conditional Preview profiles until their exact package, accessibility,
+recovery, and security evidence passes. ARM64 and 32-bit Windows are not implied by
+framework availability.
+
+Production releases require Authenticode signatures on the packaged host and outer
+setup, a trusted timestamp, signer verification before execution and after install,
+and signed/attested release manifests, SBOMs, and notice bundles. Test-signing
+evidence does not satisfy production trust.
+
+## Options Considered
+
+### Electron with per-user package — proposed
+
+| Dimension | Assessment |
+|---|---|
+| Existing code reuse | Strongest; React, Node 24, and `node:sqlite` use the host's bundled runtime |
+| Family installation | One offline-capable package; no shared browser/runtime prerequisite |
+| Security | Acceptable only with sandbox, context isolation, narrow preload, sender validation, and host-owned credentials |
+| Footprint | Weakest measured finalist: approximately 133.8 MiB setup and 467 MiB installed research footprint |
+| Lifecycle | Exact install, upgrade, downgrade, repair, and uninstall mechanics measured; product gates still required |
+| Supply chain | Unresolved Forge/Squirrel exotic dependency and notice reconciliation block acceptance |
+
+### Tauri 2 with packaged Node sidecar
+
+| Dimension | Assessment |
+|---|---|
+| Existing code reuse | React reuses cleanly; exact server application packaging and supervision remain unproven |
+| Family installation | 24.3 MiB online setup and 96.7 MiB installed, but depends on Evergreen WebView2 |
+| Security | Strong capability model; privileged commands and sidecar still require narrow design and negative tests |
+| Offline remediation | Measured 221.1 MiB package shape; genuinely missing/policy-disabled WebView2 remains unproven |
+| Lifecycle | NSIS transition mechanics measured; product compatibility and recovery gates remain identical |
+| Supply chain | Larger Rust/npm graph, missing notices, and WebView2 redistribution review remain open |
+
+Retain Tauri as the revisit candidate if it later packages and supervises the exact
+server with lower total operational risk and complete WebView2, license, update,
+and accessibility evidence. Do not maintain parallel Electron and Tauri product
+clients.
+
+### Custom WebView2 host with packaged Node sidecar
+
+Rejected for the initial client. It would require ApiaryLens to create and maintain
+its own privileged bridge, navigation policy, updater integration, packaging,
+runtime remediation, and process supervision while retaining Tauri's WebView2 and
+sidecar risks.
+
+### Native WinUI client
+
+Rejected for the initial client. It duplicates the React UI and fragments offline,
+accessibility, validation, and synchronization behavior. Individual Windows APIs
+remain appropriate behind the Electron main-process boundary.
+
+### PWA-only Windows experience
+
+Rejected by ADR 0015. It does not provide the standalone installation, local
+lifecycle, backup, credential, and family-friendly starting experience required by
+the Windows-first direction.
+
+## Trade-off Analysis
+
+Electron spends download, disk, and patching cost to reduce architecture and
+delivery risk. Tauri spends build, sidecar, WebView2, and cross-runtime integration
+complexity to reduce per-application footprint and strengthen the default command
+boundary. For the initial Preview, reusing the exact Node runtime and avoiding a
+shared runtime prerequisite outweighs Tauri's footprint advantage only if the
+Electron security and supply-chain conditions close without weakening policy.
+
+Squirrel is proposed because it is the only Electron current-user mechanism with
+exact signed lifecycle evidence in this research. It is not trusted to decide
+schema compatibility, rollback, or data deletion. If its exotic dependency cannot
+be resolved under repository policy or its residue cannot meet explicit uninstall
+behavior, this ADR returns to Proposed and a separately measured package mechanism
+must replace it.
+
+## Consequences
+
+- One Windows host implementation is built; Tauri remains research, not a second
+  product client.
+- The core monorepo keeps the Windows client and shared code under ADR 0015.
+- Chromium/Electron security updates become an ApiaryLens release-cadence
+  responsibility; release monitoring and expedited patch channels are mandatory.
+- Windows downloads and installed footprint are larger than the Tauri challenger.
+- The browser PWA, portable backend, Cloudflare profile, and Compose profile remain
+  first-class; the Electron host is an adapter, not the product architecture.
+- Scout and the Windows app retain independent versions while product release
+  metadata declares their compatibility.
+- Package data retention becomes explicit: uninstall defaults to keep data only
+  when clearly presented, while remove-all-data securely removes credentials,
+  database, media, backups selected by the user, and safe updater residue.
+- Native iOS and Android clients remain future work and do not inherit Electron.
+
+## Acceptance Conditions Before This ADR Can Become Accepted
+
+1. Package the exact built ApiaryLens server and dependencies inside the Electron
+   candidate and pass the real API, organization-isolation, media, migration, and
+   standalone lifecycle suites from the installed artifact.
+2. Prove the sandboxed preload/main bridge keeps local-control and connected-session
+   credentials out of renderer globals, browser storage, DevTools-visible messages,
+   arguments, logs, diagnostics, and crash evidence.
+3. Integrate and replay the `WIN-004` loopback, ownership, ACL/reparse, stale-
+   readiness, corrupt-database, crash, shutdown, and recovery matrix in the actual
+   Electron host; complete Job Object and Windows lifecycle evaluation.
+4. Integrate and replay the `WIN-005` Credential Manager, DPAPI, rotation/crash,
+   revocation, restore, sign-out, keep-data, and remove-all behavior through the
+   actual main-process adapter.
+5. Resolve or reject the Forge/Squirrel exotic dependency under the repository
+   supply-chain policy; reconcile every runtime/build component to an allowlisted
+   license and install complete Apache-2.0 and third-party notices.
+6. Prove complete current-user uninstall and both explicit data-retention choices,
+   including the measured updater/cache residue.
+7. Pass exact signed-package UAT on supported retail Windows profiles: keyboard,
+   high contrast, 200%/400% zoom, reduced motion, NVDA, native dialogs, updates,
+   recovery, sleep/resume, sign-out, shutdown, multiple sessions, and locked screen.
+8. Update the authoritative Lucidchart Windows host/service/security diagrams and
+   publish accessible public exports before implementation approval.
+
+## Revisit Conditions
+
+Reopen the host or package decision if Electron cannot satisfy a condition above,
+its supported Windows baseline changes, Chromium patch cadence becomes
+unsustainable, measured family-device performance is unacceptable, package size
+materially blocks adoption, or Tauri proves the exact product lifecycle with lower
+total risk. Any change requires a superseding ADR and compatible migration path for
+installed data and release channels.
+
+## References
+
+- [ADR 0015](0015-windows-first-client-portfolio.md)
+- [Windows host and package research](../research/2026-07-16-windows-host-and-package-spike.md)
+- [Windows local-service security research](../research/2026-07-16-windows-local-service-security-spike.md)
+- [Windows credential-protection research](../research/2026-07-16-windows-native-credential-protection-spike.md)
+- [Windows-first client and Scout Bee design](../deployment/windows-first-client-and-scout-bee.md)
+- [WIN-003](https://github.com/ApiaryLens/apiarylens/issues/7)
+- [WIN-004](https://github.com/ApiaryLens/apiarylens/issues/4)
+- [WIN-005](https://github.com/ApiaryLens/apiarylens/issues/8)
