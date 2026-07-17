@@ -453,8 +453,12 @@ $installedRealServiceBridgeProbePassed =
     $bridgeProbeResult.exposedBridgeKeys[0] -eq 'health' -and
     $bridgeProbeResult.typedHealthStatus -eq 200 -and
     $bridgeProbeResult.typedHealthProtocolVersion -eq 1 -and
-    $bridgeProbeResult.bridgeInvocationCount -eq 1 -and
+    $bridgeProbeResult.bridgeInvocationCount -eq 2 -and
     $bridgeProbeResult.rendererToMainArgumentCount -eq 0 -and
+    $bridgeProbeResult.trustedWindowsShareOneService -and
+    $bridgeProbeResult.secondWindowHealthStatus -eq 200 -and
+    $bridgeProbeResult.ipv6LoopbackRejected -and
+    $bridgeProbeResult.environmentProxyDoesNotInterceptLoopbackFetch -and
     $bridgeProbeResult.untrustedSenderRejected -and
     -not $bridgeProbeResult.tokenPresentInRendererSnapshot -and
     -not $bridgeProbeResult.tokenPresentInConsoleMessages -and
@@ -926,6 +930,9 @@ $result = [ordered]@{
     installedRealServiceMediaDirectoryCreated = $bridgeProbeResult.realServiceMediaDirectoryCreated
     installedRealServiceExitCode = $bridgeProbeResult.realServiceExitCode
     installedBridgeUntrustedSenderRejected = $bridgeProbeResult.untrustedSenderRejected
+    installedBridgeTrustedWindowsShareOneService = $bridgeProbeResult.trustedWindowsShareOneService
+    installedBridgeIpv6LoopbackRejected = $bridgeProbeResult.ipv6LoopbackRejected
+    installedBridgeEnvironmentProxyDoesNotInterceptLoopbackFetch = $bridgeProbeResult.environmentProxyDoesNotInterceptLoopbackFetch
     installedApiAcceptancePassed = $bridgeProbeResult.apiAcceptance.passed
     installedApiAcceptanceCheckCount = $bridgeProbeResult.apiAcceptance.checkCount
     installedApiAcceptanceMigrationVersions = @($bridgeProbeResult.apiAcceptance.migrationVersions)

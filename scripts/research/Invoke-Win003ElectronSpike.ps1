@@ -1166,6 +1166,58 @@ if (!hasSingleInstanceLock) {
       };
     })()`);
 
+    const servicePidBeforeSecondWindow = serviceProcess.pid;
+    const secondTrustedWindow = new BrowserWindow({
+      width: 640,
+      height: 480,
+      show: false,
+      webPreferences: {
+        preload: path.join(__dirname, "preload.cjs"),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true
+      }
+    });
+    secondTrustedWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    secondTrustedWindow.webContents.on("will-navigate", (event) => event.preventDefault());
+    await secondTrustedWindow.loadFile(indexPath);
+    const secondWindowHealth = await secondTrustedWindow.webContents.executeJavaScript(`
+      window.apiaryLensDesktop.health()
+    `);
+    const trustedWindowsShareOneService =
+      serviceProcess.pid === servicePidBeforeSecondWindow &&
+      secondWindowHealth.status === 200 &&
+      secondWindowHealth.serviceProtocolVersion === serviceReady.serviceProtocolVersion;
+
+    let ipv6LoopbackRejected = false;
+    try {
+      const ipv6Response = await fetch(`http://[::1]:${serviceReady.port}/health`, {
+        headers: { authorization: `Bearer ${controlToken}`, origin: allowedOrigin },
+        signal: AbortSignal.timeout(2000)
+      });
+      await ipv6Response.arrayBuffer();
+    } catch {
+      ipv6LoopbackRejected = true;
+    }
+
+    const priorHttpProxy = process.env.HTTP_PROXY;
+    const priorHttpsProxy = process.env.HTTPS_PROXY;
+    process.env.HTTP_PROXY = "http://127.0.0.1:1";
+    process.env.HTTPS_PROXY = "http://127.0.0.1:1";
+    let environmentProxyDoesNotInterceptLoopbackFetch = false;
+    try {
+      const proxyProbeResponse = await fetch(`${serviceEndpoint}/health`, {
+        headers: { authorization: `Bearer ${controlToken}`, origin: allowedOrigin }
+      });
+      environmentProxyDoesNotInterceptLoopbackFetch = proxyProbeResponse.status === 200;
+      await proxyProbeResponse.arrayBuffer();
+    } finally {
+      if (priorHttpProxy === undefined) delete process.env.HTTP_PROXY;
+      else process.env.HTTP_PROXY = priorHttpProxy;
+      if (priorHttpsProxy === undefined) delete process.env.HTTPS_PROXY;
+      else process.env.HTTPS_PROXY = priorHttpsProxy;
+    }
+
     const untrustedWindow = new BrowserWindow({
       width: 320,
       height: 240,
@@ -1182,7 +1234,7 @@ if (!hasSingleInstanceLock) {
       window.apiaryLensDesktop.health().then(() => false).catch(() => true)
     `);
 
-    const rendererSnapshot = JSON.stringify(rendererResult);
+    const rendererSnapshot = JSON.stringify({ rendererResult, secondWindowHealth });
     const credentialSecretPresentOutsideMain = [
       ...credentialProbe.secrets,
       ...serverSessionCredentialLifecycle.secrets
@@ -1207,6 +1259,10 @@ if (!hasSingleInstanceLock) {
       exposedBridgeKeys: rendererResult.bridgeKeys,
       typedHealthStatus: rendererResult.health.status,
       typedHealthProtocolVersion: rendererResult.health.serviceProtocolVersion,
+      trustedWindowsShareOneService,
+      secondWindowHealthStatus: secondWindowHealth.status,
+      ipv6LoopbackRejected,
+      environmentProxyDoesNotInterceptLoopbackFetch,
       bridgeInvocationCount,
       rendererToMainArgumentCount: bridgeArgumentCount,
       untrustedSenderRejected,
@@ -1235,6 +1291,7 @@ if (!hasSingleInstanceLock) {
     };
     fs.writeFileSync(process.argv[bridgeProbeIndex + 1], JSON.stringify(result));
     trustedWindow.destroy();
+    secondTrustedWindow.destroy();
     untrustedWindow.destroy();
     fs.rmSync(serviceLab, { recursive: true, force: true });
     app.quit();
@@ -1475,8 +1532,12 @@ $bridgePassed =
     $bridgeResult.exposedBridgeKeys[0] -eq 'health' -and
     $bridgeResult.typedHealthStatus -eq 200 -and
     $bridgeResult.typedHealthProtocolVersion -eq 1 -and
-    $bridgeResult.bridgeInvocationCount -eq 1 -and
+    $bridgeResult.bridgeInvocationCount -eq 2 -and
     $bridgeResult.rendererToMainArgumentCount -eq 0 -and
+    $bridgeResult.trustedWindowsShareOneService -and
+    $bridgeResult.secondWindowHealthStatus -eq 200 -and
+    $bridgeResult.ipv6LoopbackRejected -and
+    $bridgeResult.environmentProxyDoesNotInterceptLoopbackFetch -and
     $bridgeResult.untrustedSenderRejected -and
     -not $bridgeResult.tokenPresentInRendererSnapshot -and
     -not $bridgeResult.tokenPresentInConsoleMessages -and
@@ -1724,6 +1785,9 @@ $measurement = [ordered]@{
     bridgeSurfaceKeys = @($bridgeResult.exposedBridgeKeys)
     bridgeRendererToMainArgumentCount = $bridgeResult.rendererToMainArgumentCount
     bridgeUntrustedSenderRejected = $bridgeResult.untrustedSenderRejected
+    bridgeTrustedWindowsShareOneService = $bridgeResult.trustedWindowsShareOneService
+    bridgeIpv6LoopbackRejected = $bridgeResult.ipv6LoopbackRejected
+    bridgeEnvironmentProxyDoesNotInterceptLoopbackFetch = $bridgeResult.environmentProxyDoesNotInterceptLoopbackFetch
     bridgeTokenPresentInRendererStorageGlobalsConsoleOrArguments =
         $bridgeResult.tokenPresentInRendererSnapshot -or
         $bridgeResult.tokenPresentInConsoleMessages -or
