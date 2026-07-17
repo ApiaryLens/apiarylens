@@ -83,6 +83,8 @@ The local run passed these scenarios:
 - successful transfer and reconciliation of the maximum 25 MiB original plus its
   thumbnail as independently journaled variants;
 - preservation, backup, transfer, and reconciliation of a non-empty pending outbox;
+- idempotent replay of a create/delete history with the resulting record remaining a
+  tombstone on the target change feed;
 - colliding target record reported as a conflict while the client remains standalone;
 - target media corruption detected before cutover;
 - incompatible sync-contract version rejected before transfer;
@@ -104,6 +106,10 @@ Follow-up run
 [`29550827123`](https://github.com/ApiaryLens/apiarylens/actions/runs/29550827123)
 passed the maximum 25 MiB original and thumbnail extension on the Windows hosted
 runner.
+
+Follow-up run
+[`29550918994`](https://github.com/ApiaryLens/apiarylens/actions/runs/29550918994)
+passed preservation of a non-empty pending outbox on the Windows hosted runner.
 
 ## Proposed migration protocol
 
@@ -211,8 +217,9 @@ installation ID, accepted hashes, and outcome.
 
 ## Further evidence required to close WIN-006
 
-- Scale testing with the maximum supported record count and tombstones. Conflicts, a
-  non-empty outbox, and the 25 MiB original-media and thumbnail boundary are covered.
+- Scale testing with the maximum supported record count. A tombstone replay,
+  conflicts, a non-empty outbox, and the 25 MiB original-media and thumbnail boundary
+  are covered individually; the eventual migration protocol must combine them.
 - Inject process termination, disk-full, access-denied, database-busy, corrupt backup,
   target timeout, expired auth, and partial media failures at each state boundary.
 - Prove restored backup equivalence for the packaged Windows runtime, not only the

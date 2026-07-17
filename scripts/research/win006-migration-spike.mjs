@@ -382,6 +382,76 @@ async function addRemoteWrite(root) {
   assert.equal(result.status, 'accepted');
 }
 
+async function exerciseTombstoneTransfer(root) {
+  await seedScenario(root);
+  const identities = await readJson(join(root, 'identities.json'));
+  const source = new SqliteStore(join(root, 'source.sqlite'));
+  const target = new SqliteStore(join(root, 'target.sqlite'));
+  try {
+    const hive = source.listResources(identities.sourceOrg, 'hive')[0];
+    const entityId = randomUUID();
+    const create = operation('followUp', entityId, {
+      hiveId: hive.id,
+      description: 'Deleted standalone reminder',
+      dueDate: '2026-07-20',
+    });
+    assert.equal(
+      source.applyOperation(identities.sourceOrg, identities.sourceUser, create).status,
+      'accepted',
+    );
+    const remove = {
+      ...create,
+      operationId: randomUUID(),
+      action: 'delete',
+      baseVersion: 1,
+      payload: null,
+    };
+    assert.equal(
+      source.applyOperation(identities.sourceOrg, identities.sourceUser, remove).status,
+      'accepted',
+    );
+    const sourceTombstone = source.getResource(identities.sourceOrg, 'followUp', entityId);
+    assert.ok(sourceTombstone?.deletedAt);
+
+    const targetCreate = {
+      ...create,
+      operationId: randomUUID(),
+      clientId: randomUUID(),
+      payload: payload(sourceTombstone),
+    };
+    assert.equal(
+      target.applyOperation(identities.targetOrg, identities.targetUser, targetCreate).status,
+      'accepted',
+    );
+    const targetRemove = {
+      ...targetCreate,
+      operationId: randomUUID(),
+      action: 'delete',
+      baseVersion: 1,
+      payload: null,
+    };
+    assert.equal(
+      target.applyOperation(identities.targetOrg, identities.targetUser, targetRemove).status,
+      'accepted',
+    );
+    assert.equal(
+      target.applyOperation(identities.targetOrg, identities.targetUser, targetRemove).status,
+      'duplicate',
+    );
+    const targetTombstone = target.getResource(identities.targetOrg, 'followUp', entityId);
+    assert.ok(targetTombstone?.deletedAt);
+    assert.deepEqual(payload(targetTombstone), payload(sourceTombstone));
+    const changes = target.pullChanges(identities.targetOrg, 0, 250).changes;
+    assert.deepEqual(
+      changes.filter((change) => change.entityId === entityId).map((change) => change.action),
+      ['upsert', 'delete'],
+    );
+  } finally {
+    source.close();
+    target.close();
+  }
+}
+
 async function run(output) {
   const workspace = resolve(output, 'work');
   await rm(workspace, { recursive: true, force: true });
@@ -440,6 +510,10 @@ async function run(output) {
   );
   results.push('non-empty-pending-outbox-is-backed-up-transferred-and-reconciled');
 
+  const tombstone = join(workspace, 'tombstone');
+  await exerciseTombstoneTransfer(tombstone);
+  results.push('deleted-record-tombstone-replay-is-idempotent-and-remains-deleted');
+
   const conflict = join(workspace, 'conflict');
   await seedScenario(conflict, { conflictingTarget: true });
   await assert.rejects(migrate(conflict), /migration_conflict/);
@@ -468,17 +542,19 @@ async function run(output) {
   results.push('post-cutover-remote-write-blocks-destructive-rollback');
 
   const evidenceText = await Promise.all(
-    [happy, scale, pending, conflict, mismatch, incompatible, remote].map(async (root) => {
-      let text = '';
-      for (const file of ['migration-journal.json', 'client-config.json']) {
-        try {
-          text += await readFile(join(root, file), 'utf8');
-        } catch (error) {
-          if (error.code !== 'ENOENT') throw error;
+    [happy, scale, pending, tombstone, conflict, mismatch, incompatible, remote].map(
+      async (root) => {
+        let text = '';
+        for (const file of ['migration-journal.json', 'client-config.json']) {
+          try {
+            text += await readFile(join(root, file), 'utf8');
+          } catch (error) {
+            if (error.code !== 'ENOENT') throw error;
+          }
         }
-      }
-      return text;
-    }),
+        return text;
+      },
+    ),
   );
   assert.ok(!evidenceText.join('').includes(SECRET_SENTINEL));
   results.push('journal-config-and-evidence-contain-no-secret-values');
@@ -493,6 +569,7 @@ async function run(output) {
       mediaVariantsInScaleScenario: 2,
       maximumOriginalMediaBytes: 25 * 1024 * 1024,
       pendingOutboxOperations: 1,
+      tombstonesReplayed: 1,
       interruptionBoundaries: 5,
       identitiesMigrated: false,
       atomicCutoverAfterReconciliation: true,
