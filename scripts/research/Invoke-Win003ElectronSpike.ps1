@@ -44,6 +44,23 @@ New-Item -ItemType Directory -Force -Path $outputPath | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $labPath 'web') | Out-Null
 Copy-Item -Path (Join-Path $webDistPath '*') -Destination (Join-Path $labPath 'web') -Recurse -Force
 
+# The public PWA is built for an HTTP origin and therefore emits root-relative
+# entry assets. The disposable Electron host loads the copied entry point from a
+# file URL, so its package assembly must make those entry resources relative. This
+# is deliberately scoped to the copied research lab; it does not mutate WebDist.
+$packagedIndexPath = Join-Path $labPath 'web/index.html'
+$packagedIndex = Get-Content -Raw -LiteralPath $packagedIndexPath
+$packagedIndex = $packagedIndex.
+    Replace('src="/app/assets/', 'src="./assets/').
+    Replace('href="/app/assets/', 'href="./assets/').
+    Replace('src="/assets/', 'src="./assets/').
+    Replace('href="/assets/', 'href="./assets/').
+    Replace('href="/app/manifest.webmanifest"', 'href="./manifest.webmanifest"').
+    Replace('href="/manifest.webmanifest"', 'href="./manifest.webmanifest"').
+    Replace('href="/app/icons/', 'href="./icons/').
+    Replace('href="/icons/', 'href="./icons/')
+Set-Content -LiteralPath $packagedIndexPath -Value $packagedIndex -Encoding utf8NoBOM
+
 $packageJson = @'
 {
   "name": "apiarylens-win003-electron-research",
