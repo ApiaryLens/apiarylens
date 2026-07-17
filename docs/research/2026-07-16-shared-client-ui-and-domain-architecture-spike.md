@@ -2,7 +2,7 @@
 
 - **Backlog:** WIN-007
 - **Date:** 2026-07-16
-- **Status:** Research in progress; implementation is not authorized
+- **Status:** Research complete; implementation is not authorized
 - **Scope:** Web PWA, Windows standalone/connected, and future iOS/Android clients
 
 ## Decision sought
@@ -80,6 +80,11 @@ The existing shared-UI accessibility probe already exercises the production Reac
 bundle at desktop, 200% and 400% reflow equivalents, forced colors, reduced motion,
 keyboard focus, target size, and automated WCAG rules. That demonstrates a useful
 web-rendered UI foundation, not native-host accessibility completion.
+
+GitHub Actions run
+[`29552499665`](https://github.com/ApiaryLens/apiarylens/actions/runs/29552499665)
+reproduced the dependency and host-coupling inventory on the Windows hosted runner
+and retained the sanitized `win007-client-boundary-evidence` artifact for 14 days.
 
 ## Recommended architecture
 
@@ -267,6 +272,25 @@ successful build is not completion.
   launch, process recovery, credential isolation, and signed update lifecycle.
 - Revisit repository extraction only when ownership, release cadence, or toolchain
   evidence invalidates ADR 0015.
+
+## WIN-007 acceptance mapping
+
+WIN-007 asks for evaluation and a safe-reuse recommendation. The research gate is
+satisfied as follows:
+
+| Required concern | Research result |
+|---|---|
+| Web and Windows reuse | Pure client core, injected ports, accessible feature-level React, and separate composition roots |
+| iOS and Android reuse | Normative schemas/state-machine vectors and optional executable-core reuse; no forced UI/runtime decision |
+| Accessibility | Shared semantic component rules plus mandatory host/device-specific screen-reader, input, zoom, contrast, motion, and touch UAT |
+| Platform conventions | Shell, navigation, deep links, dialogs, updates, notifications, camera, and back behavior stay host-specific |
+| Storage/offline behavior | Repository, outbox, media, connectivity, and sync ports separate pure behavior from Dexie, SQLite, filesystem, and native adapters |
+| Security | Host-owned credentials and transport; narrow schema-validated bridge; no renderer secrets or generic native primitive |
+| Release isolation | Shared code is bundled into independently released clients with explicit compatibility metadata |
+| Current feasibility | Automated Windows inventory proves the contracts kernel is neutral and identifies each current browser coupling and empty placeholder |
+
+This closes research only. Package extraction, PWA refactoring, Windows composition,
+native-mobile selection, and released-host UAT remain gated follow-on work.
 
 ## Recommendation
 
