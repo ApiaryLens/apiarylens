@@ -14,8 +14,11 @@ also failed to decrypt a synthetic current-user DPAPI fixture while its local DP
 control succeeded. The selected Electron candidate now also passes a packaged and
 clean-installed main-process `safeStorage` store/read/rotate/corruption/delete
 lifecycle without exposing either generated credential through tested renderer or
-diagnostic surfaces. Credential Manager integration, rotation-crash recovery,
-retail-profile, restore, and uninstall-policy evidence remain required.
+diagnostic surfaces. Packaged and installed rotation-crash, revocation, sign-out,
+keep-data/remove-all, same-user reinstall, protected-backup restore, different-user
+denial, and administrator-reset recovery evidence now pass. Production signing,
+supported retail profiles, Windows Hello and local-to-Microsoft-account transitions,
+guided recovery UX, and final security/ADR acceptance remain required.
 
 ## Decision question
 

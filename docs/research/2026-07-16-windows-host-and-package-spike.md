@@ -13,10 +13,13 @@ now starts the real portable ApiaryLens service for a protected health probe and
 disposable SQLite/media creation. Exact API, organization-isolation, media,
 credential, recovery, current-user uninstall/reinstall, shared-window service,
 IPv6-loopback rejection, and environment-proxy non-interception replay now passes.
-Retail Windows profiles, host accessibility, integrated power-loss behavior,
-migration-ledger checksum rejection, production signing and attestation, final
-binary license review, and owner ADR acceptance remain required before the spike
-can close. Authenticated local-service supervision continues separately under
+Automated packaged-host accessibility now proves native accessibility support, real
+React landmarks/headings, and exact 100%/200%/400% host zoom geometry. It also
+exposes the four-pixel 400%-zoom defect tracked by `WIN-027`. Retail Windows profiles,
+manual NVDA/High Contrast/device zoom, integrated physical power-loss behavior,
+migration-ledger checksum rejection (`WIN-026`), production signing and attestation,
+final binary license review, and owner ADR acceptance remain required before the
+spike can close. Authenticated local-service supervision continues separately under
 `WIN-004`.
 
 ## Question

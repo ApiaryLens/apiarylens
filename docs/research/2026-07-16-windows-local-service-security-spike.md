@@ -15,10 +15,14 @@ current-user-plus-SYSTEM ACL, cross-user access denial, traversal rejection, and
 junction/reparse rejection. Exact packaged and installed Electron evidence now also
 proves that two trusted windows share one service process, IPv6 loopback cannot reach
 the IPv4-only listener, and a black-hole `HTTP_PROXY`/`HTTPS_PROXY` environment does
-not intercept the host-owned loopback fetch. Windows system-proxy/firewall policy,
-retail lifecycle behavior, the remaining failure matrix, and final threat review
-remain before the research gate can close. A disposable wrapper around the real API
-proves the generic loopback, authentication, ownership, and parent-supervision shape.
+not intercept the host-owned loopback fetch. A black-hole Windows per-user proxy
+policy now leaves that bridge operational, prior proxy state is restored, and the
+installed host creates no Windows Firewall application rule. Managed PAC,
+restrictive firewall/VPN/filter-driver and IPv6-only policies, retail lifecycle
+behavior, physical-volume-full behavior, the remaining failure matrix, and final
+threat review remain before the research gate can close. A disposable wrapper around
+the real API proves the generic loopback, authentication, ownership, and
+parent-supervision shape.
 
 ## Decision question
 
