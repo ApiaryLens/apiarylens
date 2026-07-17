@@ -1,256 +1,274 @@
-# Scout Bee user guide
+# Scout Bee installation and operations guide
 
-Scout Bee is the guided installer and lifecycle manager for ApiaryLens. Run Scout
-on the computer in front of you; choose where ApiaryLens should run; and let Scout
-verify, install, update, back up, repair, restore, roll back, diagnose, or remove the
-deployment. A Windows computer can manage Cloudflare or a separate Linux machine
-over SSH. You do not need to type Linux commands.
+Scout Bee is the ApiaryLens installer, updater, recovery tool, and deployment
+manager. Run Scout on the computer in front of you; it can manage ApiaryLens on
+that Windows computer, in Cloudflare, or on a separate Linux computer over SSH.
+Windows users do not need to type Linux commands.
 
-> **Public Preview status:** Scout Bee is independently versioned and is under active
-> development. Its new signed end-user packages are not published yet. Do not use a
-> source archive as an installer. When packages become available, this page and the
-> [release page](https://github.com/ApiaryLens/scout-bee/releases) will link to the
-> exact signed files. Preview and release-candidate product channels require an
-> explicit advanced opt-in; Stable remains the default.
+> **Preview availability:** Scout Bee is under active Preview development. Use only
+> packages published by the official
+> [`ApiaryLens/scout-bee` releases](https://github.com/ApiaryLens/scout-bee/releases)
+> page. If that page does not contain a signed package for your platform, the
+> end-user package has not been released yet. A source clone is a contributor
+> workflow, not a substitute installer.
 
-## Choose where ApiaryLens will live
+## Choose what Scout should manage
 
-| Choice | Best fit | What Scout manages |
+| Choice | Use it when | Where data lives |
 |---|---|---|
-| Family Cloud | A family that wants an always-available PWA without maintaining a server | Cloudflare Worker, D1 records, private R2 photos, health checks, backup, and recovery |
-| Own hardware | A home server, mini-PC, NAS-compatible Linux host, or Hyper-V VM | Docker Compose over pinned SSH, HTTPS health, releases, backups, rollback, and uninstall |
-| Cloud VM | An ordinary Linux VM in Azure or another provider | The same Compose-over-SSH path; the provider does not become an ApiaryLens dependency |
-| Advanced plan | An operator with an existing CI/CD pipeline | A secret-free plan, artifact lock, verification record, and handoff instructions |
+| Windows standalone | One Windows computer is the main ApiaryLens home | That Windows user's private application-data directory |
+| Family Cloud | Phones, tablets, and computers need one shared family deployment | Your Cloudflare account |
+| Own hardware or cloud VM | You control a Linux server, home server, mini-PC, Hyper-V VM, or cloud VM | The selected Linux target |
+| Advanced export | Your own CI/CD system will apply the deployment | In the target selected by the exported plan |
 
-Scout runs on one computer and the deployment target can be another. Installing
-Scout on Windows does not mean ApiaryLens must run on Windows or WSL.
+The optional web frontend may accompany a connected backend. The Windows client can
+also connect to the backend using a secret-free connection profile. Installing a
+backend does not copy ApiaryLens product source into your deployment repository.
 
 ## Five-minute Windows start
 
-These steps apply after a signed Windows package appears on the Scout release page.
+1. Open the official Scout Bee release and choose the latest stable signed Windows
+   executable. Preview or RC builds appear only after selecting an advanced release
+   channel.
+2. Verify that the release includes checksums and provenance, then confirm that
+   Windows shows the expected ApiaryLens publisher.
+3. Run Scout Bee. It is portable and does not require Go, Node, WSL, Docker, or a
+   Linux shell.
+4. Select **Windows standalone**, **Family Cloud**, **Own hardware or cloud VM**, or
+   **Advanced export**.
+5. Review the prerequisite and ownership summary. Scout does not change anything
+   during preflight.
+6. Review the exact actions and confirm **Apply**. Do not close Scout during
+   activation or health verification; an interrupted operation can be resumed from
+   its last verified checkpoint.
 
-1. Download `scout-bee-<version>-windows-amd64.exe` from the matching GitHub Release.
-2. Verify the file using the release's SHA-256 checksum and GitHub attestation.
-3. Confirm Windows shows the expected ApiaryLens publisher signature and a valid
-   timestamp. Stop if the publisher is missing or the signature is invalid.
-4. Run the portable executable as your normal Windows user. Administrator access,
-   Go, Node.js, WSL, Docker, and a Linux shell are not required on the Scout computer.
-5. Leave **Stable** selected, choose a target, and run **Preflight** before **Apply**.
-
-Scout opens a browser-based guide on a random loopback address. The launch token
-exists only in memory. Do not copy that address into another device or expose it on
-the network.
+For Windows standalone, Scout installs the signed current-user package without
+administrator rights. ApiaryLens data remains outside the replaceable installation
+directory. For a connected deployment, sign in inside ApiaryLens after the
+connection profile is imported; Scout never places a password or session in that
+file.
 
 ## Five-minute Linux start
 
-These steps apply after a Linux package appears on the Scout release page.
+1. Download the versioned Linux archive from the official Scout Bee release.
+2. Verify its checksum and attestation using the files attached to the same release.
+3. Extract the single Scout executable and concise README into a directory owned by
+   your user.
+4. Mark the executable as executable and run it from a local graphical session.
+5. Select the target and complete preflight before confirming any changes.
 
-1. Download `scout-bee-<version>-linux-amd64.tar.gz`, its checksums, and attestation.
-2. Verify the archive before extraction.
-3. Extract the archive and read the included `README.txt`.
-4. Mark the single `scout-bee` executable as executable and run it as your normal
-   user. Go and Node.js are not runtime prerequisites.
-5. Leave **Stable** selected, choose a target, and run **Preflight** before **Apply**.
+Linux source builds require development tools and are documented under
+[Contributor builds](#contributor-builds). They are not the normal installation
+path.
 
-The Linux archive is an end-user package. A Git clone or GitHub source ZIP is a
-contributor workflow and requires the development toolchain.
+## Deploy from Windows to Linux over SSH
 
-## Deploy from Windows to a Linux machine
+The Linux target may be a Hyper-V VM on the Windows computer, a home server, a
+mini-PC, or a cloud VM. Scout runs on Windows and performs the target-side work.
 
-The target can be a Hyper-V VM, home server, mini-PC, NAS-compatible Linux host, or
-cloud VM.
+Before starting, have the target's hostname or IP address, SSH user, and one
+supported authentication method. Know where ApiaryLens data and backups should
+live. The normal guided flow is:
 
-1. Prepare a supported Linux target with a normal SSH user and network access.
-2. In Scout, choose **Your Linux server**.
-3. Enter the server hostname, SSH user, install folder, and public HTTPS address.
-4. Compare the host-key fingerprint Scout displays with the fingerprint obtained
-   from the server or provider console. Approve only an exact match.
-5. Run **Preflight**. Scout checks the pinned host identity, SSH access, architecture,
-   clock, disk space, Docker Engine, Docker Compose v2, folder safety, and HTTPS
-   policy. It explains missing prerequisites without asking you to type shell commands.
-6. Review the secret-free plan and selected immutable release.
-7. Enter the one-time owner setup code only when Scout asks for it, then apply.
-8. Scout transfers the checksum-verified bundle and runtime secrets separately,
-   starts Compose, waits for health, and verifies the exact release identity over HTTPS.
+1. Select **Own hardware or cloud VM** and **Remote Linux over SSH**.
+2. Enter the host, port, user, and absolute target data directory.
+3. Choose password, SSH agent, or private-key authentication. Credentials stay in
+   memory or the operating-system credential boundary; they never enter the plan.
+4. Confirm the SSH host-key fingerprint. A changed key is a blocking security event;
+   investigate it instead of accepting it automatically.
+5. Run preflight. Scout checks operating system, architecture, time, disk, ports,
+   permissions, Docker Engine, Compose v2, and release compatibility.
+6. Follow the guided prerequisite remediation. A supported family deployment does
+   not require the user to open a Linux shell and paste deployment commands.
+7. Choose **backend only** or **backend plus web**, review the public address and
+   backup responsibility, then confirm apply.
+8. Scout transfers the exact verified release, verifies it again on the target,
+   creates target-side secrets through the protected boundary, applies each
+   migration once, and runs health and authenticated smoke checks.
+9. Save the redacted operation summary. If requested, save the secret-free Windows
+   connection profile and import it into the Windows client.
 
-If the live host key changes later, Scout stops. Verify whether the machine was
-legitimately rebuilt before accepting a new fingerprint.
+## Deploy to Cloudflare
 
-## Deploy to Cloudflare Family Cloud
+Use a user-owned Cloudflare account and a minimum-permission API token created for
+the intended D1, R2, Worker, route, DNS, and secret operations.
 
-1. Create or select the Cloudflare account that will own the deployment.
-2. Create a narrowly scoped API token for the required Worker, D1, R2, and deployment
-   operations. Do not paste an account-wide credential into a plan or repository.
-3. In Scout, choose **Family Cloud** and review the dated cost/allowance notice.
-4. Enter the account ID, deployment name, database name, private-photo bucket name,
-   and optional custom HTTPS domain.
-5. Run **Preflight** to verify the local deployment tool, account access, resource
-   naming, cost guardrails, release compatibility, and backup readiness.
-6. Enter the API token only into the runtime credential field. Scout keeps it in
-   memory and excludes it from plans, operation records, logs, and diagnostics.
-7. Apply and wait for Worker, D1, R2, migration, and HTTPS health verification.
-8. Create and store a backup outside the Cloudflare account.
+1. Select **Family Cloud** and **Cloudflare**.
+2. Choose **backend only** or **backend plus web**.
+3. Enter non-secret names and domain choices. Provide the API token only in the
+   protected credential prompt.
+4. Run preflight and review the exact resources Scout will create or reuse. Scout
+   reuses a resource only when its identity matches the deployment plan.
+5. Review current, dated cost information in Scout. Preview guidance must not be
+   interpreted as a permanent-free guarantee.
+6. Confirm apply. Scout pins the product release, creates storage, applies
+   migrations, uploads secrets through the provider API, deploys the backend and
+   optional frontend, then verifies DNS, TLS, authenticated API access, D1, and R2.
+7. Save the connection profile if a Windows client should use this deployment. Sign
+   in from the Windows client; provider credentials are not copied to it.
 
-Cloudflare pricing and free allowances can change. Scout shows the dated assumptions;
-the account owner remains responsible for billing limits and alerts.
-
-## Lifecycle operations
+## Install, update, and repair
 
 ### Install
 
-Run Preflight, review the exact release and target, supply runtime credentials, and
-apply. Save the owner setup code until the first owner account has been created.
+Scout downloads the exact product manifest and artifacts, verifies repository and
+release identity, schema compatibility, declared and actual size, checksum,
+signature, and attestation, then caches the verified version. Only after explicit
+confirmation does it install and health-check the selected target.
 
 ### Update
 
-Scout verifies the selected release, compatibility, checksum, and available space;
-creates a pre-update backup; applies migrations; verifies health; and commits the
-new release only after validation. Do not bypass the backup because the UI reports
-an update is available.
+1. Open Scout and select the managed installation.
+2. Review the available version, release channel, compatibility, release notes, and
+   migration consequences.
+3. Create and verify the pre-update backup.
+4. Confirm update. Scout stages the new release, applies migrations once, activates
+   it, and verifies health and data/media counts.
+5. If health fails, Scout leaves the previous version active or performs the
+   compatible rollback/restore shown before confirmation.
+
+Scout Bee and ApiaryLens have independent versions and channels. Updating Scout does
+not silently change the selected ApiaryLens product release.
 
 ### Repair
 
-Repair reacquires the same immutable release from the verified cache or official
-release source, creates a safety backup, reapplies deployment files, and verifies
-health without rewriting the migration ledger or deleting user data.
+Repair verifies installed files against the artifact lock, restores missing or
+corrupted product files from the verified cache, rechecks permissions and
+prerequisites, restarts the service, and verifies health. Repair must not overwrite
+family data to make an application-file problem disappear.
 
-### Back up
+## Backup and restore
 
-Choose **Backup**, select a destination outside the deployment, and apply. Scout
-verifies that the archive is readable and contains the expected ApiaryLens manifest.
-Keep more than one generation and periodically test restore.
+### Backup
+
+1. Select the installation and choose **Backup**.
+2. Choose a destination outside the computer or target being protected.
+3. Review included database, original media, product/contract identity, and
+   verification metadata. Secrets and Windows-protected credentials are excluded.
+4. Create the backup and wait for checksum verification to complete.
+
+For Windows standalone, an owner may also use **Account and build → Create Windows
+backup** inside ApiaryLens to create a `.albackup` file.
 
 ### Restore
 
-Select a compatible verified backup. Scout first creates a recovery backup of the
-current deployment, stops writes, restores records and private media, revokes old
-sessions, restarts the service, and verifies release health. A restore never weakens
-authentication because protected credentials could not be recovered.
+1. Select **Restore**, then choose the verified backup.
+2. Scout validates format, compatibility, space, checksums, database integrity, and
+   migration identity before offering confirmation.
+3. Review the destructive warning. Scout first creates a separate recovery backup
+   of the current installation.
+4. Confirm restore. Data is restored into staging, verified, and activated
+   atomically. Restored sessions are revoked.
+5. If activation or health verification fails, Scout restores the prior data. A
+   successful restore requires a fresh sign-in.
 
-### Roll back
+## Rollback and uninstall
 
-Choose a compatible cached earlier release. Scout backs up current data, verifies
-the earlier release and its migration compatibility, activates it, and checks health.
-Rollback is unavailable when the current schema or manifest does not declare the
-path safe; use restore with a compatible backup instead.
+Rollback is offered only when a verified cached release is compatible with the
+current schema and data. Scout explains whether it can roll code back directly or
+must restore the pre-update backup.
 
-### Uninstall
+Uninstall presents separate choices:
 
-Choose one explicit data policy:
+- **Remove application, keep data** removes replaceable program files and preserves
+  a reinstall/restore path.
+- **Remove deployment, keep backup** removes target resources only after listing
+  what remains and where the backup is stored.
+- **Permanently delete application and data** requires a separate destructive
+  confirmation and enumerates local or provider resources before deletion.
 
-- **Keep data** stops and removes application services while retaining records,
-  media, protected credentials, backups, and verified releases for recovery.
-- **Remove all data** removes services, data, media, protected credentials, and
-  selected Scout-managed residue after confirmation.
+Closing Scout is not a safe substitute for uninstalling or cancelling a lifecycle
+operation.
 
-Always create and verify an export or backup before remove-all.
+## Advanced plan and CI/CD export
 
-## Export a plan to `my-apiarylens` or CI/CD
+Choose **Advanced export** to produce a secret-free bundle containing:
 
-Choose **Advanced plan**, review the generated plan, and export
-`apiarylens-deployment.json`. The plan records intent and immutable release identity;
-it contains no password, API token, private key, bearer token, certificate, or secret
-value.
+- `apiarylens-deployment.json`;
+- an immutable artifact lock with versions, sizes, and hashes;
+- the verification record and trust policy;
+- environment and secret-name requirements without secret values;
+- provider-neutral GitHub Actions/Azure DevOps instructions; and
+- a redacted action and recovery summary.
 
-Commit only these safe handoff files:
+Commit those files to a personal automation repository such as
+`Hybrid-Solutions-Cloud/my-apiarylens`. Supply credentials through that CI system's
+secret store. The pipeline consumes immutable released artifacts; it does not copy
+ApiaryLens source or invoke a personal deployment from the core source repository.
 
-- the deployment plan;
-- artifact lock with URLs, sizes, and SHA-256 values;
-- release/compatibility verification record; and
-- generated CI/CD instructions.
+## Channels and version verification
 
-Store runtime credentials in the target pipeline's secret store. A personal
-repository such as `Hybrid-Solutions-Cloud/my-apiarylens` consumes released artifacts;
-it must not copy ApiaryLens or Scout product source.
+Stable is the default. Select Preview or RC only under **Advanced release channel**
+after reading the warning that contracts, data migrations, and user experience may
+change frequently. Before apply, confirm the product version, Scout version,
+manifest identity, source commit, compatibility range, artifact size, SHA-256, and
+verification result. Scout rejects floating versions, unexpected sizes, invalid
+checksums, untrusted manifests, incompatible schemas, and unauthorized downgrades.
 
-## Release channels and version verification
+## Data, logs, privacy, and diagnostics
 
-Scout and ApiaryLens have independent versions. Scout compatibility metadata states
-which product manifest, deployment-plan, diagnostics, and product-version ranges it
-understands.
+Windows Scout stores non-secret state under
+`%LOCALAPPDATA%\ApiaryLens\ScoutBee`. Linux uses the applicable XDG data, cache, and
+state directories. Verified releases are cached by version for resume, repair, and
+rollback. Temporary storage is used only during download and safe extraction.
 
-- **Stable** is always the default.
-- **Preview** can change frequently and must be selected under Advanced release channel.
-- **Release candidate** is also advanced and is not equivalent to Stable.
-
-Before execution, Scout checks the product and version, channel, manifest checksum,
-contract compatibility, artifact URL, byte size, and SHA-256. Release workflows also
-publish SBOM, license, provenance, and GitHub attestation evidence. Stop if any identity
-or verification result differs from the release page.
-
-## Data, cache, logs, and diagnostics
-
-Scout uses the current user's platform directories:
-
-| Data | Windows | Linux |
-|---|---|---|
-| Operation state and diagnostics source | `%AppData%\ApiaryLens\ScoutBee\operations` | `$XDG_CONFIG_HOME/ApiaryLens/ScoutBee/operations` or the user config directory |
-| Verified product release cache | `%LocalAppData%\ApiaryLens\ScoutBee\releases` | `$XDG_CACHE_HOME/ApiaryLens/ScoutBee/releases` or the user cache directory |
-
-Temporary extraction uses a protected temporary directory and is removed after the
-operation. Checksum-addressed cached versions remain for resume and rollback.
-Diagnostics contain Scout/product versions, the secret-free plan, phases, and
-sanitized errors. Review a diagnostic before sharing it. Runtime secrets must never
-appear; report it as a security defect if one does.
+Scout performs no telemetry by default. Plans, logs, diagnostics, caches, and
+exports exclude passwords, session cookies, provider tokens, SSH private keys,
+recovery codes, secret values, hive records, and media. A diagnostics bundle shows
+versions, safe environment facts, artifact/plan hashes, prerequisite results,
+operation checkpoints, health results, and redacted recent errors. Preview the
+bundle before sharing it with support.
 
 ## Troubleshooting
 
 ### SSH connection or host-key failure
 
-Confirm the hostname, port, and user. Compare the current fingerprint through a
-trusted provider console or the physical server. Never disable strict host-key
-checking to make an error disappear.
+Confirm the address, port, user, network route, and authentication method. If the
+host key changed, stop and reconcile the fingerprint with the target owner. Do not
+delete the known-host record simply to make the warning disappear.
 
-### Docker or prerequisite failure
+### Docker or Compose prerequisite failure
 
-Use Scout's guided remediation and rerun Preflight. Confirm the target—not the
-Windows Scout computer—has supported Linux, Docker Engine, Compose v2, sufficient
-disk, correct UTC time, and safe folder ownership.
+Use Scout's guided remediation and rerun preflight. Confirm that the SSH user may
+operate Docker and that Compose v2 is available. Unsupported operating systems or
+architectures require a supported target rather than an improvised root script.
 
 ### DNS or TLS health failure
 
-Confirm the hostname resolves to the deployment and that ports 80/443 reach the
-target. Wait for DNS propagation, then retry health verification. Do not replace a
-publicly trusted certificate with an untrusted certificate for an internet-facing site.
+Check that the selected hostname points to the intended target, required ports are
+reachable, and certificate issuance has completed. Scout must not report completion
+until public HTTPS and authenticated health checks pass.
 
 ### Cloudflare permission failure
 
-Create a new least-privilege token with only the resources Scout lists. Do not use
-the global API key. Confirm the account ID and resource ownership.
+Compare the requested action list with the token's account, zone, D1, R2, Worker,
+route, DNS, and secret permissions. Create a narrower corrected token and retry the
+failed checkpoint; do not use a global key as a shortcut.
 
 ### Interrupted operation
 
-Reopen Scout, load the recorded operation, and choose **Resume safely**. Resume is
-allowed only for the same target, operation, and pinned release checksum. Scout uses
-the verified cache instead of silently selecting a newer release.
-
-### Checksum, manifest, provenance, or compatibility failure
-
-Stop. Do not edit the manifest, checksum, compatibility file, or migration ledger.
-Refresh official release metadata or select another compatible release. If official
-files disagree, report a release incident.
+Reopen Scout and choose **Resume**. It continues from the last verified idempotent
+checkpoint. Do not manually delete its operation or release cache while recovery is
+pending.
 
 ### Failed migration or health check
 
-Scout leaves the previous release or recovery backup available and does not declare
-success. Save sanitized diagnostics, repair the prerequisite, and resume. Use rollback
-only when compatibility permits it; otherwise restore the verified backup.
+Open the redacted operation result. Choose the offered compatible rollback or
+verified restore. Preserve the recovery backup and diagnostics. A failed health
+check is never a successful installation.
 
-### Rollback unavailable
+### No rollback available
 
-The cache may not contain a compatible earlier version, or the schema may not permit
-downgrade. Preserve the current data, select a compatible backup, and use Restore.
+Do not force an older binary over a newer database. Restore the compatible verified
+backup or remain on the previous active installation while gathering diagnostics.
 
-## Contributor source build
+## Contributor builds
 
-End users should stop here. Contributors can clone the separate
-[`ApiaryLens/scout-bee`](https://github.com/ApiaryLens/scout-bee) repository and follow
-its README. Source builds require Node.js, pnpm, and Go and are not a substitute for
-the signed end-user package or released-artifact acceptance tests.
+Contributors may clone [`ApiaryLens/scout-bee`](https://github.com/ApiaryLens/scout-bee)
+and follow its README. Source builds currently require Node.js 24, pnpm 11.7.0, and
+Go 1.26 or newer. Those tools are build prerequisites only; end-user Scout packages
+must not require them. Product contracts, manifests, migrations, and artifacts stay
+authoritative in [`ApiaryLens/apiarylens`](https://github.com/ApiaryLens/apiarylens).
 
-## Get help
-
-- [Scout Bee source and issues](https://github.com/ApiaryLens/scout-bee)
-- [ApiaryLens product issues](https://github.com/ApiaryLens/apiarylens/issues)
-- [Security reporting](https://github.com/ApiaryLens/scout-bee/security)
-- [Public roadmap](https://apiarylens.org/roadmap/)
+For executor boundaries, failure semantics, and repository ownership, see the
+[Scout Bee lifecycle design](../deployment/scout-bee.md).
