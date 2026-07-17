@@ -9,10 +9,13 @@ The first disposable lifecycle and security prototype passed on a fresh GitHub-
 hosted Windows runner. Exact portable-server process integration and its 15 API
 tests also passed persistence and organization-isolation checks, but exposed a
 release-blocking listener defect: the current server binds to the wildcard interface
-while logging a loopback URL. Credential protection, host-to-renderer secret
-delivery, host-specific bridge validation, file ACLs, migration failure recovery,
+while logging a loopback URL. Credential protection and migration failure recovery
+now have separate measured evidence, and Windows path-security evidence proves a
+current-user-plus-SYSTEM ACL, cross-user access denial, traversal rejection, and
+junction/reparse rejection. Host-to-renderer secret delivery, host-specific bridge
+validation, Job Object and Windows lifecycle behavior, the remaining failure matrix,
 and threat review remain before the research gate can close. A disposable wrapper
-around the real API now proves the generic loopback, authentication, ownership, and
+around the real API proves the generic loopback, authentication, ownership, and
 parent-supervision shape.
 
 ## Decision question
@@ -166,9 +169,40 @@ second database owner.
 The wrapper is deliberately framework-neutral research code. It does not prove that
 an Electron preload bridge or Tauri command keeps the token outside ordinary
 renderer JavaScript, that Windows Credential Manager protects durable connected-mode
-credentials, that per-user directories reject other accounts and reparse attacks,
-or that a Job Object provides stronger termination semantics. Those remain required
+credentials, or that a Job Object provides stronger termination semantics. Separate
+research now proves the Windows filesystem boundary, but the selected host must
+integrate and repeat that contract. Those host-specific controls remain required
 before the host/service ADR can be accepted.
+
+## Windows path-security evidence
+
+GitHub Actions run
+[`29552828360`](https://github.com/ApiaryLens/apiarylens/actions/runs/29552828360)
+executed commit `c8182ef38b5bfa6be4d2825fccd8ec665fe664c3` on a fresh hosted
+Windows runner. The probe created disposable directories beneath Public Documents
+so a disposable second local Windows account could reach the parent path, then
+protected the ApiaryLens-like data directory with an explicit ACL. It retained only
+sanitized runner-temporary evidence for 14 days and removed the disposable account
+and filesystem lab.
+
+| Windows path-security check | Result |
+|---|---:|
+| ACL inheritance | Disabled |
+| Explicit allow principals | Current user and SYSTEM only |
+| Normal child path | Accepted |
+| `..` traversal path | Rejected |
+| Junction/reparse path to an outside directory | Rejected |
+| Outside sentinel after hostile-path tests | Unchanged |
+| Different local user read | Denied |
+| Different local user write | Denied |
+| Disposable account cleanup | Passed |
+| Username, SID, or password in evidence | None |
+
+This proves the required filesystem primitive and safe path-resolution behavior on
+Windows. It does not prove that an Electron or Tauri retail package applies the ACL
+before writing data, that every media/database operation uses the safe resolver, or
+that roaming profiles, Remote Desktop, locked workstations, sign-out, and shutdown
+preserve the intended behavior. Those are integration and lifecycle gates.
 
 ## Threat analysis
 
@@ -182,6 +216,7 @@ before the host/service ADR can be accepted.
 | Child outlives host | Parent liveness watch plus host job/process ownership where available | Parent-death prototype passed; Windows Job Object option remains to compare |
 | Crash corrupts or loses data | WAL, transactions, backup-before-update, integrity/health checks | One forced crash preserved a committed record; fault matrix remains |
 | Local non-loopback exposure | Explicit IPv4/IPv6 loopback bind and listener assertion | Disposable wrapper passed IPv4; exact portable server failed with `::` wildcard |
+| Another Windows account or hostile filesystem redirect reaches local data | Protected current-user/SYSTEM ACL plus canonical child paths that reject traversal and reparse points | Hosted probe denied a second account and rejected traversal/junction paths; retail-host integration remains |
 | Same-user malicious native process | Windows user boundary, protected credentials, least privilege | Such a process may inspect another same-user process; not solved by bearer token alone |
 | Stale update starts incompatible service | Version handshake, schema range, atomic update, rollback | Not yet exercised |
 
@@ -235,8 +270,10 @@ before the host/service ADR can be accepted.
 3. Testing process startup timeout, crash loops, forced termination during writes,
    WAL recovery, `integrity_check`, disk-full, read-only directory, corrupt database,
    migration failure, backup restore, and incompatible versions.
-4. Measuring per-user directory ACLs, symlink/reparse-point handling, path traversal,
-   Windows Job Object versus parent polling, sleep/resume, sign-out, and shutdown.
+4. Integrating the proven current-user/SYSTEM directory ACL and traversal/reparse
+   rejection into each finalist, then measuring Windows Job Object versus parent
+   polling, sleep/resume, sign-out, shutdown, roaming profiles, Remote Desktop, and
+   locked-workstation behavior.
 5. Testing multiple windows, rapid double launch, stale readiness state, port
    collision, IPv6 loopback, local proxy settings, and firewall policy restrictions.
 6. Threat-reviewing the selected host bridge and documenting the accepted local
