@@ -2,7 +2,7 @@
 
 ## Status and intent
 
-**Status:** Planning baseline only. Implementation is not authorized in this phase.
+**Status:** Production implementation authorized; Windows release gates remain open.
 
 This is the detailed post-Preview design for making the packaged Windows client the
 default family starting point while preserving the existing portable backend and web
@@ -14,6 +14,13 @@ Public Preview 1 remains the current testable web/PWA release. Preview 2 is expe
 to contain major architectural and experience changes; no document may imply that
 the Windows package, new Scout repository, or standalone-to-connected migration is
 already complete.
+
+The first production tranche now exists in [`apps/windows`](../../apps/windows/README.md).
+It composes the real React UI and portable API in a single-instance Electron host,
+supervises an IPv4-loopback-only local service, protects standalone secrets in the
+main process, and exposes only a versioned preload bridge. This does not accept ADR
+0016, produce a signed package, or satisfy the clean-profile and physical-device
+release gates below.
 
 ## Product experience
 

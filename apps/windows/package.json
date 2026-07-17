@@ -1,22 +1,16 @@
 {
-  "name": "@apiarylens/server",
+  "name": "@apiarylens/windows",
   "version": "0.1.0-preview.1",
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
-  "exports": {
-    ".": "./src/app.ts",
-    "./runtime-app": {
-      "types": "./src/app.ts",
-      "default": "./dist/app.js"
-    }
-  },
+  "main": "dist/main.js",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "pnpm --filter @apiarylens/server build && pnpm --filter @apiarylens/web build && tsc -p tsconfig.build.json && node -e \"require('node:fs').copyFileSync('src/preload.cjs','dist/preload.cjs')\"",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
-    "dev": "node --experimental-strip-types src/server.ts",
+    "dev": "pnpm build && electron .",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "start": "node --experimental-strip-types dist/server.js",
+    "start": "electron .",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -24,12 +18,12 @@
     "@apiarylens/contracts": "workspace:*",
     "@apiarylens/database": "workspace:*",
     "@apiarylens/media": "workspace:*",
-    "@hono/node-server": "catalog:",
-    "fflate": "catalog:",
-    "hono": "catalog:"
+    "@apiarylens/server": "workspace:*",
+    "@hono/node-server": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "electron": "43.1.1",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

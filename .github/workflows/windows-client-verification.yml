@@ -1,0 +1,97 @@
+name: Windows client verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "apps/windows/**"
+      - "apps/web/**"
+      - "apps/api/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/windows-client-verification.yml"
+  pull_request:
+    paths:
+      - "apps/windows/**"
+      - "apps/web/**"
+      - "apps/api/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/windows-client-verification.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-client-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  exact-host:
+    name: Exact Windows host
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out immutable revision
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+
+      - name: Configure Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+
+      - name: Install locked dependencies
+        shell: pwsh
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Build and test production Windows composition
+        shell: pwsh
+        run: |
+          pnpm --filter @apiarylens/windows typecheck
+          pnpm --filter @apiarylens/windows test
+          pnpm --filter @apiarylens/windows build
+
+      - name: Run hidden exact-host smoke
+        shell: pwsh
+        run: >-
+          pnpm --filter @apiarylens/windows start --
+          --desktop-user-data=${{ runner.temp }}/apiarylens-windows-profile
+          --desktop-smoke=${{ runner.temp }}/apiarylens-windows-evidence.json
+
+      - name: Verify secret-free security evidence
+        shell: pwsh
+        run: |
+          $evidence = Get-Content -Raw "${{ runner.temp }}/apiarylens-windows-evidence.json" | ConvertFrom-Json
+          foreach ($property in @(
+            'loopbackOnly',
+            'unauthorizedRequestRejected',
+            'authenticatedHealthPassed',
+            'productShellServed',
+            'sandboxedRenderer'
+          )) {
+            if ($evidence.$property -ne $true) { throw "Windows evidence failed: $property" }
+          }
+          if ($evidence.controlTokenExposedInRenderer -ne $false) {
+            throw 'The local service control token was exposed to renderer JavaScript.'
+          }
+          $expectedBridge = @('runtimeStatus', 'bootstrapOwner')
+          if (Compare-Object $expectedBridge @($evidence.bridgeKeys)) {
+            throw 'The preload bridge differs from the approved minimal surface.'
+          }
+          if ($evidence.serviceProtocolVersion -ne 1) {
+            throw 'The embedded service protocol is incompatible.'
+          }
+
+      - name: Upload sanitized Windows evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: windows-client-security-evidence
+          path: ${{ runner.temp }}/apiarylens-windows-evidence.json
+          if-no-files-found: error
+          retention-days: 14

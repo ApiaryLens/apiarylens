@@ -2,6 +2,21 @@ import type { SessionView } from '@apiarylens/contracts';
 
 export type BootstrapSession = SessionView & { recoveryCodes: string[] };
 
+type DesktopBootstrapBridge = {
+  bootstrapOwner(input: {
+    identifier: string;
+    displayName: string;
+    password: string;
+    organizationName: string;
+    timezone: string;
+  }): Promise<BootstrapSession>;
+};
+
+function desktopBridge(): DesktopBootstrapBridge | undefined {
+  return (window as typeof window & { apiaryLensDesktop?: DesktopBootstrapBridge })
+    .apiaryLensDesktop;
+}
+
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { credentials: 'same-origin', ...init });
   if (!response.ok) {
@@ -12,8 +27,12 @@ async function json<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  bootstrapStatus: () =>
-    json<{ available: boolean; requiresToken?: boolean }>('/api/v1/bootstrap/status'),
+  bootstrapStatus: async () => {
+    const status = await json<{ available: boolean; requiresToken?: boolean }>(
+      '/api/v1/bootstrap/status',
+    );
+    return desktopBridge() && status.available ? { ...status, requiresToken: false } : status;
+  },
   session: () => json<SessionView>('/api/v1/session'),
   bootstrap: (input: {
     identifier: string;
@@ -22,12 +41,18 @@ export const api = {
     organizationName: string;
     timezone: string;
     bootstrapToken?: string;
-  }) =>
-    json<BootstrapSession>('/api/v1/bootstrap', {
+  }) => {
+    const desktop = desktopBridge();
+    if (desktop) {
+      const { bootstrapToken: _ignored, ...owner } = input;
+      return desktop.bootstrapOwner(owner);
+    }
+    return json<BootstrapSession>('/api/v1/bootstrap', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
-    }),
+    });
+  },
   signIn: (identifier: string, password: string) =>
     json<SessionView>('/api/v1/auth/sign-in', {
       method: 'POST',
