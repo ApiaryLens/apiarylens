@@ -82,6 +82,7 @@ The local run passed these scenarios:
 - idempotent overwrite and hash verification of an already-copied media object;
 - successful transfer and reconciliation of the maximum 25 MiB original plus its
   thumbnail as independently journaled variants;
+- preservation, backup, transfer, and reconciliation of a non-empty pending outbox;
 - colliding target record reported as a conflict while the client remains standalone;
 - target media corruption detected before cutover;
 - incompatible sync-contract version rejected before transfer;
@@ -98,6 +99,11 @@ GitHub Actions run
 [`29550672120`](https://github.com/ApiaryLens/apiarylens/actions/runs/29550672120)
 passed all steps on the Windows hosted runner and retained the sanitized
 `win006-migration-evidence` artifact for 14 days.
+
+Follow-up run
+[`29550827123`](https://github.com/ApiaryLens/apiarylens/actions/runs/29550827123)
+passed the maximum 25 MiB original and thumbnail extension on the Windows hosted
+runner.
 
 ## Proposed migration protocol
 
@@ -205,8 +211,8 @@ installation ID, accepted hashes, and outcome.
 
 ## Further evidence required to close WIN-006
 
-- Scale testing with the maximum supported record count, tombstones, conflicts, and a
-  non-empty outbox. The 25 MiB original-media and thumbnail boundary is now covered.
+- Scale testing with the maximum supported record count and tombstones. Conflicts, a
+  non-empty outbox, and the 25 MiB original-media and thumbnail boundary are covered.
 - Inject process termination, disk-full, access-denied, database-busy, corrupt backup,
   target timeout, expired auth, and partial media failures at each state boundary.
 - Prove restored backup equivalence for the packaged Windows runtime, not only the

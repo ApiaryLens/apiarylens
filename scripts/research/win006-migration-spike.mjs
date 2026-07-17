@@ -75,7 +75,12 @@ function operation(entityType, entityId, body) {
 
 async function seedScenario(
   root,
-  { conflictingTarget = false, mediaSize, includeThumbnail = false } = {},
+  {
+    conflictingTarget = false,
+    mediaSize,
+    includeThumbnail = false,
+    includePendingOutbox = false,
+  } = {},
 ) {
   await mkdir(root, { recursive: true });
   const source = new SqliteStore(join(root, 'source.sqlite'), { authRootSecret: SECRET_SENTINEL });
@@ -146,6 +151,15 @@ async function seedScenario(
     endpoint: 'http://127.0.0.1',
   });
   await atomicJson(join(root, 'identities.json'), { sourceOrg, targetOrg, sourceUser, targetUser });
+  if (includePendingOutbox) {
+    await atomicJson(join(root, 'pending-outbox.json'), [
+      operation('followUp', randomUUID(), {
+        hiveId,
+        description: 'Inspect the entrance after connecting',
+        dueDate: '2026-07-20',
+      }),
+    ]);
+  }
 }
 
 function inventory(store, organizationId) {
@@ -164,12 +178,31 @@ function inventory(store, organizationId) {
 async function createJournal(root, identities) {
   await cp(join(root, 'source.sqlite'), join(root, 'backup.sqlite'));
   await cp(join(root, 'source-media'), join(root, 'backup-media'), { recursive: true });
+  let pendingOutbox = [];
+  try {
+    pendingOutbox = await readJson(join(root, 'pending-outbox.json'));
+    await cp(join(root, 'pending-outbox.json'), join(root, 'backup-outbox.json'));
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
   const source = new SqliteStore(join(root, 'source.sqlite'));
   const records = inventory(source, identities.sourceOrg).map((item) => ({
     ...item,
     operationId: randomUUID(),
+    origin: 'standalone-store',
     state: 'pending',
   }));
+  for (const item of pendingOutbox) {
+    records.push({
+      entityType: item.entityType,
+      entityId: item.entityId,
+      payload: item.payload,
+      payloadHash: hash(canonical(item.payload)),
+      operationId: item.operationId,
+      origin: 'pending-outbox',
+      state: 'pending',
+    });
+  }
   source.close();
   const sourceMedia = new FilesystemMediaStore(join(root, 'source-media'));
   const media = [];
@@ -391,6 +424,22 @@ async function run(output) {
   assert.ok(scaled.media.some((item) => item.variant === 'thumbnail'));
   results.push('maximum-25-mib-original-and-thumbnail-transfer');
 
+  const pending = join(workspace, 'pending-outbox');
+  await seedScenario(pending, { includePendingOutbox: true });
+  const pendingCompleted = await migrate(pending);
+  assert.equal(pendingCompleted.status, 'complete');
+  assert.equal(
+    pendingCompleted.records.filter((item) => item.origin === 'pending-outbox').length,
+    1,
+  );
+  assert.equal(
+    await readFile(join(pending, 'backup-outbox.json'), 'utf8')
+      .then(JSON.parse)
+      .then(Array.isArray),
+    true,
+  );
+  results.push('non-empty-pending-outbox-is-backed-up-transferred-and-reconciled');
+
   const conflict = join(workspace, 'conflict');
   await seedScenario(conflict, { conflictingTarget: true });
   await assert.rejects(migrate(conflict), /migration_conflict/);
@@ -419,7 +468,7 @@ async function run(output) {
   results.push('post-cutover-remote-write-blocks-destructive-rollback');
 
   const evidenceText = await Promise.all(
-    [happy, scale, conflict, mismatch, incompatible, remote].map(async (root) => {
+    [happy, scale, pending, conflict, mismatch, incompatible, remote].map(async (root) => {
       let text = '';
       for (const file of ['migration-journal.json', 'client-config.json']) {
         try {
@@ -443,6 +492,7 @@ async function run(output) {
       recordsPerScenario: 4,
       mediaVariantsInScaleScenario: 2,
       maximumOriginalMediaBytes: 25 * 1024 * 1024,
+      pendingOutboxOperations: 1,
       interruptionBoundaries: 5,
       identitiesMigrated: false,
       atomicCutoverAfterReconciliation: true,
