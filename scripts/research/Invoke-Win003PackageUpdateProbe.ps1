@@ -141,8 +141,8 @@ $result = [ordered]@{
 }
 
 try {
-    $result.baselineInstallExitCode = Invoke-Installer -Path $baselineInstaller
-    $result.afterBaselineInstall = Get-InstalledSnapshot
+    $result['baselineInstallExitCode'] = Invoke-Installer -Path $baselineInstaller
+    $result['afterBaselineInstall'] = Get-InstalledSnapshot
     if (-not $result.afterBaselineInstall) { throw 'Baseline installation was not detected' }
 
     New-Item -ItemType Directory -Force -Path $stateDirectory | Out-Null
@@ -156,37 +156,37 @@ try {
     [System.Array]::Copy($bytes, $truncatedBytes, $truncatedBytes.Length)
     [System.IO.File]::WriteAllBytes($truncatedPath, $truncatedBytes)
     $truncatedHash = (Get-FileHash -LiteralPath $truncatedPath -Algorithm SHA256).Hash
-    $result.invalidArtifact = [ordered]@{
+    $result['invalidArtifact'] = [ordered]@{
         truncatedSha256 = $truncatedHash
         rejectedBeforeExecution = $truncatedHash -ne $upgradeExpectedHash
         installedSnapshotUnchanged = (Get-InstalledSnapshot).displayVersion -eq $result.afterBaselineInstall.displayVersion
     }
     if (-not $result.invalidArtifact.rejectedBeforeExecution) { throw 'Truncated update unexpectedly matched the release hash' }
 
-    $result.upgradeInstallExitCode = Invoke-Installer -Path $upgradeInstaller
-    $result.afterUpgrade = Get-InstalledSnapshot
-    $result.stateRetainedAfterUpgrade = Test-Path -LiteralPath $statePath
-    $result.signerRetainedAfterUpgrade = $result.afterUpgrade.hostSignerThumbprint -eq $result.expectedSignerThumbprint
+    $result['upgradeInstallExitCode'] = Invoke-Installer -Path $upgradeInstaller
+    $result['afterUpgrade'] = Get-InstalledSnapshot
+    $result['stateRetainedAfterUpgrade'] = Test-Path -LiteralPath $statePath
+    $result['signerRetainedAfterUpgrade'] = $result.afterUpgrade.hostSignerThumbprint -eq $result.expectedSignerThumbprint
     if (-not $result.afterUpgrade -or -not $result.stateRetainedAfterUpgrade -or -not $result.signerRetainedAfterUpgrade) {
         throw 'Upgrade did not preserve state and signer continuity'
     }
 
-    $result.downgradeInstallExitCode = Invoke-Installer -Path $baselineInstaller
-    $result.afterDowngradeAttempt = Get-InstalledSnapshot
-    $result.stateRetainedAfterDowngradeAttempt = Test-Path -LiteralPath $statePath
+    $result['downgradeInstallExitCode'] = Invoke-Installer -Path $baselineInstaller
+    $result['afterDowngradeAttempt'] = Get-InstalledSnapshot
+    $result['stateRetainedAfterDowngradeAttempt'] = Test-Path -LiteralPath $statePath
 
-    $result.repairUpgradeExitCode = Invoke-Installer -Path $upgradeInstaller
-    $result.afterRepairUpgrade = Get-InstalledSnapshot
-    $result.stateRetainedAfterRepairUpgrade = Test-Path -LiteralPath $statePath
-    $result.signerRetainedAfterRepairUpgrade = $result.afterRepairUpgrade.hostSignerThumbprint -eq $result.expectedSignerThumbprint
+    $result['repairUpgradeExitCode'] = Invoke-Installer -Path $upgradeInstaller
+    $result['afterRepairUpgrade'] = Get-InstalledSnapshot
+    $result['stateRetainedAfterRepairUpgrade'] = Test-Path -LiteralPath $statePath
+    $result['signerRetainedAfterRepairUpgrade'] = $result.afterRepairUpgrade.hostSignerThumbprint -eq $result.expectedSignerThumbprint
     if (-not $result.afterRepairUpgrade -or -not $result.stateRetainedAfterRepairUpgrade -or -not $result.signerRetainedAfterRepairUpgrade) {
         throw 'Repair upgrade did not preserve state and signer continuity'
     }
 } finally {
-    try { $result.uninstallExitCode = Invoke-Uninstall } catch { $result.uninstallError = $_.Exception.Message }
-    $result.registrationRemainsAfterUninstall = $null -ne (Get-UninstallEntry)
-    $result.syntheticStateRetainedAfterUninstall = Test-Path -LiteralPath $statePath
-    $result.limitations = @(
+    try { $result['uninstallExitCode'] = Invoke-Uninstall } catch { $result['uninstallError'] = $_.Exception.Message }
+    $result['registrationRemainsAfterUninstall'] = $null -ne (Get-UninstallEntry)
+    $result['syntheticStateRetainedAfterUninstall'] = Test-Path -LiteralPath $statePath
+    $result['limitations'] = @(
         'Hosted Windows Server runner, not a retail Windows profile',
         'Ephemeral self-signed identities are not production publisher trust',
         'Synthetic state proves package transition retention only; real SQLite backup, migration, health, and rollback remain product lifecycle requirements',
