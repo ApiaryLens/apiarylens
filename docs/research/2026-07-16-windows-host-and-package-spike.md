@@ -422,6 +422,45 @@ production-signing, or retail-device acceptance conditions. The artifact is an
 unsigned research build and its license files are incomplete; those facts remain
 release blockers rather than being hidden by the green workflow.
 
+Follow-on run
+[`29555804486`](https://github.com/ApiaryLens/apiarylens/actions/runs/29555804486)
+at commit `7088b44d253bda751d5e8625ddd48c5b287b82e3` replaced the
+health-only limitation with a production-dependency-only HTTP acceptance module.
+The same 50 assertions ran first from the packaged application and then from the
+exact setup artifact on a second clean Windows runner. No Vitest, test runner, or
+development SDK was bundled into the product server tree.
+
+| Installed-artifact API check | Result |
+|---|---:|
+| Exact setup SHA-256 | `264D50EA7F295F77AC24DF7907A3D87BCD491823E95A2196B14AB0DE86DC4651` |
+| Packaged / installed assertions | 50 / 50; both passed |
+| Migration history on first start and restart | `0001`, `0002`, `0003`, `0004` |
+| Protected bootstrap and one-owner claim | Passed |
+| CSRF and synchronized-write deduplication | Passed |
+| Cross-family resource, changes, membership, media, mutation, and export isolation | Passed |
+| Opaque-session rotation and one-time recovery | Passed |
+| Viewer write, export, and media-delete denial | Passed |
+| Private original, thumbnail, export, restart persistence, and synchronized deletion | Passed |
+| Real service restart with same SQLite/media directories and reauthentication | Passed |
+| External Node / Rust / .NET SDK in clean job | Absent / absent / absent |
+| Control token in tested renderer, storage, console, arguments, readiness, or service output | No |
+| Uninstall host / registration | Removed / removed in 307 ms |
+| Updater/cache residue | 9.6 MiB |
+
+The cross-family records and bytes were seeded through two control-token and
+origin-protected endpoints that exist only in the disposable research wrapper; they
+are not product routes. The public API then had to conceal reads, changes, media,
+members, and exports, reject a foreign mutation, and leave the foreign records and
+bytes unchanged. Sanitized evidence contains only booleans, counts, versions,
+statuses, and artifact identity; cookies, passwords, recovery codes, bootstrap
+codes, organization identifiers, and media identifiers were not emitted.
+
+This closes the packaged and installed current-schema API, authorization, media,
+export, and restart-persistence subgate. It does not prove upgrade from every
+historical schema, interrupted or failed migration recovery, a production-signed
+artifact, complete SBOM/notices, retail Windows profiles, host accessibility, or
+the explicit keep-data/remove-all cleanup policy.
+
 ### Electron package-transition evidence
 
 Exact-artifact replay
@@ -792,7 +831,9 @@ implementations in parallel.
    launch, idle/active memory, process count, first-run runtime remediation, and
    complete uninstall for Electron and Tauri.
 2. Exercise local-service startup, crash, restart, duplicate-instance prevention,
-   clean shutdown, data lock, and orphan cleanup.
+   clean shutdown, data lock, and orphan cleanup. Packaged and clean-installed
+   restart persistence now pass; crash/data-lock/orphan behavior remains open in
+   the actual host.
 3. Verify Windows 11 and the chosen Windows 10 baseline in clean user profiles with
    no developer tools. Include a profile where WebView2 is absent or its updater is
    policy-disabled.

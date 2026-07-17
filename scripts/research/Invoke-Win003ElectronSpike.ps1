@@ -561,7 +561,7 @@ $measurement = [ordered]@{
     limitations = @(
         $(if ($env:WINDOWS_CERTIFICATE_FILE) { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research build; not a release artifact' }),
         'Hosted Windows runner, not a retail family computer',
-        'Real packaged ApiaryLens service health only; full typed API and user lifecycle remain open',
+        'Real packaged API/auth/org-isolation/media/export/restart lifecycle exercised; historical and failed migration transitions remain open',
         'Warm filesystem/runtime effects after the first launch'
     )
 }

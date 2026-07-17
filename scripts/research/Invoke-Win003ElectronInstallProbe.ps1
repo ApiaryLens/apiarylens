@@ -339,7 +339,7 @@ $result = [ordered]@{
     limitations = @(
         'Fresh hosted runner profile, not a retail Windows image',
         $(if ($measurement.signingMode -eq 'ephemeral-test-signing') { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research artifact' }),
-        'Real ApiaryLens service health and disposable database/media creation were exercised; full typed API and user lifecycle remain open'
+        'Real API/auth/org-isolation/media/export/restart lifecycle exercised; historical and failed migration transitions remain open'
     )
 }
 

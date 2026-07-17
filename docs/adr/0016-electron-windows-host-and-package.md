@@ -54,6 +54,17 @@ down with exit 0. This materially advances conditions 1 through 3 but does not
 complete their full API, organization-isolation, migration, crash/recovery, or
 credential-adapter matrices.
 
+Follow-on run
+[`29555804486`](https://github.com/ApiaryLens/apiarylens/actions/runs/29555804486)
+then passed 50 production-dependency-only assertions from both the packaged and
+clean-installed artifact: protected bootstrap, CSRF and deduplication,
+cross-organization read/write/media/member/export isolation, session rotation and
+recovery, viewer denial, private original/thumbnail/export/deletion, migration head
+`0004`, real-service restart, reauthentication, and SQLite/media persistence. This
+closes the current-schema installed API and organization-isolation portion of
+condition 1. Historical and failed migration transitions, complete host crash and
+recovery integration, and the other conditions below remain open.
+
 ## Proposed Decision
 
 Use **Electron** as the initial Windows Preview host. Use a **signed per-user
