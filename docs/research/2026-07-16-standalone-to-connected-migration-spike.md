@@ -80,6 +80,8 @@ The local run passed these scenarios:
   followed by successful resume;
 - exact retry of an already-applied record through the real idempotency table;
 - idempotent overwrite and hash verification of an already-copied media object;
+- successful transfer and reconciliation of the maximum 25 MiB original plus its
+  thumbnail as independently journaled variants;
 - colliding target record reported as a conflict while the client remains standalone;
 - target media corruption detected before cutover;
 - incompatible sync-contract version rejected before transfer;
@@ -203,8 +205,8 @@ installation ID, accepted hashes, and outcome.
 
 ## Further evidence required to close WIN-006
 
-- Scale testing with the maximum supported record and 25 MiB media sizes, thumbnails,
-  tombstones, conflicts, and a non-empty outbox.
+- Scale testing with the maximum supported record count, tombstones, conflicts, and a
+  non-empty outbox. The 25 MiB original-media and thumbnail boundary is now covered.
 - Inject process termination, disk-full, access-denied, database-busy, corrupt backup,
   target timeout, expired auth, and partial media failures at each state boundary.
 - Prove restored backup equivalence for the packaged Windows runtime, not only the

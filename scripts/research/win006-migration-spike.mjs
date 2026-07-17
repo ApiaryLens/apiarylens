@@ -73,7 +73,10 @@ function operation(entityType, entityId, body) {
   };
 }
 
-async function seedScenario(root, { conflictingTarget = false } = {}) {
+async function seedScenario(
+  root,
+  { conflictingTarget = false, mediaSize, includeThumbnail = false } = {},
+) {
   await mkdir(root, { recursive: true });
   const source = new SqliteStore(join(root, 'source.sqlite'), { authRootSecret: SECRET_SENTINEL });
   const target = new SqliteStore(join(root, 'target.sqlite'), { authRootSecret: SECRET_SENTINEL });
@@ -99,7 +102,12 @@ async function seedScenario(root, { conflictingTarget = false } = {}) {
   const hiveId = randomUUID();
   const inspectionId = randomUUID();
   const mediaId = randomUUID();
-  const mediaBytes = new TextEncoder().encode('research-only-photo-content');
+  const mediaBytes = mediaSize
+    ? new Uint8Array(mediaSize).fill(0x5a)
+    : new TextEncoder().encode('research-only-photo-content');
+  const thumbnailBytes = includeThumbnail
+    ? new TextEncoder().encode('research-only-thumbnail-content')
+    : undefined;
   const records = [
     operation('apiary', apiaryId, { name: 'Back field' }),
     operation('hive', hiveId, { apiaryId, name: 'Hive one', status: 'active' }),
@@ -132,6 +140,7 @@ async function seedScenario(root, { conflictingTarget = false } = {}) {
   target.close();
   const sourceMedia = new FilesystemMediaStore(join(root, 'source-media'));
   await sourceMedia.put(sourceOrg, mediaId, mediaBytes);
+  if (thumbnailBytes) await sourceMedia.put(sourceOrg, mediaId, thumbnailBytes, 'thumbnail');
   await atomicJson(join(root, 'client-config.json'), {
     mode: 'standalone',
     endpoint: 'http://127.0.0.1',
@@ -162,13 +171,22 @@ async function createJournal(root, identities) {
     state: 'pending',
   }));
   source.close();
-  const media = records
-    .filter((item) => item.entityType === 'mediaAsset')
-    .map((item) => ({
-      entityId: item.entityId,
-      sha256: item.payload.sha256,
-      state: 'pending',
-    }));
+  const sourceMedia = new FilesystemMediaStore(join(root, 'source-media'));
+  const media = [];
+  for (const item of records.filter((candidate) => candidate.entityType === 'mediaAsset')) {
+    for (const variant of ['original', 'thumbnail']) {
+      const bytes = await sourceMedia.get(identities.sourceOrg, item.entityId, variant);
+      if (bytes) {
+        media.push({
+          entityId: item.entityId,
+          variant,
+          sha256: hash(bytes),
+          byteSize: bytes.byteLength,
+          state: 'pending',
+        });
+      }
+    }
+  }
   const journal = {
     schemaVersion: 1,
     migrationId: randomUUID(),
@@ -235,15 +253,16 @@ async function migrate(root, options = {}) {
     }
     for (const item of journal.media) {
       if (item.state === 'verified') continue;
-      const bytes = await sourceMedia.get(identities.sourceOrg, item.entityId);
+      const bytes = await sourceMedia.get(identities.sourceOrg, item.entityId, item.variant);
       assert.ok(bytes, 'source media is present');
       assert.equal(hash(bytes), item.sha256);
-      const existing = await targetMedia.get(identities.targetOrg, item.entityId);
+      assert.equal(bytes.byteLength, item.byteSize);
+      const existing = await targetMedia.get(identities.targetOrg, item.entityId, item.variant);
       if (existing && hash(existing) === item.sha256) journal.duplicateMediaWrites += 1;
-      await targetMedia.put(identities.targetOrg, item.entityId, bytes);
+      await targetMedia.put(identities.targetOrg, item.entityId, bytes, item.variant);
       applied += 1;
       if (options.interruptAfterApply === applied) throw new InjectedInterruption('media_apply');
-      const copied = await targetMedia.get(identities.targetOrg, item.entityId);
+      const copied = await targetMedia.get(identities.targetOrg, item.entityId, item.variant);
       assert.ok(copied);
       assert.equal(hash(copied), item.sha256);
       item.state = 'verified';
@@ -255,6 +274,7 @@ async function migrate(root, options = {}) {
         identities.targetOrg,
         first.entityId,
         new TextEncoder().encode('tampered'),
+        first.variant,
       );
     }
     const targetRecords = inventory(target, identities.targetOrg);
@@ -266,9 +286,14 @@ async function migrate(root, options = {}) {
       assert.equal(actual?.payloadHash, expected.payloadHash, 'record hash reconciles');
     }
     for (const expected of journal.media) {
-      const bytes = await targetMedia.get(identities.targetOrg, expected.entityId);
+      const bytes = await targetMedia.get(
+        identities.targetOrg,
+        expected.entityId,
+        expected.variant,
+      );
       assert.ok(bytes);
       assert.equal(hash(bytes), expected.sha256, 'media hash reconciles');
+      assert.equal(bytes.byteLength, expected.byteSize, 'media size reconciles');
     }
     journal.cutoverCursor = target.pullChanges(identities.targetOrg, 0, 250).nextCursor;
     journal.status = 'complete';
@@ -354,6 +379,18 @@ async function run(output) {
   }
   results.push('interruption-resume-at-every-record-and-media-boundary');
 
+  const scale = join(workspace, 'maximum-media');
+  await seedScenario(scale, { mediaSize: 25 * 1024 * 1024, includeThumbnail: true });
+  const scaled = await migrate(scale);
+  assert.equal(scaled.status, 'complete');
+  assert.equal(scaled.media.length, 2);
+  assert.equal(
+    scaled.media.find((item) => item.variant === 'original')?.byteSize,
+    25 * 1024 * 1024,
+  );
+  assert.ok(scaled.media.some((item) => item.variant === 'thumbnail'));
+  results.push('maximum-25-mib-original-and-thumbnail-transfer');
+
   const conflict = join(workspace, 'conflict');
   await seedScenario(conflict, { conflictingTarget: true });
   await assert.rejects(migrate(conflict), /migration_conflict/);
@@ -382,7 +419,7 @@ async function run(output) {
   results.push('post-cutover-remote-write-blocks-destructive-rollback');
 
   const evidenceText = await Promise.all(
-    [happy, conflict, mismatch, incompatible, remote].map(async (root) => {
+    [happy, scale, conflict, mismatch, incompatible, remote].map(async (root) => {
       let text = '';
       for (const file of ['migration-journal.json', 'client-config.json']) {
         try {
@@ -404,7 +441,8 @@ async function run(output) {
     scenarios: results,
     assertions: {
       recordsPerScenario: 4,
-      mediaObjectsPerScenario: 1,
+      mediaVariantsInScaleScenario: 2,
+      maximumOriginalMediaBytes: 25 * 1024 * 1024,
       interruptionBoundaries: 5,
       identitiesMigrated: false,
       atomicCutoverAfterReconciliation: true,
