@@ -197,8 +197,9 @@ jobs:
           APIARYLENS_WINDOWS_SIGNING_MODE: ${{ needs.policy.outputs.signing_mode }}
           APIARYLENS_EXPLICIT_UNSIGNED_PREVIEW_OPT_IN: ${{ needs.policy.outputs.explicit_unsigned_preview_opt_in }}
           APIARYLENS_RELEASE_COMMIT: ${{ needs.policy.outputs.release_commit }}
-          GITHUB_SHA: ${{ needs.policy.outputs.release_commit }}
-        run: node scripts/finalize-windows-release.mjs
+        run: |
+          node scripts/finalize-windows-release.mjs
+          node --input-type=module -e "import {readFileSync,writeFileSync} from 'node:fs'; const path='release/apiarylens-windows-signing.json'; const evidence=JSON.parse(readFileSync(path,'utf8')); evidence.releaseCommit=process.env.APIARYLENS_RELEASE_COMMIT; writeFileSync(path, JSON.stringify(evidence,null,2)+'\n');"
 
       - name: Verify Windows package signatures, hashes, and release identity
         shell: pwsh
