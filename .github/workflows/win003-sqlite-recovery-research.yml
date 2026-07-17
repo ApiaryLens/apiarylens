@@ -1,0 +1,32 @@
+name: WIN-003 SQLite recovery research
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sqlite-recovery:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Exercise SQLite migration and recovery transaction
+        shell: pwsh
+        run: >-
+          node ./scripts/research/win003-sqlite-recovery-probe.mjs
+          --work-directory "$env:RUNNER_TEMP/win003-sqlite-recovery"
+          --output "$env:RUNNER_TEMP/win003-sqlite-recovery/evidence.json"
+      - name: Upload sanitized recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: win003-sqlite-recovery-evidence
+          path: ${{ runner.temp }}/win003-sqlite-recovery/evidence.json
+          if-no-files-found: error
+          retention-days: 14
