@@ -100,7 +100,7 @@ if (-not $installedSidecar) { throw 'Installed packaged Node sidecar not found' 
 $installedSignature = Get-AuthenticodeSignature -LiteralPath $installedHost.FullName
 if ($measurement.signingMode -eq 'ephemeral-test-signing' -and (
     -not $installedSignature.SignerCertificate -or
-    $installedSignature.SignerCertificate.Thumbprint -ne $measurement.hostSignatureThumbprint
+    $installedSignature.SignerCertificate.Thumbprint -ne $measurement.installerSignatureThumbprint
 )) {
     throw 'Installed Tauri host did not retain the expected Authenticode signer'
 }

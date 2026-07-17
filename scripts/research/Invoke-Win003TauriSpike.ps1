@@ -163,14 +163,12 @@ if (-not $installer) { throw 'Tauri NSIS installer was not generated' }
 $hostSignature = Get-AuthenticodeSignature -LiteralPath $hostExecutable
 $installerSignature = Get-AuthenticodeSignature -LiteralPath $installer.FullName
 if ($env:WIN003_CERT_THUMBPRINT -and (
-    -not $hostSignature.SignerCertificate -or
     -not $installerSignature.SignerCertificate -or
-    $hostSignature.SignerCertificate.Thumbprint -ne $env:WIN003_CERT_THUMBPRINT -or
     $installerSignature.SignerCertificate.Thumbprint -ne $env:WIN003_CERT_THUMBPRINT
 )) {
     $hostThumbprint = if ($hostSignature.SignerCertificate) { $hostSignature.SignerCertificate.Thumbprint } else { '<none>' }
     $installerThumbprint = if ($installerSignature.SignerCertificate) { $installerSignature.SignerCertificate.Thumbprint } else { '<none>' }
-    throw "Tauri signature mismatch: expected $env:WIN003_CERT_THUMBPRINT; host $hostThumbprint ($($hostSignature.Status)); installer $installerThumbprint ($($installerSignature.Status))"
+    throw "Tauri installer signature mismatch: expected $env:WIN003_CERT_THUMBPRINT; loose host $hostThumbprint ($($hostSignature.Status)); installer $installerThumbprint ($($installerSignature.Status))"
 }
 
 $sqliteProbe = & $sidecarPath -e "const { DatabaseSync } = require('node:sqlite'); const db = new DatabaseSync(':memory:'); db.exec('create table probe(value text)'); db.close(); process.stdout.write('node-sqlite-ok')"
