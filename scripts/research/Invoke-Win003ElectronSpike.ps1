@@ -394,8 +394,13 @@ if (!hasSingleInstanceLock) {
   app.whenReady().then(() => {
     if (!safeStorage.isEncryptionAvailable()) throw new Error("safe-storage-unavailable");
     const retentionRoot = retentionRootFromState(process.argv[retentionVerifyInputIndex + 1]);
-    const protectedRoot = readCredentialEnvelope(path.join(retentionRoot, "standalone-root.bin"));
+    const activeRoot = path.join(retentionRoot, "standalone-root.bin");
+    const backupRoot = path.join(retentionRoot, "backups", "standalone-root.bin");
+    const protectedRoot = readCredentialEnvelope(activeRoot);
     const hiveData = fs.readFileSync(path.join(retentionRoot, "apiarylens.sqlite.fixture"), "utf8");
+    fs.rmSync(activeRoot, { force: true });
+    fs.copyFileSync(backupRoot, activeRoot);
+    const restoredRoot = readCredentialEnvelope(activeRoot);
     fs.writeFileSync(
       process.argv[retentionVerifyOutputIndex + 1],
       JSON.stringify({
@@ -405,7 +410,12 @@ if (!hasSingleInstanceLock) {
           protectedRoot.purpose === "standalone-auth-root" &&
           typeof protectedRoot.value === "string" &&
           protectedRoot.value.length === 64,
-        hiveDataReadableAfterReinstall: hiveData === "non-secret-hive-data"
+        hiveDataReadableAfterReinstall: hiveData === "non-secret-hive-data",
+        protectedBackupRestoredAfterReinstall:
+          restoredRoot.schemaVersion === 1 &&
+          restoredRoot.version === 1 &&
+          restoredRoot.purpose === "standalone-auth-root" &&
+          restoredRoot.value === protectedRoot.value
       })
     );
     app.quit();
@@ -425,11 +435,15 @@ if (!hasSingleInstanceLock) {
     );
     fs.rmSync(retentionRoot, { recursive: true, force: true });
     fs.mkdirSync(retentionRoot, { recursive: true });
+    const activeRoot = path.join(retentionRoot, "standalone-root.bin");
+    const backupRoot = path.join(retentionRoot, "backups", "standalone-root.bin");
     protectCredentialEnvelope(
-      path.join(retentionRoot, "standalone-root.bin"),
+      activeRoot,
       1,
       "standalone-auth-root"
     );
+    fs.mkdirSync(path.dirname(backupRoot), { recursive: true });
+    fs.copyFileSync(activeRoot, backupRoot);
     fs.writeFileSync(
       path.join(retentionRoot, "apiarylens.sqlite.fixture"),
       "non-secret-hive-data",

@@ -448,7 +448,8 @@ if ($retentionVerify.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $retentionV
 $retentionVerifyState = Get-Content -Raw -LiteralPath $retentionVerifyPath | ConvertFrom-Json
 $reinstallReadProtectedCredentialAndHiveData =
     $retentionVerifyState.protectedRootReadableAfterReinstall -and
-    $retentionVerifyState.hiveDataReadableAfterReinstall
+    $retentionVerifyState.hiveDataReadableAfterReinstall -and
+    $retentionVerifyState.protectedBackupRestoredAfterReinstall
 if (-not $reinstallReadProtectedCredentialAndHiveData) {
     throw 'Reinstalled Electron host could not read retained protected state'
 }
@@ -566,6 +567,7 @@ $result = [ordered]@{
     defaultUninstallKeptProtectedCredentialAndHiveData = $defaultUninstallKeptProtectedCredentialAndHiveData
     reinstallExitCode = $reinstall.ExitCode
     reinstallReadProtectedCredentialAndHiveData = $reinstallReadProtectedCredentialAndHiveData
+    reinstallRestoredProtectedCredentialBackup = $retentionVerifyState.protectedBackupRestoredAfterReinstall
     explicitRemoveAllDeletedCredentialAndHiveData = $explicitRemoveAllDeletedCredentialAndHiveData
     secondUninstallExitCode = $secondUninstall.ExitCode
     secondUninstallEntryRemains = $secondEntryRemains
