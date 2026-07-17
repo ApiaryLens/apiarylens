@@ -154,7 +154,7 @@ if ($env:WINDOWS_CERTIFICATE_FILE) {
         Sort-Object FullName -Descending |
         Select-Object -First 1
     if (-not $signTool) { throw 'Windows SDK SignTool was not found for outer installer test signing' }
-    & $signTool.FullName sign /fd SHA256 /sha1 $env:WIN003_CERT_THUMBPRINT $installer.FullName
+    & $signTool.FullName sign /fd SHA256 /f $env:WINDOWS_CERTIFICATE_FILE /p $env:WINDOWS_CERTIFICATE_PASSWORD $installer.FullName
     if ($LASTEXITCODE -ne 0) { throw "Electron outer setup test signing failed with exit code $LASTEXITCODE" }
 }
 
