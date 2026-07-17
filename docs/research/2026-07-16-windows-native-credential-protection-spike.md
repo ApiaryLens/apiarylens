@@ -298,6 +298,30 @@ the existing separate-machine DPAPI run proves denial, while guided cross-machin
 UX, Windows-account changes, final UI, retail profiles, and production signing
 remain open.
 
+Installed cross-user follow-on run
+[`29562748266`](https://github.com/ApiaryLens/apiarylens/actions/runs/29562748266)
+at commit `6330015ed24ce4dc4b28277c3a5123a91358fd13` copied the exact
+clean-installed application into a disposable Public Documents lab so a temporary
+second Windows account could execute the same host without weakening the installed
+application directory's ACLs. The setup SHA-256 was
+`5CB601B9C7E4E8DC8D49A7EAE105B615A267C50F60FAF0AAC641B57F34E2CEE5`.
+
+| Installed `safeStorage` account-boundary check | Result |
+|---|---:|
+| Creating user decrypted its generated fixture | Passed |
+| Ciphertext excluded the generated plaintext | Passed |
+| Disposable second Windows account decrypted the fixture | Denied |
+| Existing native credential and real-session lifecycle | Passed |
+| Existing 50-check API and organization-isolation matrix | Passed |
+| Account, profile, copied host, ciphertext lab, and logs removed | Passed |
+| Failure diagnostic retained on the green run | No |
+
+Only aggregate booleans entered the green lifecycle evidence; the generated secret,
+ciphertext, temporary username, SID, and password did not. This closes the selected
+adapter's installed different-user denial mechanics. It does not yet supply the final
+guided recovery screen, test Windows password/PIN/local-to-Microsoft-account changes,
+or replace the existing separate-computer DPAPI denial with retail-device UAT.
+
 Primary source:
 
 - [Electron `safeStorage`](https://www.electronjs.org/docs/latest/api/safe-storage)
@@ -365,8 +389,10 @@ Primary sources:
    keep-data, and remove-all state machine now passes. The real API
    issue/refresh/revocation/restart/sign-out lifecycle also passes. Restore,
    account-change, and final installer-choice UX evidence remain. Exact default
-   keep-data, same-user reinstall/decrypt, protected backup restore, explicit
-   remove-all, and second-uninstall mechanics now pass.
+   keep-data, same-user reinstall/decrypt, protected backup restore, installed
+   different-user denial, explicit remove-all, and second-uninstall mechanics now
+   pass. Password/PIN and local-to-Microsoft-account transitions plus the guided
+   recovery UX remain open.
 5. Recording ACL, roaming-profile, Remote Desktop, multiple Windows session, and
    locked-workstation behavior on supported retail Windows profiles.
 6. Completing the supported Electron API, protected-file, dependency, license, and

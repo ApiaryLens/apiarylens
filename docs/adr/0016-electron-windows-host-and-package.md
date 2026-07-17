@@ -127,6 +127,16 @@ cross-user/computer failure, Windows-account changes, final UX, retail profiles,
 production signing remain open.
 
 Run
+[`29562748266`](https://github.com/ApiaryLens/apiarylens/actions/runs/29562748266)
+then used the exact clean-installed host under a disposable second Windows account.
+The creating account passed a `safeStorage` round trip, the second account was denied
+decryption, and the account, Windows profile, copied host, ciphertext lab, and logs
+were removed. Only aggregate booleans entered green evidence. This closes installed
+different-user denial mechanics; final guided recovery UX, Windows password/PIN and
+local-to-Microsoft-account transitions, retail profiles, and production signing
+remain open.
+
+Run
 [`29559517037`](https://github.com/ApiaryLens/apiarylens/actions/runs/29559517037)
 then forced the embedded service to terminate with an open real-database transaction
 in both packaged and clean-installed forms. The same data directory restarted,
@@ -322,7 +332,9 @@ must replace it.
    server issue/refresh/revocation/restart/sign-out now passes as well. Restore and
    account-change behavior, final installer-choice UX, and owner acceptance stay
    open. Exact default keep-data, same-user reinstall/decrypt, protected backup
-   restore, explicit remove-all, and second-uninstall mechanics now pass.
+   restore, installed different-user denial, explicit remove-all, and second-uninstall
+   mechanics now pass. Password/PIN and local-to-Microsoft-account transitions plus
+   guided recovery UX remain open.
 5. Resolve or reject the Forge/Squirrel exotic dependency under the repository
    supply-chain policy; reconcile every runtime/build component to an allowlisted
    license and install complete Apache-2.0 and third-party notices.
