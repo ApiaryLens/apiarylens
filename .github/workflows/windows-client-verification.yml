@@ -10,6 +10,8 @@ on:
       - "apps/api/**"
       - "packages/**"
       - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "scripts/build-windows-package.mjs"
       - ".github/workflows/windows-client-verification.yml"
   pull_request:
     paths:
@@ -18,6 +20,8 @@ on:
       - "apps/api/**"
       - "packages/**"
       - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "scripts/build-windows-package.mjs"
       - ".github/workflows/windows-client-verification.yml"
 
 permissions:
@@ -131,3 +135,119 @@ jobs:
           path: ${{ runner.temp }}/apiarylens-windows-evidence.json
           if-no-files-found: error
           retention-days: 14
+
+      - name: Build current-user installer and update artifacts
+        shell: pwsh
+        run: node scripts/build-windows-package.mjs
+
+      - name: Verify package manifest and hidden packaged host
+        shell: pwsh
+        run: |
+          $release = "${{ github.workspace }}/.artifacts/windows-release"
+          $manifest = Get-Content -Raw "$release/windows-package.json" | ConvertFrom-Json
+          if ($manifest.productVersion -ne '0.1.0-preview.1') { throw 'Unexpected Windows package version.' }
+          if ($manifest.packageKind -ne 'squirrel-current-user') { throw 'Unexpected package kind.' }
+          if ($manifest.signed -ne $false) { throw 'Ordinary verification must not claim production signing.' }
+          foreach ($artifact in $manifest.artifacts) {
+            $path = "$release/artifacts/$($artifact.name)"
+            if (-not (Test-Path -LiteralPath $path)) { throw "Missing package artifact $($artifact.name)" }
+            if ((Get-Item -LiteralPath $path).Length -ne $artifact.bytes) { throw "Size mismatch for $($artifact.name)" }
+            if ((Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash.ToLowerInvariant() -ne $artifact.sha256) {
+              throw "SHA-256 mismatch for $($artifact.name)"
+            }
+          }
+          $required = @('ApiaryLensSetup.exe', 'RELEASES')
+          foreach ($name in $required) {
+            if ($name -notin @($manifest.artifacts.name)) { throw "Manifest omits $name" }
+          }
+
+          $appDirectory = Get-ChildItem "$release/packaged" -Directory | Select-Object -First 1
+          $executable = Join-Path $appDirectory.FullName 'ApiaryLens.exe'
+          $evidence = "${{ runner.temp }}/apiarylens-packaged-evidence.json"
+          $profile = "${{ runner.temp }}/apiarylens-packaged-profile"
+          $process = Start-Process -FilePath $executable -ArgumentList @(
+            "--desktop-user-data=$profile",
+            "--desktop-smoke=$evidence"
+          ) -PassThru -WindowStyle Hidden
+          try {
+            $deadline = (Get-Date).AddSeconds(40)
+            while (-not (Test-Path -LiteralPath $evidence)) {
+              if ($process.HasExited) { throw "Packaged host exited early ($($process.ExitCode))." }
+              if ((Get-Date) -ge $deadline) { throw 'Packaged host smoke timed out.' }
+              Start-Sleep -Milliseconds 200
+            }
+            $result = Get-Content -Raw $evidence | ConvertFrom-Json
+            foreach ($property in @('loopbackOnly', 'unauthorizedRequestRejected', 'authenticatedHealthPassed', 'productShellServed', 'sandboxedRenderer')) {
+              if ($result.$property -ne $true) { throw "Packaged host evidence failed: $property" }
+            }
+            if ($result.controlTokenExposedInRenderer -ne $false) { throw 'Packaged renderer exposed the control token.' }
+          }
+          finally {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Upload Windows package verification artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: windows-preview-package-verification
+          path: |
+            .artifacts/windows-release/artifacts/
+            .artifacts/windows-release/windows-package.json
+            ${{ runner.temp }}/apiarylens-packaged-evidence.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Verify current-user install, launch, keep-data uninstall
+        shell: pwsh
+        run: |
+          $release = "${{ github.workspace }}/.artifacts/windows-release"
+          $setup = "$release/artifacts/ApiaryLensSetup.exe"
+          $install = Start-Process -FilePath $setup -ArgumentList '--silent' -PassThru -WindowStyle Hidden
+          if (-not $install.WaitForExit(90000)) {
+            Stop-Process -Id $install.Id -Force -ErrorAction SilentlyContinue
+            throw 'ApiaryLens Setup exceeded 90 seconds.'
+          }
+          if ($install.ExitCode -ne 0) { throw "ApiaryLens Setup failed with exit code $($install.ExitCode)." }
+
+          $installRoot = Join-Path $env:LOCALAPPDATA 'ApiaryLens'
+          $deadline = (Get-Date).AddSeconds(30)
+          while (-not (Test-Path -LiteralPath (Join-Path $installRoot 'Update.exe'))) {
+            if ((Get-Date) -ge $deadline) { throw 'Squirrel install root was not created.' }
+            Start-Sleep -Milliseconds 250
+          }
+          Get-Process ApiaryLens -ErrorAction SilentlyContinue |
+            Where-Object { $_.Path -and $_.Path.StartsWith($installRoot, [StringComparison]::OrdinalIgnoreCase) } |
+            Stop-Process -Force -ErrorAction SilentlyContinue
+
+          $appDirectory = Get-ChildItem $installRoot -Directory -Filter 'app-*' |
+            Sort-Object Name -Descending | Select-Object -First 1
+          $installedHost = Join-Path $appDirectory.FullName 'ApiaryLens.exe'
+          if (-not (Test-Path -LiteralPath $installedHost)) { throw 'Installed ApiaryLens host was not found.' }
+          $profile = "${{ runner.temp }}/apiarylens-installed-profile"
+          $evidence = "${{ runner.temp }}/apiarylens-installed-evidence.json"
+          $host = Start-Process -FilePath $installedHost -ArgumentList @(
+            "--desktop-user-data=$profile",
+            "--desktop-smoke=$evidence"
+          ) -PassThru -WindowStyle Hidden
+          try {
+            $deadline = (Get-Date).AddSeconds(40)
+            while (-not (Test-Path -LiteralPath $evidence)) {
+              if ($host.HasExited) { throw "Installed host exited early ($($host.ExitCode))." }
+              if ((Get-Date) -ge $deadline) { throw 'Installed host smoke timed out.' }
+              Start-Sleep -Milliseconds 200
+            }
+          }
+          finally {
+            Stop-Process -Id $host.Id -Force -ErrorAction SilentlyContinue
+          }
+
+          $update = Join-Path $installRoot 'Update.exe'
+          $uninstall = Start-Process -FilePath $update -ArgumentList @('--uninstall', '--silent') -PassThru -WindowStyle Hidden
+          if (-not $uninstall.WaitForExit(90000)) {
+            Stop-Process -Id $uninstall.Id -Force -ErrorAction SilentlyContinue
+            throw 'ApiaryLens uninstall exceeded 90 seconds.'
+          }
+          if ($uninstall.ExitCode -ne 0) { throw "ApiaryLens uninstall failed with exit code $($uninstall.ExitCode)." }
+          if (Test-Path -LiteralPath $installedHost) { throw 'Installed host remained after uninstall.' }
+          if (-not (Test-Path -LiteralPath $profile)) { throw 'Keep-data uninstall removed the user data root.' }

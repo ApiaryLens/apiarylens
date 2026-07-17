@@ -4,9 +4,13 @@ packages:
   - 'tests/*'
 
 allowBuilds:
+  electron-winstaller: true
   esbuild: true
   sharp: false
   workerd: true
+
+overrides:
+  '@electron/rebuild': '4.2.0'
 
 catalog:
   '@hono/node-server': '^2.0.9'

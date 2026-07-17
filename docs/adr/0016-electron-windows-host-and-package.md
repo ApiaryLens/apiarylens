@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted for Preview implementation; production release gates remain open
 
 ## Date
 
@@ -10,9 +10,9 @@ Proposed
 
 ## Deciders
 
-ApiaryLens project owner after the `WIN-003`, `WIN-004`, and `WIN-005` acceptance
-conditions below are satisfied. This proposal does not authorize product
-implementation.
+ApiaryLens project owner. Planning and implementation gates were approved on
+2026-07-17. The acceptance conditions below remain production release gates; they
+do not prevent implementation and Preview verification of the selected design.
 
 ## Context
 

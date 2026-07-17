@@ -22,6 +22,7 @@
     "test:e2e": "pnpm --filter @apiarylens/e2e test",
     "release:artifacts": "node scripts/build-release-artifacts.mjs",
     "release:supply-chain": "node scripts/build-supply-chain.mjs",
+    "release:windows": "node scripts/build-windows-package.mjs release/artifacts/windows",
     "release:verify": "node scripts/verify-release-identity.mjs && node scripts/verify-release-supply-chain.mjs",
     "security:secrets": "node scripts/scan-secrets.mjs",
     "docs:check": "node scripts/check-doc-links.mjs",

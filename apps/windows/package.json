@@ -10,6 +10,7 @@
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "dev": "pnpm build && electron .",
     "lint": "tsc -p tsconfig.json --noEmit",
+    "package:windows": "node ../../scripts/build-windows-package.mjs",
     "start": "electron .",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
@@ -19,11 +20,14 @@
     "@apiarylens/database": "workspace:*",
     "@apiarylens/media": "workspace:*",
     "@apiarylens/server": "workspace:*",
-    "@hono/node-server": "catalog:"
+    "@hono/node-server": "catalog:",
+    "electron-squirrel-startup": "1.0.1"
   },
   "devDependencies": {
+    "@electron/packager": "18.4.4",
     "@types/node": "catalog:",
     "electron": "43.1.1",
+    "electron-winstaller": "5.4.4",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

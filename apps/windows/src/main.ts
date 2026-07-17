@@ -1,5 +1,6 @@
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import {
   app,
@@ -44,6 +45,8 @@ import {
 } from './standalone-backup.js';
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
+const squirrelStartup = require('electron-squirrel-startup') as boolean;
 const preloadPath = join(currentDirectory, 'preload.cjs');
 const serviceScript = join(currentDirectory, 'service.js');
 const webRoot = resolve(currentDirectory, '..', '..', 'web', 'dist');
@@ -60,7 +63,7 @@ if (userDataArgument) {
   app.setPath('userData', resolve(userDataArgument.slice('--desktop-user-data='.length)));
 }
 
-if (!app.requestSingleInstanceLock()) app.quit();
+if (squirrelStartup || !app.requestSingleInstanceLock()) app.quit();
 
 function secureWindow(
   endpoint: string,

@@ -121,6 +121,16 @@ SSH key, deployment secret, or recovery code. Authentication happens in the Wind
 client after import. Returning to standalone mode preserves the prior standalone
 data; it does not silently copy newer remote-only records back into that database.
 
+ApiaryLens for Windows is distributed as a signed, current-user `ApiaryLensSetup.exe`
+release. It installs without administrator rights and does not require Node, Go,
+WSL, Docker, or a Linux shell. Release verification also publishes a full Squirrel
+update package, `RELEASES` metadata, artifact sizes, and SHA-256 hashes. Preview
+users should download only from the official ApiaryLens GitHub release and verify
+that Windows shows the expected ApiaryLens publisher before running Setup. The
+database, original photos, protected credentials, connection profile, and backups
+live in the user's application-data directory rather than the replaceable install
+directory, so application updates do not overwrite family data.
+
 An owner using Windows standalone can choose **Account and build → Create Windows
 backup**. Select a destination for the `.albackup` file and keep it somewhere other
 than the computer running ApiaryLens. The application briefly restarts its private

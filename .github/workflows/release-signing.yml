@@ -9,6 +9,81 @@ permissions:
   contents: read
 
 jobs:
+  windows-package:
+    if: github.repository == 'ApiaryLens/apiarylens'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      WINDOWS_CERTIFICATE_PFX_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 }}
+      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+    steps:
+      - name: Check out immutable revision
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+
+      - name: Configure Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+
+      - name: Install locked dependencies
+        shell: pwsh
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Build fail-closed Authenticode Windows release
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PFX_BASE64)) {
+            throw 'WINDOWS_CERTIFICATE_PFX_BASE64 is required for a Windows release.'
+          }
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)) {
+            throw 'WINDOWS_CERTIFICATE_PASSWORD is required for a Windows release.'
+          }
+          $certificate = Join-Path $env:RUNNER_TEMP 'apiarylens-release-signing.pfx'
+          [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_PFX_BASE64))
+          try {
+            $env:WINDOWS_CERTIFICATE_FILE = $certificate
+            node scripts/build-windows-package.mjs release/artifacts/windows
+          }
+          finally {
+            Remove-Item -LiteralPath $certificate -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Verify signed package identity and hashes
+        shell: pwsh
+        run: |
+          $release = '${{ github.workspace }}/release/artifacts/windows'
+          $manifest = Get-Content -Raw "$release/windows-package.json" | ConvertFrom-Json
+          if ($manifest.signed -ne $true) { throw 'Windows release manifest did not record signing.' }
+          if ($manifest.sourceCommit -ne '${{ github.sha }}') { throw 'Windows release source identity mismatch.' }
+          foreach ($artifact in $manifest.artifacts) {
+            $path = "$release/artifacts/$($artifact.name)"
+            if ((Get-Item -LiteralPath $path).Length -ne $artifact.bytes) { throw "Size mismatch for $($artifact.name)" }
+            if ((Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash.ToLowerInvariant() -ne $artifact.sha256) {
+              throw "SHA-256 mismatch for $($artifact.name)"
+            }
+          }
+          foreach ($executable in @(
+            "$release/artifacts/ApiaryLensSetup.exe",
+            "$release/packaged/ApiaryLens-win32-x64/ApiaryLens.exe"
+          )) {
+            $signature = Get-AuthenticodeSignature -LiteralPath $executable
+            if ($signature.Status -ne 'Valid') { throw "Invalid Authenticode signature on $executable: $($signature.Status)" }
+          }
+
+      - name: Upload signed Windows release subjects
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: apiarylens-windows-${{ github.ref_name }}
+          path: |
+            release/artifacts/windows/artifacts/
+            release/artifacts/windows/windows-package.json
+          if-no-files-found: error
+          retention-days: 30
+
   attest:
     if: github.repository == 'ApiaryLens/apiarylens'
     runs-on: ubuntu-latest
