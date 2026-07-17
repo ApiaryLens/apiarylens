@@ -315,6 +315,9 @@ installation ID, accepted hashes, and outcome.
 
 ## Recommendation
 
+The resulting decision is now captured as proposed
+[ADR 0019](../adr/0019-standalone-to-connected-migration-and-authority-cutover.md).
+
 Proceed to an ADR and detailed protocol design with a **journaled staged-copy model**.
 Do not implement connecting as ordinary sync, destructive move, source-database copy,
 or endpoint toggle. Keep the standalone source intact until verified reconciliation

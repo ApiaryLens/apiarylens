@@ -74,10 +74,15 @@ direction changes the starting experience without rewriting that release history
   Bee to a separate Apache-2.0 public repository and independent release lifecycle.
 - [ADR 0015](docs/adr/0015-windows-first-client-portfolio.md) makes a signed
   standalone/connected Windows application the future default family starting point.
-- [ADR 0016](docs/adr/0016-electron-windows-host-and-package.md) and
-  [ADR 0017](docs/adr/0017-windows-native-authentication-and-credential-protection.md)
-  are proposed host/package and native-authentication decisions; they are not yet
-  accepted and do not authorize product implementation or release claims.
+- Proposed [ADR 0016](docs/adr/0016-electron-windows-host-and-package.md),
+  [0017](docs/adr/0017-windows-native-authentication-and-credential-protection.md),
+  [0018](docs/adr/0018-windows-standalone-service-and-local-data-boundary.md),
+  [0019](docs/adr/0019-standalone-to-connected-migration-and-authority-cutover.md),
+  [0020](docs/adr/0020-shared-client-core-and-feature-ui-boundaries.md), and
+  [0021](docs/adr/0021-independent-product-client-and-scout-release-compatibility.md)
+  cover host/package, native authentication, standalone service, migration, shared
+  client, and independent updates. They are not yet accepted and do not authorize
+  product implementation or release claims.
 
 ## Repository layout
 

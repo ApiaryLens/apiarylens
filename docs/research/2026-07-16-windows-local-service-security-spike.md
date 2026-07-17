@@ -343,6 +343,9 @@ work.
 
 ## Proposed direction to challenge
 
+The resulting decision is now captured as proposed
+[ADR 0018](../adr/0018-windows-standalone-service-and-local-data-boundary.md).
+
 1. The signed host owns the service lifecycle and starts exactly one packaged Node
    service per Windows user.
 2. The host generates a new 256-bit token and random port on every service start.

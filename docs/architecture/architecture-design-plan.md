@@ -111,6 +111,10 @@ Proposed decisions under review (not yet assembled architecture):
 
 - [ADR 0016: Electron Windows Host and Current-User Package](../adr/0016-electron-windows-host-and-package.md)
 - [ADR 0017: Windows Native Authentication and Credential Protection](../adr/0017-windows-native-authentication-and-credential-protection.md)
+- [ADR 0018: Windows Standalone Service and Local Data Boundary](../adr/0018-windows-standalone-service-and-local-data-boundary.md)
+- [ADR 0019: Standalone-to-Connected Migration and Authority Cutover](../adr/0019-standalone-to-connected-migration-and-authority-cutover.md)
+- [ADR 0020: Shared Client Core and Feature UI Boundaries](../adr/0020-shared-client-core-and-feature-ui-boundaries.md)
+- [ADR 0021: Independent Product, Client, and Scout Release Compatibility](../adr/0021-independent-product-client-and-scout-release-compatibility.md)
 
 Accepted product-scope decision:
 
@@ -282,11 +286,11 @@ appropriate. Native host, transport, credential, filesystem, process, and lifecy
 adapters remain narrow boundaries. The portable backend and optional web frontend
 remain the shared connected foundation for Windows, PWA, and later mobile clients.
 
-ADR 0016 proposes Electron and a signed per-user package; ADR 0017 proposes external-
-browser PKCE, opaque host-owned native sessions, and main-process `safeStorage`.
-Both remain Proposed and do not authorize implementation or release. Their exact
-acceptance conditions, retail-device evidence, signing, and owner decisions remain
-gates.
+ADRs 0016 through 0021 propose Electron packaging, external-browser native
+authentication, the supervised standalone service, journaled connected migration,
+shared client boundaries, and independent release compatibility. All remain
+Proposed and do not authorize implementation or release. Their exact acceptance
+conditions, retail-device evidence, signing, and owner decisions remain gates.
 
 ### iPhone App Store Client
 

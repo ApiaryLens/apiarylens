@@ -294,6 +294,9 @@ native-mobile selection, and released-host UAT remain gated follow-on work.
 
 ## Recommendation
 
+The resulting decision is now captured as proposed
+[ADR 0020](../adr/0020-shared-client-core-and-feature-ui-boundaries.md).
+
 Proceed to an ADR selecting a **pure client core, injected ports, feature-level React
 reuse, and host-specific composition roots/adapters**. Do not reuse the PWA as an
 undifferentiated webview application, force one UI technology onto future native

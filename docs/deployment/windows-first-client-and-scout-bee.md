@@ -254,11 +254,11 @@ risks, rejected options, and the ADRs it informs.
 ## Required ADRs and design documents
 
 - Windows host framework and package format.
-- Embedded standalone service and local data/security boundary.
+- [Embedded standalone service and local data/security boundary](../adr/0018-windows-standalone-service-and-local-data-boundary.md).
 - [Native-client authentication and credential storage](../adr/0017-windows-native-authentication-and-credential-protection.md).
-- Standalone-to-connected migration and conflict semantics.
-- Multi-client shared UI/domain boundary.
-- Windows/product/Scout release-channel and update compatibility policy.
+- [Standalone-to-connected migration and conflict semantics](../adr/0019-standalone-to-connected-migration-and-authority-cutover.md).
+- [Multi-client shared UI/domain boundary](../adr/0020-shared-client-core-and-feature-ui-boundaries.md).
+- [Windows/product/Scout release-channel and update compatibility policy](../adr/0021-independent-product-client-and-scout-release-compatibility.md).
 - Mobile Scout orchestration, only if pursued after the Windows path.
 
 Focused designs must cover Windows UX/navigation, local directories, process

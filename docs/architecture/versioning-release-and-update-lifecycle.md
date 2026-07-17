@@ -367,6 +367,9 @@ waive the update test.
 
 ## Required Research and ADRs
 
+The independent product/client/Scout version and compatibility decision is proposed
+in [ADR 0021](../adr/0021-independent-product-client-and-scout-release-compatibility.md).
+
 - Product-version source of truth and release-manifest schema
 - Release automation, change-entry, changelog, and documentation publishing tools
 - API, synchronization, local-store, export, and deployment-plan compatibility

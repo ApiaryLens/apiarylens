@@ -375,6 +375,14 @@ mechanism must replace it.
   database, media, backups selected by the user, and safe updater residue.
 - Native iOS and Android clients remain future work and do not inherit Electron.
 
+## Gallery or Registry Impact
+
+No community gallery or registry applies to the Windows host, package mechanism,
+native bridge, credential adapter, or lifecycle coordinator. They are privileged
+signed product code distributed only through verified official releases. Future
+community templates, equipment profiles, integrations, or plugins remain behind the
+separate gallery/registry design and cannot inject native code into the host.
+
 ## Acceptance Conditions Before This ADR Can Become Accepted
 
 1. Package the exact built ApiaryLens server and dependencies inside the Electron
