@@ -1,0 +1,52 @@
+name: WIN-003 Tauri WebView2 remediation research
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-webview-installer:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Build exact shared client
+        shell: pwsh
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm --filter @apiarylens/web... build
+      - name: Create runner-only test certificate
+        shell: pwsh
+        run: ./scripts/research/New-Win003TestCertificate.ps1
+      - name: Build signed Tauri offline-WebView2 package
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003TauriSpike.ps1
+          -WebDist ./apps/web/dist
+          -IconPath ./apps/web/public/icons/apiarylens-512.png
+          -OutputDirectory "$env:RUNNER_TEMP/tauri-offline-webview-evidence"
+          -ResearchVersion 0.1.0
+          -WebViewInstallMode offlineInstaller
+      - name: Install, launch, and uninstall exact package
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003TauriInstallProbe.ps1
+          -EvidenceDirectory "$env:RUNNER_TEMP/tauri-offline-webview-evidence"
+          -OutputDirectory "$env:RUNNER_TEMP/tauri-offline-webview-lifecycle"
+      - name: Upload sanitized remediation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: win003-tauri-offline-webview-evidence
+          path: |
+            ${{ runner.temp }}/tauri-offline-webview-evidence
+            ${{ runner.temp }}/tauri-offline-webview-lifecycle
+          if-no-files-found: warn
+          retention-days: 14

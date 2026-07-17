@@ -10,7 +10,10 @@ param(
     [string] $OutputDirectory,
 
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $ResearchVersion = '0.0.0'
+    [string] $ResearchVersion = '0.0.0',
+
+    [ValidateSet('downloadBootstrapper', 'offlineInstaller')]
+    [string] $WebViewInstallMode = 'downloadBootstrapper'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -134,12 +137,13 @@ $packageJson = $packageJson.Replace('"version": "0.0.0"', '"version": "' + $Rese
 $cargoToml = $cargoToml.Replace('version = "0.0.0"', 'version = "' + $ResearchVersion + '"')
 $tauriConfig = $tauriConfig.Replace('"version": "0.0.0"', '"version": "' + $ResearchVersion + '"')
 
+$configObject = $tauriConfig | ConvertFrom-Json
+$configObject.bundle.windows.webviewInstallMode.type = $WebViewInstallMode
 if ($env:WIN003_CERT_THUMBPRINT) {
-    $configObject = $tauriConfig | ConvertFrom-Json
     $configObject.bundle.windows | Add-Member -NotePropertyName certificateThumbprint -NotePropertyValue $env:WIN003_CERT_THUMBPRINT
     $configObject.bundle.windows | Add-Member -NotePropertyName digestAlgorithm -NotePropertyValue 'sha256'
-    $tauriConfig = $configObject | ConvertTo-Json -Depth 12
 }
+$tauriConfig = $configObject | ConvertTo-Json -Depth 12
 
 Set-Content -LiteralPath (Join-Path $labPath 'package.json') -Value $packageJson -Encoding utf8NoBOM
 Set-Content -LiteralPath (Join-Path $labPath 'src-tauri/Cargo.toml') -Value $cargoToml -Encoding utf8NoBOM
@@ -252,6 +256,7 @@ $measurement = [ordered]@{
     runnerImage = $env:ImageOS
     runnerImageVersion = $env:ImageVersion
     researchVersion = $ResearchVersion
+    webViewInstallMode = $WebViewInstallMode
     nodeVersion = (& node --version)
     rustVersion = (& rustc --version)
     cargoVersion = (& cargo --version)
