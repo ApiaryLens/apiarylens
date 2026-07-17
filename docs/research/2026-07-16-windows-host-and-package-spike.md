@@ -493,6 +493,32 @@ Before either candidate can be selected for release:
    provenance, or is absent from the notice/SBOM reconciliation.
 5. Sign and attest the SBOM and notice bundle with the immutable release artifacts.
 
+## Shared UI accessibility evidence
+
+The first Windows accessibility run
+[`29547961728`](https://github.com/ApiaryLens/apiarylens/actions/runs/29547961728)
+found one shared-product defect: the **Use a recovery code** button was only 28.2 CSS
+pixels high at every tested profile. Commit `23dac44` restored a 44-pixel minimum
+target, and rerun
+[`29548097125`](https://github.com/ApiaryLens/apiarylens/actions/runs/29548097125)
+passed the automated gate against the rebuilt React bundle.
+
+| Shared UI accessibility check | Result |
+|---|---:|
+| axe-core 4.12.1 WCAG A/AA violations across five profiles | 0 |
+| Keyboard sequence and visible focus | Passed |
+| Main landmark / single page heading | Passed / passed |
+| Targets below 44 CSS pixels | 0 |
+| Horizontal overflow at desktop, 200%, and 400% reflow equivalents | None |
+| Forced-colors media activation | Passed |
+| Reduced-motion media activation | Passed |
+
+The 640- and 320-CSS-pixel profiles are standards-aligned reflow equivalents for
+200% and 400% zoom; they are not proof of each desktop host's native zoom controls.
+Headless Chromium also cannot replace NVDA, retail Windows High Contrast, physical
+keyboard use, Electron/WebView2 host chrome, file dialogs, update prompts, or native
+error surfaces. Those remain manual host-specific acceptance gates.
+
 ## Security and lifecycle requirements common to finalists
 
 Regardless of framework:

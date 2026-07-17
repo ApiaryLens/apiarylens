@@ -31,6 +31,7 @@ the signed UAT device matrix remain release gates.
 | 5 | Keyboard focus | 2.4.7 | None | Focused demo exit link exposes a visible browser outline |
 | 6 | Public-site brand, footer, and inline-link targets rendered below the project's 44 by 44 CSS-pixel gate | 2.5.5 Target Size | Major | Fixed across `.org`, generated docs, `.app`, and `.dev`; live mobile recheck found no undersized visible targets |
 | 7 | Generated `.org` documentation pages relied on implicit root favicon discovery | 1.1.1 Non-text Content | Minor | Fixed with explicit SVG favicon and Apple touch-icon metadata on every generated document |
+| 8 | Current shared-client recovery-code button rendered at 28.2 CSS pixels high | 2.5.5 Target Size | Major | Fixed in `23dac44`; five-profile rerun found no target below 44 CSS pixels |
 
 The live browser pass also found no unnamed visible control, missing image alternative,
 or page-level horizontal overflow on the six inspected public entry surfaces. This is
@@ -48,6 +49,16 @@ record is [`desktop-chrome-uat-2026-07-16.json`](desktop-chrome-uat-2026-07-16.j
 This closes the Chrome desktop structural, keyboard-navigation, target-size, and
 synthetic reload checks only; it does not close the manual screen-reader, 200% zoom,
 forced-colors, physical-device, photo, or release-update gates.
+
+On 2026-07-17, the Windows-host research harness scanned the current shared React UI
+at desktop, 200%-equivalent, 400%-equivalent, forced-colors, and reduced-motion
+profiles. The first run found finding 8. After remediation, GitHub Actions run
+[`29548097125`](https://github.com/ApiaryLens/apiarylens/actions/runs/29548097125)
+reported zero axe A/AA violations, zero undersized targets, no horizontal overflow,
+valid landmarks, visible keyboard focus, and active forced-colors/reduced-motion
+media queries. The detailed interpretation and remaining native-host limitations are
+recorded in
+[`2026-07-16-windows-host-and-package-spike.md`](../research/2026-07-16-windows-host-and-package-spike.md#shared-ui-accessibility-evidence).
 
 ## Automated Scan Evidence
 
