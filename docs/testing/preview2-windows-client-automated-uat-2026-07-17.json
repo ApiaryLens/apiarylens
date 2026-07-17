@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-07-17T21:36:00.000Z",
+  "scope": "Safely automatable Windows client and connected lifecycle gates for Product Preview 2",
+  "release": {
+    "productVersion": "0.1.0-preview.2",
+    "releaseChannel": "public-preview",
+    "windowsInstaller": "ApiaryLensSetup-UNSIGNED-PREVIEW.exe",
+    "windowsInstallerBytes": 141472256,
+    "windowsInstallerSha256": "696276fdd0c4c537b34ea757f2d17a40383cb385d8c72ac0de2779af404c0b1e",
+    "downloadIdentityMatched": true
+  },
+  "standaloneInstalledPackage": {
+    "silentInstallPassed": true,
+    "installedVersionDirectory": "app-0.1.0-preview2",
+    "hiddenSmoke": {
+      "loopbackOnly": true,
+      "unauthorizedRequestRejected": true,
+      "authenticatedHealthPassed": true,
+      "productShellServed": true,
+      "sandboxedRenderer": true,
+      "bridgeKeys": [
+        "runtimeStatus",
+        "bootstrapOwner",
+        "createStandaloneBackup",
+        "restoreStandaloneBackup"
+      ],
+      "controlTokenExposedInRenderer": false,
+      "serviceProtocolVersion": 1
+    },
+    "backup": {
+      "status": "passed",
+      "productVersion": "0.1.0-preview.2",
+      "databaseMigration": "0004",
+      "verifiedArchive": true,
+      "files": 1
+    },
+    "restore": {
+      "status": "passed",
+      "productVersion": "0.1.0-preview.2",
+      "databaseMigration": "0004",
+      "recoveryBackupVerified": true,
+      "rollbackPerformed": false
+    },
+    "keepDataUninstall": {
+      "status": "passed",
+      "installedHostRemoved": true,
+      "isolatedDataRetained": true
+    },
+    "reinstall": {
+      "status": "passed",
+      "installedHostRestored": true,
+      "isolatedDataRetained": true
+    }
+  },
+  "connectedReleasedLifecycle": {
+    "cloudflare": {
+      "evidence": "preview2-cloudflare-released-lifecycle-2026-07-17.json",
+      "freshInstall": "passed",
+      "update": "passed",
+      "repair": "passed",
+      "backupRestore": "passed",
+      "rollback": "passed",
+      "keepDataUninstallReinstall": "passed",
+      "cleanup": "passed"
+    },
+    "windowsToLinux": {
+      "evidence": "preview2-windows-to-linux-released-lifecycle-2026-07-17.json",
+      "freshInstall": "passed",
+      "update": "passed",
+      "repair": "passed",
+      "backupRestore": "passed",
+      "rollback": "passed",
+      "keepDataUninstallReinstall": "passed",
+      "fullUninstall": "passed",
+      "cleanup": "passed"
+    }
+  },
+  "automatedAccessibility": {
+    "subject": "Web assets shipped inside the exact installed Preview 2 Windows package",
+    "axeCoreVersion": "4.12.1",
+    "playwrightVersion": "1.61.1",
+    "profiles": [
+      "desktop-100",
+      "zoom-equivalent-200",
+      "zoom-equivalent-400",
+      "packaged-windows-400-usable-width-316px",
+      "forced-colors",
+      "reduced-motion"
+    ],
+    "severeAxeViolations": 0,
+    "failedLayoutProfiles": [],
+    "keyboardFocusFailure": false,
+    "targetsBelow44": 0,
+    "forcedColorsMediaQueryMatched": true,
+    "reducedMotionMediaQueryMatched": true,
+    "passed": true
+  },
+  "windowsSecurityAndRecoveryTests": {
+    "command": "pnpm --filter @apiarylens/windows test",
+    "testFilesPassed": 6,
+    "testsPassed": 18,
+    "testsFailed": 0,
+    "includes": [
+      "restore rollback after forced health failure",
+      "verified recovery backup",
+      "secret-looking request-field rejection",
+      "concurrent lifecycle lock",
+      "connected-profile compatibility and transport checks",
+      "window and service boundary checks"
+    ]
+  },
+  "sanitization": {
+    "containsCredentials": false,
+    "containsTokens": false,
+    "containsPasswords": false,
+    "containsUserData": false,
+    "containsUserProfileOrTemporaryPaths": false
+  },
+  "remainingHumanOnlyGates": [
+    "NVDA reading and announcements on Windows",
+    "VoiceOver on physical iPhone and iPad",
+    "retail Windows High Contrast and native browser or host zoom confirmation",
+    "physical-device installed-PWA offline relaunch and update with pending work",
+    "owner acceptance and release signoff"
+  ],
+  "limitations": [
+    "Automated forced-colors emulation does not replace a retail Windows High Contrast review.",
+    "Zoom-equivalent viewport checks do not replace native host zoom controls.",
+    "Automated checks do not constitute NVDA, VoiceOver, or physical-device evidence.",
+    "Standalone rollback-on-health-failure is proven by the Windows recovery test suite; released connected rollback is proven by the two referenced released-lifecycle records."
+  ],
+  "result": "passed_with_human_gates_open"
+}

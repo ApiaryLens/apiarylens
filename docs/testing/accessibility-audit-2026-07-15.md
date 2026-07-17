@@ -71,6 +71,17 @@ for its scrollbar while the current body minimum remained 320 pixels. This is fi
 9 and remains open; no Preview accessibility claim may treat the headless result as
 overriding the packaged-host failure.
 
+On 2026-07-17, the exact web assets shipped inside the installed Product Preview 2
+Windows package passed the established automated accessibility probe at desktop,
+200%- and 400%-equivalent widths, the 316-CSS-pixel Windows usable-width profile,
+forced colors, and reduced motion. The run found zero serious or critical axe
+violations, no undersized target, no horizontal overflow, and no keyboard-focus
+failure. The sanitized result is recorded in
+[`preview2-windows-client-automated-uat-2026-07-17.json`](preview2-windows-client-automated-uat-2026-07-17.json).
+This confirms that the shipped stylesheet contains the reflow remediation, but it
+does not by itself close finding 9: a native Electron zoom retest and the manual
+assistive-technology gates below are still required.
+
 ## Automated Scan Evidence
 
 | Page | Passed rules | Total violations | Serious/critical |
