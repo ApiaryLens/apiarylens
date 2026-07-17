@@ -525,6 +525,68 @@ button:focus-visible {
 .management-grid {
   margin-top: 1.25rem;
 }
+.equipment-builder {
+  display: grid;
+  gap: 1rem;
+}
+.equipment-hive-select {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 750;
+}
+.equipment-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style-position: inside;
+}
+.equipment-component {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 58px;
+  padding: 0.7rem 0.8rem;
+  border: 2px solid #795b24;
+  border-radius: 8px;
+  background: #f6d889;
+}
+.equipment-component > div:first-child {
+  display: inline-block;
+}
+.equipment-component span {
+  display: block;
+  margin-top: 0.15rem;
+  color: #4f3d1c;
+  font-size: 0.82rem;
+}
+.equipment-component.component-queen_excluder {
+  min-height: 38px;
+  border-style: dashed;
+  background: #e7e0c9;
+}
+.equipment-component.component-bottom_board,
+.equipment-component.component-inner_cover,
+.equipment-component.component-outer_cover {
+  min-height: 44px;
+  background: #eee8d7;
+}
+.equipment-form {
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+.equipment-form h3 {
+  margin: 0;
+}
+.equipment-history summary {
+  min-height: 44px;
+  padding: 0.7rem 0;
+  color: var(--honey-dark);
+  cursor: pointer;
+  font-weight: 750;
+}
 .family-access {
   margin-top: 1.25rem;
 }

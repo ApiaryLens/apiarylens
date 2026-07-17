@@ -52,6 +52,20 @@ The color cycle follows the [University of Florida IFAS queen-management
 guidance](https://ask.ifas.ufl.edu/publication/IN1457). Source choices cover raised
 in this apiary, purchased from a breeder, swarm/removal, unknown, and Other.
 
+### Hive equipment stack
+
+Open **Hives**, select a hive under **Equipment stack**, and add each physical
+component from bottom to top. ApiaryLens supports bottom boards, deep brood boxes,
+medium and shallow honey supers, queen excluders, feeders, inner and outer covers,
+and an Other option for local equipment variations. Record the purpose and frame
+count where applicable.
+
+The list is both a visual and textual representation of the hive. Use **Up** or
+**Down** to match the physical order. **Remove** takes a component out of the active
+stack without erasing its history; removed and stored equipment remains available
+under the history disclosure. Stack changes save locally and synchronize like other
+hive records.
+
 ## Family Access
 
 Owners can invite members as a beekeeper or viewer. The owner role cannot be

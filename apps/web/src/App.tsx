@@ -24,6 +24,16 @@ import {
   queenColorForYear,
   type QueenIdentifierKind,
 } from './queen-fields.js';
+import {
+  activeEquipmentForHive,
+  adjacentEquipment,
+  equipmentPurposeLabels,
+  equipmentTypeLabels,
+  isFrameBox,
+  nextEquipmentPosition,
+  type EquipmentPurpose,
+  type EquipmentType,
+} from './equipment-stack.js';
 
 type Page = 'dashboard' | 'apiaries' | 'hives' | 'inspections' | 'care' | 'version';
 type ActiveSession = Omit<SessionView, 'csrfToken'> & { csrfToken: string | undefined };
@@ -813,30 +823,12 @@ function Hives({ organizationId, onNotice, canWrite = true }: FormProps) {
           </section>
           <section className="card">
             <h2>Equipment stack</h2>
-            <QuickForm
-              submitLabel="Add box"
-              fields={[
-                ['position', 'Stack position (1 is bottom)', true],
-                ['frameCount', 'Frame count', true],
-                ['notes', 'Notes', false],
-              ]}
-              select={{
-                name: 'hiveId',
-                label: 'Hive',
-                options: records.map((item) => [item.id, String(item.data.name)]),
-              }}
-              onSubmit={async (fields) => {
-                await queueCreate(organizationId, 'equipmentBox', {
-                  ...fields,
-                  position: Number(fields.position),
-                  frameCount: Number(fields.frameCount),
-                  boxType: 'deep',
-                  status: 'active',
-                });
-                onNotice('Equipment stack saved offline.');
-              }}
+            <EquipmentStackBuilder
+              organizationId={organizationId}
+              hives={records}
+              equipment={equipment}
+              onNotice={onNotice}
             />
-            <RecordList records={equipment} titleField="boxType" />
           </section>
         </div>
       )}
@@ -852,6 +844,178 @@ function Hives({ organizationId, onNotice, canWrite = true }: FormProps) {
         />
       )}
     </>
+  );
+}
+
+function EquipmentStackBuilder({
+  organizationId,
+  hives,
+  equipment,
+  onNotice,
+}: {
+  organizationId: string;
+  hives: LocalResource[];
+  equipment: LocalResource[];
+  onNotice: (message: string) => void;
+}) {
+  const [hiveId, setHiveId] = useState(hives[0]?.id ?? '');
+  const [componentType, setComponentType] = useState<EquipmentType>('deep');
+  const [error, setError] = useState('');
+  const active = activeEquipmentForHive(equipment, hiveId);
+  const history = equipment.filter(
+    (item) => item.data.hiveId === hiveId && item.data.status !== 'active',
+  );
+
+  async function add(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const values = Object.fromEntries(new FormData(form).entries()) as Record<string, string>;
+    const position = nextEquipmentPosition(equipment, hiveId);
+    setError('');
+    try {
+      if (position > 20) throw new Error('A hive stack can contain up to 20 active components.');
+      await queueCreate(organizationId, 'equipmentBox', {
+        hiveId,
+        boxType: componentType,
+        purpose: values.purpose || null,
+        position,
+        frameCount: isFrameBox(componentType) ? Number(values.frameCount) : null,
+        status: 'active',
+        notes: values.notes || null,
+      });
+      form.reset();
+      setComponentType('deep');
+      onNotice('Hive component added and queued for synchronization.');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not add the component.');
+    }
+  }
+
+  async function move(item: LocalResource, direction: -1 | 1) {
+    const adjacent = adjacentEquipment(equipment, item, direction);
+    if (!adjacent) return;
+    const position = Number(item.data.position);
+    await queueUpdate(item, { position: Number(adjacent.data.position) });
+    await queueUpdate(adjacent, { position });
+    onNotice('Hive stack order updated.');
+  }
+
+  return (
+    <div className="equipment-builder">
+      <label className="equipment-hive-select">
+        Hive
+        <select value={hiveId} onChange={(event) => setHiveId(event.currentTarget.value)}>
+          {hives.map((hive) => (
+            <option key={hive.id} value={hive.id}>
+              {String(hive.data.name)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="field-hint">Shown bottom to top, matching the physical hive.</p>
+      {active.length === 0 ? (
+        <Empty text="No equipment recorded for this hive." />
+      ) : (
+        <ol className="equipment-stack" aria-label="Hive equipment, bottom to top">
+          {active.map((item, index) => {
+            const type = String(item.data.boxType) as EquipmentType;
+            const purpose = item.data.purpose as EquipmentPurpose | undefined;
+            return (
+              <li className={`equipment-component component-${type}`} key={item.key}>
+                <div>
+                  <strong>{equipmentTypeLabels[type] ?? 'Other component'}</strong>
+                  <span>
+                    {purpose ? equipmentPurposeLabels[purpose] : 'Purpose not recorded'}
+                    {item.data.frameCount ? ` · ${item.data.frameCount} frames` : ''}
+                  </span>
+                  {item.data.notes ? <span>{String(item.data.notes)}</span> : null}
+                </div>
+                <div
+                  className="record-actions"
+                  aria-label={`Actions for ${equipmentTypeLabels[type] ?? 'component'}`}
+                >
+                  <button
+                    className="text-button"
+                    disabled={index === 0}
+                    onClick={() => void move(item, -1)}
+                    aria-label="Move toward bottom"
+                  >
+                    Down
+                  </button>
+                  <button
+                    className="text-button"
+                    disabled={index === active.length - 1}
+                    onClick={() => void move(item, 1)}
+                    aria-label="Move toward top"
+                  >
+                    Up
+                  </button>
+                  <button
+                    className="text-button"
+                    onClick={() =>
+                      void queueUpdate(item, { status: 'removed' }).then(() =>
+                        onNotice('Component removed from the active stack; history retained.'),
+                      )
+                    }
+                  >
+                    Remove
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+      <form className="form compact equipment-form" onSubmit={(event) => void add(event)}>
+        <h3>Add a component</h3>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+        <label>
+          Component type
+          <select
+            value={componentType}
+            onChange={(event) => setComponentType(event.currentTarget.value as EquipmentType)}
+          >
+            {Object.entries(equipmentTypeLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Purpose
+          <select name="purpose" defaultValue="">
+            <option value="">Not recorded</option>
+            {Object.entries(equipmentPurposeLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        {isFrameBox(componentType) && (
+          <label>
+            Frame count
+            <input name="frameCount" type="number" min="1" max="24" defaultValue="10" required />
+          </label>
+        )}
+        <label>
+          Notes
+          <textarea name="notes" rows={2} />
+        </label>
+        <button className="button primary">Add to top</button>
+      </form>
+      {history.length > 0 && (
+        <details className="equipment-history">
+          <summary>Removed and stored equipment ({history.length})</summary>
+          <RecordList records={history} titleField="boxType" />
+        </details>
+      )}
+    </div>
   );
 }
 
@@ -2086,7 +2250,7 @@ function recordSummary(record: LocalResource): string | undefined {
   if (record.entityType === 'queen')
     return `${record.data.status} · ${record.data.marked ? `marked ${record.data.markColor || record.data.year || ''}` : 'unmarked'}${record.data.source ? ` · ${record.data.source}` : ''}`;
   if (record.entityType === 'equipmentBox')
-    return `position ${record.data.position} · ${record.data.frameCount} frames · ${record.data.status}`;
+    return `position ${record.data.position}${record.data.frameCount ? ` · ${record.data.frameCount} frames` : ''} · ${record.data.status}`;
   if (record.entityType === 'apiary')
     return String(
       record.data.location ||

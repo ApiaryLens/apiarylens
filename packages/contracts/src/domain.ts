@@ -44,9 +44,23 @@ export const queenSchema = entityMetaSchema.extend(queenFieldsSchema.shape);
 
 export const equipmentBoxFieldsSchema = z.object({
   hiveId: uuidSchema,
-  boxType: z.enum(['deep', 'medium', 'shallow', 'other']),
+  boxType: z.enum([
+    'bottom_board',
+    'deep',
+    'medium',
+    'shallow',
+    'queen_excluder',
+    'feeder',
+    'inner_cover',
+    'outer_cover',
+    'other',
+  ]),
+  purpose: z
+    .enum(['entrance', 'brood', 'honey', 'feeding', 'ventilation', 'cover', 'other'])
+    .optional()
+    .nullable(),
   position: z.number().int().min(1).max(20),
-  frameCount: z.number().int().min(1).max(24),
+  frameCount: z.number().int().min(1).max(24).optional().nullable(),
   status: z.enum(['active', 'stored', 'removed']).default('active'),
   notes: optionalTextSchema,
 });
