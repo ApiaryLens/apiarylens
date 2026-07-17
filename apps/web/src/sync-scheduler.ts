@@ -71,6 +71,8 @@ export class OnlineSyncScheduler {
       this.options.onStart?.(trigger);
       try {
         await this.options.synchronize(controller.signal);
+        if (generation !== this.cancelGeneration || controller.signal.aborted || this.stopped)
+          return;
         this.retryAttempt = 0;
         this.options.onSuccess?.(trigger);
       } catch (error) {

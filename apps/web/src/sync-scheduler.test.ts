@@ -70,4 +70,22 @@ describe('online sync scheduler', () => {
     expect(canceled).toHaveBeenCalledOnce();
     vi.useRealTimers();
   });
+
+  it('suppresses a late success callback when canceled work ignores abort', async () => {
+    let release!: () => void;
+    const synchronize = vi.fn(() => new Promise<void>((resolve) => (release = resolve)));
+    const succeeded = vi.fn();
+    const scheduler = new OnlineSyncScheduler({
+      isOnline: () => true,
+      synchronize,
+      onSuccess: succeeded,
+    });
+
+    const running = scheduler.request('save');
+    scheduler.cancel();
+    release();
+    await running;
+
+    expect(succeeded).not.toHaveBeenCalled();
+  });
 });

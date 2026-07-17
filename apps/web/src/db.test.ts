@@ -249,4 +249,116 @@ describe('offline workspace', () => {
 
     expect(await db.outbox.where('organizationId').equals(secondOrganization).count()).toBe(1);
   });
+
+  it('drains every queued push batch in one automatic synchronization pass', async () => {
+    const organizationId = crypto.randomUUID();
+    for (let index = 0; index < 101; index += 1) {
+      await queueCreate(organizationId, 'apiary', { name: `Yard ${index}` });
+    }
+    const pushedBatchSizes: number[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      if (String(input).includes('/sync/push')) {
+        const request = JSON.parse(String(init?.body)) as {
+          operations: Array<{
+            operationId: string;
+            entityId: string;
+            entityType: 'apiary';
+            payload: Record<string, unknown>;
+          }>;
+        };
+        pushedBatchSizes.push(request.operations.length);
+        const timestamp = new Date().toISOString();
+        return Response.json({
+          results: request.operations.map((operation) => ({
+            operationId: operation.operationId,
+            entityType: operation.entityType,
+            entityId: operation.entityId,
+            status: 'accepted',
+            serverValue: {
+              id: operation.entityId,
+              organizationId,
+              ...operation.payload,
+              version: 1,
+              createdAt: timestamp,
+              updatedAt: timestamp,
+              deletedAt: null,
+            },
+          })),
+        });
+      }
+      return Response.json({ changes: [], nextCursor: '0', hasMore: false });
+    });
+
+    await synchronize(organizationId, 'csrf');
+
+    expect(pushedBatchSizes).toEqual([100, 1]);
+    expect(await db.outbox.count()).toBe(0);
+  });
+
+  it('rejects an incomplete push response without duplicating concurrent retries', async () => {
+    const organizationId = crypto.randomUUID();
+    const id = await queueCreate(organizationId, 'apiary', { name: 'Safe local copy' });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(Response.json({ results: [] }));
+
+    await expect(synchronize(organizationId, 'csrf')).rejects.toThrow(
+      'incomplete synchronization result',
+    );
+
+    expect((await db.resources.get(`${organizationId}:apiary:${id}`))?.syncState).toBe('pending');
+    expect((await db.outbox.toArray())[0]?.attempts).toBe(1);
+  });
+
+  it('pulls every available page with an organization-scoped cursor', async () => {
+    const firstOrganization = crypto.randomUUID();
+    const secondOrganization = crypto.randomUUID();
+    const conflictedId = crypto.randomUUID();
+    const timestamp = new Date().toISOString();
+    await db.resources.put({
+      key: `${firstOrganization}:apiary:${conflictedId}`,
+      id: conflictedId,
+      organizationId: firstOrganization,
+      entityType: 'apiary',
+      version: 1,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      deletedAt: null,
+      syncState: 'conflicted',
+      data: { name: 'Keep this local conflict' },
+    });
+    const requestedCursors: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(String(input), 'https://apiarylens.test');
+      const cursor = url.searchParams.get('cursor') ?? 'missing';
+      requestedCursors.push(cursor);
+      if (requestedCursors.length === 1) {
+        return Response.json({
+          changes: [
+            {
+              entityType: 'apiary',
+              entityId: conflictedId,
+              action: 'delete',
+              value: null,
+            },
+          ],
+          nextCursor: '4',
+          hasMore: true,
+        });
+      }
+      if (requestedCursors.length === 2) {
+        return Response.json({ changes: [], nextCursor: '9', hasMore: false });
+      }
+      return Response.json({ changes: [], nextCursor: cursor, hasMore: false });
+    });
+
+    await synchronize(firstOrganization, 'csrf');
+    await synchronize(secondOrganization, 'csrf');
+    await synchronize(firstOrganization, 'csrf');
+
+    expect(requestedCursors).toEqual(['0', '4', '0', '9']);
+    expect((await db.settings.get(`syncCursor:${firstOrganization}`))?.value).toBe('9');
+    expect((await db.settings.get(`syncCursor:${secondOrganization}`))?.value).toBe('0');
+    expect((await db.resources.get(`${firstOrganization}:apiary:${conflictedId}`))?.data.name).toBe(
+      'Keep this local conflict',
+    );
+  });
 });

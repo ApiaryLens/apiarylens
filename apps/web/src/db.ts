@@ -416,22 +416,11 @@ export async function synchronize(
   csrfToken: string,
   signal?: AbortSignal,
 ): Promise<void> {
-  const candidates = await db.outbox.orderBy('queuedAt').toArray();
-  const batch: OutboxItem[] = [];
-  for (const item of candidates) {
-    // Older Preview databases did not persist organizationId on the outbox
-    // item. Resolve those operations through their organization-scoped local
-    // record instead of ever submitting another family's queued work.
-    const localRecord = await db.resources.get(
-      recordKey(organizationId, item.entityType, item.entityId),
-    );
-    const belongsToOrganization =
-      item.organizationId === organizationId ||
-      (item.organizationId === undefined && localRecord !== undefined);
-    if (belongsToOrganization && localRecord?.syncState !== 'failed') batch.push(item);
-    if (batch.length === 100) break;
-  }
-  if (batch.length > 0) {
+  let rejectedTotal = 0;
+  while (true) {
+    const batch = await nextPushBatch(organizationId);
+    if (batch.length === 0) break;
+    signal?.throwIfAborted();
     await Promise.all(
       batch.map((item) =>
         db.resources.update(recordKey(organizationId, item.entityType, item.entityId), {
@@ -451,6 +440,18 @@ export async function synchronize(
       if (!response.ok) throw new SyncRequestError('Push', response.status);
       const body = (await response.json()) as { results: SyncOperationResult[] };
       results = body.results;
+      const expected = new Set(batch.map((item) => item.operationId));
+      if (
+        results.length !== batch.length ||
+        results.some((result) => !expected.delete(result.operationId)) ||
+        expected.size > 0
+      ) {
+        throw new SyncRequestError(
+          'Push response',
+          502,
+          'The server returned an incomplete synchronization result.',
+        );
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Synchronization failed';
       await db.transaction('rw', db.resources, db.outbox, async () => {
@@ -466,47 +467,99 @@ export async function synchronize(
       });
       throw error;
     }
-    const rejected = await applyPushResults(organizationId, results);
-    if (rejected > 0) {
-      throw new SyncRequestError(
-        'Push operation',
-        422,
-        `${rejected} saved item${rejected === 1 ? '' : 's'} need attention before synchronizing.`,
-      );
-    }
+    rejectedTotal += await applyPushResults(organizationId, results);
+  }
+  if (rejectedTotal > 0) {
+    throw new SyncRequestError(
+      'Push operation',
+      422,
+      `${rejectedTotal} saved item${rejectedTotal === 1 ? '' : 's'} need attention before synchronizing.`,
+    );
   }
 
   await uploadStagedMedia(organizationId, csrfToken, signal);
+  await pullAllChanges(organizationId, signal);
+}
 
-  const cursor = ((await db.settings.get('syncCursor'))?.value as string | undefined) ?? '0';
-  const pull = await fetch(`/api/v1/sync/pull?cursor=${encodeURIComponent(cursor)}&limit=250`, {
-    credentials: 'same-origin',
-    ...(signal ? { signal } : {}),
-  });
-  if (!pull.ok) throw new SyncRequestError('Pull', pull.status);
-  const body = (await pull.json()) as {
-    changes: Array<{
-      entityType: ResourceType;
-      entityId: string;
-      action: 'upsert' | 'delete';
-      value: Record<string, unknown> | null;
-    }>;
-    nextCursor: string;
-  };
-  await db.transaction('rw', db.resources, db.settings, async () => {
-    for (const change of body.changes) {
-      const key = recordKey(organizationId, change.entityType, change.entityId);
-      if (change.action === 'delete') {
-        await db.resources.delete(key);
-      } else if (change.value) {
+async function nextPushBatch(organizationId: string): Promise<OutboxItem[]> {
+  const candidates = await db.outbox.orderBy('queuedAt').toArray();
+  const batch: OutboxItem[] = [];
+  for (const item of candidates) {
+    // Older Preview databases did not persist organizationId on the outbox
+    // item. Resolve those operations through their organization-scoped local
+    // record instead of ever submitting another family's queued work.
+    const localRecord = await db.resources.get(
+      recordKey(organizationId, item.entityType, item.entityId),
+    );
+    const belongsToOrganization =
+      item.organizationId === organizationId ||
+      (item.organizationId === undefined && localRecord !== undefined);
+    if (
+      belongsToOrganization &&
+      localRecord !== undefined &&
+      localRecord.syncState !== 'failed' &&
+      localRecord.syncState !== 'conflicted'
+    ) {
+      batch.push(item);
+    }
+    if (batch.length === 100) break;
+  }
+  return batch;
+}
+
+async function pullAllChanges(organizationId: string, signal?: AbortSignal): Promise<void> {
+  const cursorKey = `syncCursor:${organizationId}`;
+  let cursor = ((await db.settings.get(cursorKey))?.value as string | undefined) ?? '0';
+  while (true) {
+    signal?.throwIfAborted();
+    const pull = await fetch(`/api/v1/sync/pull?cursor=${encodeURIComponent(cursor)}&limit=250`, {
+      credentials: 'same-origin',
+      ...(signal ? { signal } : {}),
+    });
+    if (!pull.ok) throw new SyncRequestError('Pull', pull.status);
+    const body = (await pull.json()) as {
+      changes: Array<{
+        entityType: ResourceType;
+        entityId: string;
+        action: 'upsert' | 'delete';
+        value: Record<string, unknown> | null;
+      }>;
+      nextCursor: string;
+      hasMore?: boolean;
+      fullResyncRequired?: boolean;
+    };
+    if (body.fullResyncRequired) {
+      throw new SyncRequestError(
+        'Pull',
+        409,
+        'The server requires a full resynchronization before more changes can be applied.',
+      );
+    }
+    await db.transaction('rw', db.resources, db.settings, async () => {
+      for (const change of body.changes) {
+        const key = recordKey(organizationId, change.entityType, change.entityId);
         const current = await db.resources.get(key);
-        if (current?.syncState !== 'conflicted') {
+        const hasUnsynchronizedLocalValue =
+          current !== undefined && current.syncState !== 'synchronized';
+        if (hasUnsynchronizedLocalValue) continue;
+        if (change.action === 'delete') {
+          await db.resources.delete(key);
+        } else if (change.value) {
           await db.resources.put(serverRecord(change.entityType, change.value));
         }
       }
+      await db.settings.put({ key: cursorKey, value: body.nextCursor });
+    });
+    if (!body.hasMore) return;
+    if (body.nextCursor === cursor) {
+      throw new SyncRequestError(
+        'Pull response',
+        502,
+        'The server returned more changes without advancing the synchronization cursor.',
+      );
     }
-    await db.settings.put({ key: 'syncCursor', value: body.nextCursor });
-  });
+    cursor = body.nextCursor;
+  }
 }
 
 async function uploadStagedMedia(

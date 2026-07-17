@@ -49,4 +49,15 @@ describe('installed PWA shell', () => {
     expect(appSource).toContain("pendingWork === 1 ? '' : 's'");
     expect(serviceWorker).toContain("event.data?.type === 'SKIP_WAITING'");
   });
+
+  it('schedules automatic synchronization for every connected lifecycle trigger', () => {
+    expect(appSource).toContain("scheduler.request('open')");
+    expect(appSource).toContain("scheduler.request('resume')");
+    expect(appSource).toContain("scheduler.request('reconnect')");
+    expect(appSource).toContain("scheduler.request('save')");
+    expect(appSource).toContain("schedulerRef.current?.request('manual')");
+    expect(appSource).toContain("window.addEventListener('pageshow', open)");
+    expect(appSource).toContain("document.addEventListener('visibilitychange', resume)");
+    expect(appSource).toContain('window.addEventListener(LOCAL_CHANGE_EVENT, localChange)');
+  });
 });
