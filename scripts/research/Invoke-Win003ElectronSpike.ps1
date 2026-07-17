@@ -217,7 +217,9 @@ function sqliteProbe() {
 const probeIndex = process.argv.indexOf("--win003-probe-output");
 const bridgeProbeIndex = process.argv.indexOf("--win003-bridge-output");
 const crashProbeIndex = process.argv.indexOf("--win003-crash-probe-output");
-if (crashProbeIndex >= 0) {
+if (!hasSingleInstanceLock) {
+  // The primary instance owns all application and embedded-service work.
+} else if (crashProbeIndex >= 0) {
   app.whenReady().then(async () => {
     await startRealService();
     fs.writeFileSync(process.argv[crashProbeIndex + 1], JSON.stringify({
@@ -524,7 +526,7 @@ foreach ($attempt in 1..100) {
 $readyFileRemovedAfterHostCrash = -not (Test-Path -LiteralPath ([string] $crashState.serviceReadyFile))
 if (-not $singleInstancePassed -or -not $serviceExitedAfterHostCrash -or -not $readyFileRemovedAfterHostCrash) {
     Stop-Process -Id ([int] $crashState.serviceProcessId) -Force -ErrorAction SilentlyContinue
-    throw 'Packaged Electron single-instance or parent-death acceptance failed'
+    throw "Packaged Electron single-instance or parent-death acceptance failed (singleInstance=$singleInstancePassed, serviceExited=$serviceExitedAfterHostCrash, readyFileRemoved=$readyFileRemovedAfterHostCrash)"
 }
 
 $runs = @()

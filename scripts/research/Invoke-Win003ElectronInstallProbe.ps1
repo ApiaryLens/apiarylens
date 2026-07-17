@@ -218,7 +218,7 @@ foreach ($attempt in 1..100) {
 $installedReadyFileRemovedAfterHostCrash = -not (Test-Path -LiteralPath ([string] $crashState.serviceReadyFile))
 if (-not $installedSingleInstancePassed -or -not $installedServiceExitedAfterHostCrash -or -not $installedReadyFileRemovedAfterHostCrash) {
     Stop-Process -Id ([int] $crashState.serviceProcessId) -Force -ErrorAction SilentlyContinue
-    throw 'Installed Electron single-instance or parent-death acceptance failed'
+    throw "Installed Electron single-instance or parent-death acceptance failed (singleInstance=$installedSingleInstancePassed, serviceExited=$installedServiceExitedAfterHostCrash, readyFileRemoved=$installedReadyFileRemovedAfterHostCrash)"
 }
 
 $process = Start-Process -FilePath $installedHost.FullName -PassThru -WindowStyle Hidden
