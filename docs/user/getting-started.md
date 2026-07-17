@@ -123,18 +123,11 @@ SSH key, deployment secret, or recovery code. Authentication happens in the Wind
 client after import. Returning to standalone mode preserves the prior standalone
 data; it does not silently copy newer remote-only records back into that database.
 
-ApiaryLens for Windows Preview 3 is available as a current-user
-[`ApiaryLensSetup-UNSIGNED-PREVIEW.exe`](https://github.com/ApiaryLens/apiarylens/releases/download/v0.1.0-preview.3/ApiaryLensSetup-UNSIGNED-PREVIEW.exe).
-It installs without administrator rights and does not require Node, Go, WSL, Docker,
-or a Linux shell. Review the
-[official versioned release](https://github.com/ApiaryLens/apiarylens/releases/tag/v0.1.0-preview.3)
-before running Setup. The current Preview installer is **not Authenticode-signed**;
-its SHA-256 is
-`529a40ac910c749fc289003d13280381dccabc571af4130d2d6a86dc7223032c`.
-Windows may show **Windows protected your PC**. Choose **More info → Run anyway**
-only after the downloaded file matches that exact hash. A future signed release
-must show the publisher documented on its own release page; this unsigned Preview
-must not be described as signed.
+The ApiaryLens for Windows Preview 3 download was withdrawn on 2026-07-17 after
+owner testing showed that its first-run experience did not satisfy the approved
+standalone Windows product requirements. Do not install or recommend that package.
+A corrected Windows application will return only after it launches directly into
+usable device-only standalone mode without a browser or account login.
 
 The release also publishes a full Squirrel update package, `RELEASES` metadata,
 artifact sizes, and SHA-256 hashes. The database, original photos, protected
