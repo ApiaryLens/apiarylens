@@ -390,6 +390,50 @@ app.get('/api/v1/members', requireSession, async (c) => {
   return c.json({ items: members.results });
 });
 
+app.delete('/api/v1/members/:membershipId', requireSession, requireCsrf, async (c) => {
+  const session = c.get('session');
+  if (!rolePermissions[session.role].includes('members:manage'))
+    return apiError(c, 403, 'permission_denied', 'You do not have permission for this action');
+  const membership = await c.env.DB.prepare(
+    `SELECT user_id, role FROM memberships
+     WHERE id = ? AND organization_id = ? AND deleted_at IS NULL`,
+  )
+    .bind(c.req.param('membershipId'), session.organizationId)
+    .first<{ user_id: string; role: string }>();
+  if (!membership)
+    return apiError(c, 404, 'membership_not_found', 'The family member was not found');
+  if (membership.role === 'owner')
+    return apiError(c, 409, 'owner_required', 'The family owner cannot be removed');
+  const timestamp = now();
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `UPDATE memberships
+       SET status = 'revoked', version = version + 1, updated_at = ?
+       WHERE id = ? AND organization_id = ?`,
+    ).bind(timestamp, c.req.param('membershipId'), session.organizationId),
+    c.env.DB.prepare(
+      'UPDATE sessions SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL',
+    ).bind(timestamp, membership.user_id),
+  ]);
+  return c.body(null, 204);
+});
+
+app.get('/api/v1/invitations', requireSession, async (c) => {
+  const session = c.get('session');
+  if (!rolePermissions[session.role].includes('members:manage'))
+    return apiError(c, 403, 'permission_denied', 'You do not have permission for this action');
+  const invitations = await c.env.DB.prepare(
+    `SELECT id, identifier, display_name AS displayName, role,
+      expires_at AS expiresAt, created_at AS createdAt
+     FROM invitations
+     WHERE organization_id = ? AND accepted_at IS NULL AND expires_at > ?
+     ORDER BY created_at DESC`,
+  )
+    .bind(session.organizationId, now())
+    .all();
+  return c.json({ items: invitations.results });
+});
+
 app.post('/api/v1/invitations', requireSession, requireCsrf, async (c) => {
   if (!rolePermissions[c.get('session').role].includes('members:manage'))
     return apiError(c, 403, 'permission_denied', 'You do not have permission for this action');
@@ -417,6 +461,57 @@ app.post('/api/v1/invitations', requireSession, requireCsrf, async (c) => {
       c.get('session').userId,
     )
     .run();
+  return c.json({ token, expiresAt }, 201);
+});
+
+app.delete('/api/v1/invitations/:invitationId', requireSession, requireCsrf, async (c) => {
+  const session = c.get('session');
+  if (!rolePermissions[session.role].includes('members:manage'))
+    return apiError(c, 403, 'permission_denied', 'You do not have permission for this action');
+  const result = await c.env.DB.prepare(
+    `DELETE FROM invitations
+     WHERE id = ? AND organization_id = ? AND accepted_at IS NULL`,
+  )
+    .bind(c.req.param('invitationId'), session.organizationId)
+    .run();
+  return Number(result.meta.changes) > 0
+    ? c.body(null, 204)
+    : apiError(c, 404, 'invitation_not_found', 'The invitation was not found');
+});
+
+app.post('/api/v1/invitations/:invitationId/replace', requireSession, requireCsrf, async (c) => {
+  const session = c.get('session');
+  if (!rolePermissions[session.role].includes('members:manage'))
+    return apiError(c, 403, 'permission_denied', 'You do not have permission for this action');
+  const invitation = await c.env.DB.prepare(
+    `SELECT identifier, display_name, role FROM invitations
+       WHERE id = ? AND organization_id = ? AND accepted_at IS NULL`,
+  )
+    .bind(c.req.param('invitationId'), session.organizationId)
+    .first<{ identifier: string; display_name: string; role: Exclude<Role, 'owner'> }>();
+  if (!invitation) return apiError(c, 404, 'invitation_not_found', 'The invitation was not found');
+  const token = opaqueToken();
+  const timestamp = now();
+  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM invitations WHERE id = ?').bind(c.req.param('invitationId')),
+    c.env.DB.prepare(
+      `INSERT INTO invitations(
+          id, organization_id, token_hash, identifier, display_name, role,
+          expires_at, created_at, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(
+      crypto.randomUUID(),
+      session.organizationId,
+      await sha256(token),
+      invitation.identifier,
+      invitation.display_name,
+      invitation.role,
+      expiresAt,
+      timestamp,
+      session.userId,
+    ),
+  ]);
   return c.json({ token, expiresAt }, 201);
 });
 

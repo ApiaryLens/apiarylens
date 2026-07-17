@@ -364,4 +364,104 @@ describe('Cloudflare organization boundary', () => {
       db.close();
     }
   });
+
+  it('manages pending invitations and removes a non-owner across the Cloudflare profile', async () => {
+    const db = new TestD1Database();
+    const environment = {
+      DB: db as unknown as D1Database,
+      MEDIA: new TestR2Bucket() as unknown as R2Bucket,
+      AUTH_ROOT_SECRET: 'test-authentication-root-secret-at-least-32-characters',
+    };
+    try {
+      const bootstrap = await app.request(
+        '/api/v1/bootstrap',
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            identifier: 'manager@example.test',
+            displayName: 'Family Manager',
+            password: 'correct horse battery staple',
+            organizationName: 'Managed family',
+            timezone: 'America/New_York',
+          }),
+        },
+        environment,
+      );
+      const owner = (await bootstrap.json()) as { csrfToken: string };
+      const ownerCookie = bootstrap.headers.get('set-cookie')?.split(';')[0] ?? '';
+      const ownerHeaders = {
+        cookie: ownerCookie,
+        'content-type': 'application/json',
+        'x-csrf-token': owner.csrfToken,
+      };
+      const created = await app.request(
+        '/api/v1/invitations',
+        {
+          method: 'POST',
+          headers: ownerHeaders,
+          body: JSON.stringify({
+            displayName: 'Family Viewer',
+            identifier: 'managed-viewer@example.test',
+            role: 'viewer',
+            expiresInHours: 48,
+          }),
+        },
+        environment,
+      );
+      expect(created.status).toBe(201);
+      const pending = (await (
+        await app.request('/api/v1/invitations', { headers: { cookie: ownerCookie } }, environment)
+      ).json()) as { items: Array<{ id: string }> };
+      expect(pending.items).toHaveLength(1);
+
+      const replaced = await app.request(
+        `/api/v1/invitations/${pending.items[0]!.id}/replace`,
+        { method: 'POST', headers: ownerHeaders },
+        environment,
+      );
+      expect(replaced.status).toBe(201);
+      const replacementToken = String(((await replaced.json()) as { token: string }).token);
+      const replacedPending = (await (
+        await app.request('/api/v1/invitations', { headers: { cookie: ownerCookie } }, environment)
+      ).json()) as { items: Array<{ id: string }> };
+      expect(replacedPending.items[0]?.id).not.toBe(pending.items[0]?.id);
+
+      const accepted = await app.request(
+        '/api/v1/invitations/accept',
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            token: replacementToken,
+            password: 'viewer password is sufficiently long',
+          }),
+        },
+        environment,
+      );
+      expect(accepted.status).toBe(201);
+      const viewer = (await accepted.json()) as { membership: { id: string } };
+      const viewerCookie = accepted.headers.get('set-cookie')?.split(';')[0] ?? '';
+      expect(
+        (
+          (await (
+            await app.request('/api/v1/members', { headers: { cookie: ownerCookie } }, environment)
+          ).json()) as { items: unknown[] }
+        ).items,
+      ).toHaveLength(2);
+
+      const removed = await app.request(
+        `/api/v1/members/${viewer.membership.id}`,
+        { method: 'DELETE', headers: ownerHeaders },
+        environment,
+      );
+      expect(removed.status).toBe(204);
+      expect(
+        (await app.request('/api/v1/session', { headers: { cookie: viewerCookie } }, environment))
+          .status,
+      ).toBe(401);
+    } finally {
+      db.close();
+    }
+  });
 });
