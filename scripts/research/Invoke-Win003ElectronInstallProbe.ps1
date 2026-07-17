@@ -189,7 +189,7 @@ try {
         $redactDiagnostic = {
             param([string] $Value)
             if ($null -eq $Value) { return $null }
-            foreach ($sensitive in @($temporaryUserName, $temporaryUserSid, $temporaryPasswordText)) {
+            foreach ($sensitive in @($temporaryUserName, $temporaryUserSid, $temporaryPasswordText, $env:USERNAME)) {
                 if ($sensitive) { $Value = $Value.Replace($sensitive, '[redacted]') }
             }
             return $Value

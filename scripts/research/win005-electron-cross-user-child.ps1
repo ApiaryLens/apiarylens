@@ -16,11 +16,13 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$userProfile = [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)
-$localAppData = [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
-$roamingAppData = [Environment]::GetFolderPath([Environment+SpecialFolder]::ApplicationData)
-$commonDocuments = [Environment]::GetFolderPath([Environment+SpecialFolder]::CommonDocuments)
-if (-not $userProfile -or -not $localAppData -or -not $roamingAppData -or -not $commonDocuments) {
+$currentSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+$profileRecord = Get-ItemProperty -LiteralPath "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$currentSid" -ErrorAction Stop
+$userProfile = [Environment]::ExpandEnvironmentVariables([string] $profileRecord.ProfileImagePath)
+$localAppData = Join-Path $userProfile 'AppData\Local'
+$roamingAppData = Join-Path $userProfile 'AppData\Roaming'
+$commonDocuments = Join-Path $env:SystemDrive 'Users\Public\Documents'
+if (-not (Test-Path -LiteralPath $userProfile) -or -not (Test-Path -LiteralPath $commonDocuments)) {
     throw 'Disposable user profile directories were unavailable'
 }
 
@@ -32,6 +34,7 @@ $env:TEMP = Join-Path $localAppData 'Temp'
 $env:TMP = $env:TEMP
 $env:HOMEDRIVE = [IO.Path]::GetPathRoot($userProfile).TrimEnd('\')
 $env:HOMEPATH = $userProfile.Substring([IO.Path]::GetPathRoot($userProfile).Length - 1)
+$env:USERNAME = [Security.Principal.WindowsIdentity]::GetCurrent().Name.Split('\')[-1]
 New-Item -ItemType Directory -Force -Path $env:TEMP | Out-Null
 
 $arguments = "--win003-cross-user-lab `"$LabDirectory`" --win003-cross-user-action verify-denied --win003-cross-user-output `"$ResultPath`""
