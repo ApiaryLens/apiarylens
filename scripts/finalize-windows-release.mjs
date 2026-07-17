@@ -89,7 +89,7 @@ function run() {
   const productManifest = JSON.parse(readFileSync(productManifestPath, 'utf8'));
   const signingMode = process.env.APIARYLENS_WINDOWS_SIGNING_MODE;
   const exactTag = process.env.APIARYLENS_EXACT_TAG;
-  const releaseCommit = process.env.GITHUB_SHA;
+  const releaseCommit = process.env.APIARYLENS_RELEASE_COMMIT || process.env.GITHUB_SHA;
   const sourceCommit = productManifest.sourceCommit;
   const explicitUnsignedPreviewOptIn =
     process.env.APIARYLENS_EXPLICIT_UNSIGNED_PREVIEW_OPT_IN === 'true';

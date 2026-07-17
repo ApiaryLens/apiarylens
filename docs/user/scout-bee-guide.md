@@ -75,8 +75,22 @@ live. The normal guided flow is:
 
 1. Select **Own hardware or cloud VM** and **Remote Linux over SSH**.
 2. Enter the host, port, user, and absolute target data directory.
-3. Choose password, SSH agent, or private-key authentication. Credentials stay in
-   memory or the operating-system credential boundary; they never enter the plan.
+3. Choose one explicit authentication method:
+   - **Windows OpenSSH agent or default identity** uses the current user's agent and
+     normal OpenSSH identity files without an interactive prompt.
+   - **Private key file** requires an absolute path to a regular key file. The path
+     is a runtime-only input and never enters the plan, operation history, logs, or
+     diagnostics. On Windows, an optional passphrase is supplied through Scout's
+     protected OpenSSH askpass boundary.
+   - **Password** is supported by packaged Windows Scout through that same protected
+     askpass boundary. Scout writes the value to a restricted temporary file, never
+     to command arguments or the deployment plan, and removes the file when the SSH
+     operation ends.
+
+   Linux Scout currently fails closed for password and encrypted-private-key
+   passphrase authentication. Use the Linux user's SSH agent or an unencrypted
+   runtime-only private key until an equivalent protected askpass boundary is
+   implemented there.
 4. Confirm the SSH host-key fingerprint. A changed key is a blocking security event;
    investigate it instead of accepting it automatically.
 5. Run preflight. Scout checks operating system, architecture, time, disk, ports,

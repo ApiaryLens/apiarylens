@@ -28,6 +28,7 @@ jobs:
       channel: ${{ steps.policy.outputs.channel }}
       signing_mode: ${{ steps.policy.outputs.signing_mode }}
       explicit_unsigned_preview_opt_in: ${{ steps.policy.outputs.explicit_unsigned_preview_opt_in }}
+      release_commit: ${{ steps.policy.outputs.release_commit }}
     steps:
       - name: Check out exact revision and tags
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
@@ -42,10 +43,15 @@ jobs:
           APIARYLENS_ALLOW_UNSIGNED_PREVIEW: ${{ inputs.allow_unsigned_preview && 'true' || 'false' }}
           APIARYLENS_WINDOWS_SIGNING_AVAILABLE: ${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 != '' && secrets.WINDOWS_CERTIFICATE_PASSWORD != '' }}
         run: |
-          test "$(git rev-list -n 1 "$APIARYLENS_EXACT_TAG")" = "$GITHUB_SHA"
-          test "$GITHUB_REF" = "refs/tags/$APIARYLENS_EXACT_TAG"
+          release_commit="$(git rev-list -n 1 "$APIARYLENS_EXACT_TAG")"
+          test -n "$release_commit"
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            test "$release_commit" = "$GITHUB_SHA"
+            test "$GITHUB_REF" = "refs/tags/$APIARYLENS_EXACT_TAG"
+          fi
           test -z "$(git status --porcelain)"
           node scripts/product-release-policy.mjs
+          echo "release_commit=$release_commit" >> "$GITHUB_OUTPUT"
 
   product:
     needs: policy
@@ -57,6 +63,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+          ref: ${{ needs.policy.outputs.release_commit }}
 
       - name: Configure Node.js 24
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -76,6 +83,7 @@ jobs:
       - name: Bind release inputs to the exact revision
         env:
           RELEASE_CHANNEL: ${{ needs.policy.outputs.channel }}
+          RELEASE_COMMIT: ${{ needs.policy.outputs.release_commit }}
         run: |
           node --input-type=module <<'NODE'
           import { readFileSync, writeFileSync } from 'node:fs';
@@ -91,7 +99,7 @@ jobs:
           NODE
           source_commit="$(node -p "require('./release/release-manifest.json').sourceCommit")"
           git cat-file -e "$source_commit^{commit}"
-          git merge-base --is-ancestor "$source_commit" "$GITHUB_SHA"
+          git merge-base --is-ancestor "$source_commit" "$RELEASE_COMMIT"
 
       - name: Build deployment bundles and supply-chain evidence
         run: |
@@ -135,6 +143,7 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           persist-credentials: false
+          ref: ${{ needs.policy.outputs.release_commit }}
 
       - name: Configure Node.js 24
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -155,7 +164,7 @@ jobs:
 
       - name: Restore exact generated release inputs
         shell: pwsh
-        run: Copy-Item -LiteralPath dist/product-input/release/* -Destination release -Recurse -Force
+        run: Copy-Item -Path dist/product-input/release/* -Destination release -Recurse -Force
 
       - name: Build Windows package under resolved signing policy
         shell: pwsh
@@ -187,6 +196,7 @@ jobs:
           APIARYLENS_EXACT_TAG: ${{ needs.policy.outputs.exact_tag }}
           APIARYLENS_WINDOWS_SIGNING_MODE: ${{ needs.policy.outputs.signing_mode }}
           APIARYLENS_EXPLICIT_UNSIGNED_PREVIEW_OPT_IN: ${{ needs.policy.outputs.explicit_unsigned_preview_opt_in }}
+          APIARYLENS_RELEASE_COMMIT: ${{ needs.policy.outputs.release_commit }}
         run: node scripts/finalize-windows-release.mjs
 
       - name: Verify Windows package signatures, hashes, and release identity
@@ -241,6 +251,7 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           persist-credentials: false
+          ref: ${{ needs.policy.outputs.release_commit }}
 
       - name: Download product subjects
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -270,7 +281,7 @@ jobs:
           import { readFileSync, statSync } from 'node:fs';
           const manifest = JSON.parse(readFileSync('dist/publish/release-manifest.json', 'utf8'));
           const signing = JSON.parse(readFileSync('dist/publish/apiarylens-windows-signing.json', 'utf8'));
-          if (manifest.productVersion !== process.env.RELEASE_VERSION || signing.sourceCommit !== manifest.sourceCommit || signing.releaseCommit !== process.env.GITHUB_SHA || signing.exactTag !== process.env.EXACT_TAG) throw new Error('Final release identity mismatch.');
+          if (manifest.productVersion !== process.env.RELEASE_VERSION || signing.sourceCommit !== manifest.sourceCommit || signing.releaseCommit !== process.env.RELEASE_COMMIT || signing.exactTag !== process.env.EXACT_TAG) throw new Error('Final release identity mismatch.');
           for (const artifact of manifest.artifacts) {
             const path = `dist/publish/${artifact.name}`;
             const hash = createHash('sha256').update(readFileSync(path)).digest('hex');
@@ -280,6 +291,7 @@ jobs:
         env:
           RELEASE_VERSION: ${{ needs.policy.outputs.version }}
           EXACT_TAG: ${{ needs.policy.outputs.exact_tag }}
+          RELEASE_COMMIT: ${{ needs.policy.outputs.release_commit }}
 
       - name: Attest every published subject
         uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4
