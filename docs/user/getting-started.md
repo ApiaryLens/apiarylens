@@ -39,6 +39,19 @@ media remain pending.
 - **Care** records mite counts, feeding, treatments, harvests, and tasks. The mite
   trend includes an accessible table as well as a chart.
 
+### Queen identity and marking
+
+When adding a queen, choose a numbered disc/tag, breeder code, queen name, or an
+explicit Other identifier. Then record the mark by year, by observed color, or as
+unmarked. Year mode suggests the international five-color cycle: white for years
+ending in 1 or 6, yellow for 2 or 7, red for 3 or 8, green for 4 or 9, and blue for
+5 or 0. You can still record a different observed color. The year remains a manual
+field because the beekeeper—not the current date—knows the queen's actual year.
+
+The color cycle follows the [University of Florida IFAS queen-management
+guidance](https://ask.ifas.ufl.edu/publication/IN1457). Source choices cover raised
+in this apiary, purchased from a breeder, swarm/removal, unknown, and Other.
+
 ## Family Access
 
 Owners can invite members as a beekeeper or viewer. The owner role cannot be
