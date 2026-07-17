@@ -186,6 +186,7 @@ $installedRealServiceBridgeProbePassed =
     $bridgeProbeResult.nativeCredentialProtection.replacementCiphertextExcludesPlaintext -and
     $bridgeProbeResult.nativeCredentialProtection.corruptCiphertextRejected -and
     $bridgeProbeResult.nativeCredentialProtection.credentialDeleted -and
+    $bridgeProbeResult.serverSessionCredentialLifecyclePassed -and
     -not $bridgeProbeResult.credentialSecretPresentOutsideMain -and
     $bridgeProbeResult.localStorageEntryCount -eq 0 -and
     $bridgeProbeResult.sessionStorageEntryCount -eq 0
@@ -426,7 +427,9 @@ $result = [ordered]@{
         $bridgeProbeResult.nativeCredentialProtection.replacementCiphertextExcludesPlaintext -and
         $bridgeProbeResult.nativeCredentialProtection.corruptCiphertextRejected -and
         $bridgeProbeResult.nativeCredentialProtection.credentialDeleted -and
+        $bridgeProbeResult.serverSessionCredentialLifecyclePassed -and
         -not $bridgeProbeResult.credentialSecretPresentOutsideMain
+    installedServerSessionCredentialLifecyclePassed = $bridgeProbeResult.serverSessionCredentialLifecyclePassed
     installedCredentialCrashRecoveryPassed = $installedCredentialCrashRecoveryPassed
     installedSingleInstancePassed = $installedSingleInstancePassed
     installedServiceExitedAfterHostCrash = $installedServiceExitedAfterHostCrash

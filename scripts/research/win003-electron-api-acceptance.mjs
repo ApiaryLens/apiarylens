@@ -11,6 +11,7 @@ export async function runApiAcceptance({
   bootstrapToken,
   migrationVersions,
   restartService,
+  credentialLifecycle,
 }) {
   let baseUrl = endpoint;
   let checkCount = 0;
@@ -67,6 +68,7 @@ export async function runApiAcceptance({
   let ownerCookie = cookieFrom(bootstrap);
   const owner = await json(bootstrap);
   expect(Boolean(ownerCookie) && owner.csrfToken.length > 32, 'owner-session-issued');
+  credentialLifecycle?.issued(ownerCookie);
 
   const secondBootstrap = await request('/api/v1/bootstrap', {
     method: 'POST',
@@ -183,6 +185,7 @@ export async function runApiAcceptance({
   ownerCookie = cookieFrom(refreshed);
   const refreshedOwner = await json(refreshed);
   expect(ownerCookie !== oldOwnerCookie, 'session-cookie-rotated');
+  credentialLifecycle?.rotated(oldOwnerCookie, ownerCookie);
   expect(
     (await request('/api/v1/session', { headers: { cookie: oldOwnerCookie } })).status === 401,
     'old-session-revoked',
@@ -328,6 +331,7 @@ export async function runApiAcceptance({
     (await request('/api/v1/session', { headers: { cookie: ownerCookie } })).status === 401,
     'recovery-revoked-session',
   );
+  credentialLifecycle?.revoked(ownerCookie);
   const reusedRecovery = await request('/api/v1/auth/recover', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -354,6 +358,7 @@ export async function runApiAcceptance({
   expect(signIn.status === 200, 'restart-sign-in');
   const restartedCookie = cookieFrom(signIn);
   const restartedOwner = await json(signIn);
+  credentialLifecycle?.issued(restartedCookie);
   const persistedMedia = await request(`/api/v1/media/${mediaId}/content`, {
     headers: { cookie: restartedCookie },
   });
@@ -392,6 +397,7 @@ export async function runApiAcceptance({
       .status === 404,
     'media-delete-applied',
   );
+  credentialLifecycle?.signedOut(restartedCookie);
 
   return Object.freeze({
     passed: true,
@@ -404,5 +410,6 @@ export async function runApiAcceptance({
     viewerAuthorizationPassed: true,
     mediaOriginalThumbnailExportDeletePassed: true,
     restartPersistencePassed: true,
+    serverSessionCredentialLifecyclePassed: credentialLifecycle?.passed() ?? false,
   });
 }

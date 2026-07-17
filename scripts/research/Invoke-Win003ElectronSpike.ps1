@@ -298,6 +298,58 @@ function readCredentialEnvelope(target) {
   return JSON.parse(safeStorage.decryptString(fs.readFileSync(target)));
 }
 
+function createServerSessionCredentialLifecycle() {
+  const directory = path.join(serviceLab, "server-session-credential");
+  const currentFile = path.join(directory, "connected-session.bin");
+  const pendingFile = path.join(directory, "connected-session.pending");
+  const journalFile = path.join(directory, "rotation.json");
+  fs.mkdirSync(directory, { recursive: true });
+  const secrets = [];
+  let issuedCount = 0;
+  let rotationPassed = false;
+  let revocationPassed = false;
+  let signOutPassed = false;
+  const protect = (target, value) => {
+    secrets.push(value);
+    fs.writeFileSync(target, safeStorage.encryptString(value), { mode: 0o600 });
+  };
+  const load = () => safeStorage.decryptString(fs.readFileSync(currentFile));
+  return {
+    secrets,
+    issued(value) {
+      protect(currentFile, value);
+      if (load() !== value) throw new Error("server-session-protect-failed");
+      issuedCount += 1;
+    },
+    rotated(previous, replacement) {
+      if (load() !== previous) throw new Error("server-session-rotation-source-mismatch");
+      protect(pendingFile, replacement);
+      fs.writeFileSync(
+        journalFile,
+        JSON.stringify({ schemaVersion: 1, state: "replacement-protected", purpose: "connected-session" }),
+        { encoding: "utf8", mode: 0o600 }
+      );
+      fs.renameSync(pendingFile, currentFile);
+      fs.rmSync(journalFile, { force: true });
+      rotationPassed = load() === replacement && !fs.existsSync(pendingFile);
+      if (!rotationPassed) throw new Error("server-session-rotation-failed");
+    },
+    revoked(value) {
+      if (load() !== value) throw new Error("server-session-revocation-source-mismatch");
+      fs.rmSync(currentFile, { force: true });
+      revocationPassed = !fs.existsSync(currentFile);
+    },
+    signedOut(value) {
+      if (load() !== value) throw new Error("server-session-signout-source-mismatch");
+      fs.rmSync(directory, { recursive: true, force: true });
+      signOutPassed = !fs.existsSync(directory);
+    },
+    passed() {
+      return issuedCount === 2 && rotationPassed && revocationPassed && signOutPassed;
+    }
+  };
+}
+
 const probeIndex = process.argv.indexOf("--win003-probe-output");
 const bridgeProbeIndex = process.argv.indexOf("--win003-bridge-output");
 const crashProbeIndex = process.argv.indexOf("--win003-crash-probe-output");
@@ -464,13 +516,15 @@ if (!hasSingleInstanceLock) {
     const acceptanceModule = await import(
       `${pathToFileURL(path.join(serverRoot, "desktop-acceptance.mjs")).href}?run=${crypto.randomUUID()}`
     );
+    const serverSessionCredentialLifecycle = createServerSessionCredentialLifecycle();
     const apiAcceptance = await acceptanceModule.runApiAcceptance({
       endpoint: serviceEndpoint,
       controlToken,
       allowedOrigin,
       bootstrapToken,
       migrationVersions: serviceReady.migrationVersions,
-      restartService: restartRealService
+      restartService: restartRealService,
+      credentialLifecycle: serverSessionCredentialLifecycle
     });
     const credentialProbe = safeStorageCredentialProbe();
     const consoleMessages = [];
@@ -525,7 +579,10 @@ if (!hasSingleInstanceLock) {
     `);
 
     const rendererSnapshot = JSON.stringify(rendererResult);
-    const credentialSecretPresentOutsideMain = credentialProbe.secrets.some((secret) =>
+    const credentialSecretPresentOutsideMain = [
+      ...credentialProbe.secrets,
+      ...serverSessionCredentialLifecycle.secrets
+    ].some((secret) =>
       rendererSnapshot.includes(secret) ||
       consoleMessages.some((message) => message.includes(secret)) ||
       process.argv.some((argument) => argument.includes(secret)) ||
@@ -557,6 +614,8 @@ if (!hasSingleInstanceLock) {
       realServiceExitCode: serviceProcess.exitCode,
       apiAcceptance,
       nativeCredentialProtection: credentialProbe.evidence,
+      serverSessionCredentialLifecyclePassed:
+        apiAcceptance.serverSessionCredentialLifecyclePassed,
       credentialSecretPresentOutsideMain,
       localStorageEntryCount: rendererResult.localStorage.length,
       sessionStorageEntryCount: rendererResult.sessionStorage.length
@@ -734,6 +793,7 @@ $bridgePassed =
     $bridgeResult.nativeCredentialProtection.replacementCiphertextExcludesPlaintext -and
     $bridgeResult.nativeCredentialProtection.corruptCiphertextRejected -and
     $bridgeResult.nativeCredentialProtection.credentialDeleted -and
+    $bridgeResult.serverSessionCredentialLifecyclePassed -and
     -not $bridgeResult.credentialSecretPresentOutsideMain -and
     $bridgeResult.localStorageEntryCount -eq 0 -and
     $bridgeResult.sessionStorageEntryCount -eq 0
@@ -906,7 +966,9 @@ $measurement = [ordered]@{
         $bridgeResult.nativeCredentialProtection.replacementCiphertextExcludesPlaintext -and
         $bridgeResult.nativeCredentialProtection.corruptCiphertextRejected -and
         $bridgeResult.nativeCredentialProtection.credentialDeleted -and
+        $bridgeResult.serverSessionCredentialLifecyclePassed -and
         -not $bridgeResult.credentialSecretPresentOutsideMain
+    packagedServerSessionCredentialLifecyclePassed = $bridgeResult.serverSessionCredentialLifecyclePassed
     packagedCredentialCrashRecoveryPassed = $credentialCrashRecoveryPassed
     packagedSingleInstancePassed = $singleInstancePassed
     packagedServiceExitedAfterHostCrash = $serviceExitedAfterHostCrash
