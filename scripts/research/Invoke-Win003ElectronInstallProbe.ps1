@@ -99,6 +99,100 @@ if ($measurement.signingMode -eq 'ephemeral-test-signing' -and (
     throw 'Installed Electron host did not retain the expected Authenticode signer'
 }
 
+$crossUserSameUserRoundTrip = $false
+$crossUserCiphertextExcludesPlaintext = $false
+$crossUserDifferentUserDenied = $false
+$crossUserCleanupPassed = $false
+$crossUserLab = $null
+$temporaryUserName = $null
+$temporaryUserSid = $null
+$temporaryPassword = $null
+$temporaryPasswordText = $null
+$randomBytes = $null
+$credential = $null
+try {
+    $publicDocuments = [IO.Path]::GetFullPath([Environment]::GetFolderPath([Environment+SpecialFolder]::CommonDocuments))
+    $crossUserLab = [IO.Path]::GetFullPath((Join-Path $publicDocuments "ApiaryLens-WIN005-Electron-$([guid]::NewGuid().ToString('N'))"))
+    $publicPrefix = $publicDocuments.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+    if (-not $crossUserLab.StartsWith($publicPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Cross-user credential lab escaped Public Documents'
+    }
+    $copiedHostDirectory = Join-Path $crossUserLab 'host'
+    New-Item -ItemType Directory -Force -Path $copiedHostDirectory | Out-Null
+    Copy-Item -Path (Join-Path $appDirectory.FullName '*') -Destination $copiedHostDirectory -Recurse -Force
+    $copiedHost = Join-Path $copiedHostDirectory 'ApiaryLensElectronResearch.exe'
+    if (-not (Test-Path -LiteralPath $copiedHost)) { throw 'Copied cross-user Electron host was not found' }
+
+    $createOutput = Join-Path $crossUserLab 'create.json'
+    $createArguments = "--win003-cross-user-lab `"$crossUserLab`" --win003-cross-user-action create --win003-cross-user-output `"$createOutput`""
+    $create = Start-Process -FilePath $copiedHost -ArgumentList $createArguments -WorkingDirectory $copiedHostDirectory -PassThru -WindowStyle Hidden
+    if (-not $create.WaitForExit(15000)) {
+        Stop-Process -Id $create.Id -Force -ErrorAction SilentlyContinue
+        throw 'Same-user safeStorage fixture creation exceeded 15 seconds'
+    }
+    if ($create.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $createOutput)) {
+        throw 'Same-user safeStorage fixture creation failed'
+    }
+    $createState = Get-Content -Raw -LiteralPath $createOutput | ConvertFrom-Json
+    $crossUserSameUserRoundTrip = [bool] $createState.sameUserRoundTrip
+    $crossUserCiphertextExcludesPlaintext = [bool] $createState.ciphertextExcludesPlaintext
+
+    $temporaryUserName = "alw5e$([guid]::NewGuid().ToString('N').Substring(0, 8))"
+    $randomBytes = [byte[]]::new(24)
+    [Security.Cryptography.RandomNumberGenerator]::Fill($randomBytes)
+    $temporaryPasswordText = "W5E-$([Convert]::ToHexString($randomBytes))!"
+    [Array]::Clear($randomBytes, 0, $randomBytes.Length)
+    $temporaryPassword = ConvertTo-SecureString -String $temporaryPasswordText -AsPlainText -Force
+    New-LocalUser -Name $temporaryUserName -Password $temporaryPassword -AccountNeverExpires -PasswordNeverExpires -UserMayNotChangePassword | Out-Null
+    $temporaryUserSid = (Get-LocalUser -Name $temporaryUserName).SID.Value
+    $credential = [pscredential]::new("$env:COMPUTERNAME\$temporaryUserName", $temporaryPassword)
+    $verifyOutput = Join-Path $crossUserLab 'verify.json'
+    $verifyStdout = Join-Path $crossUserLab 'verify.stdout.log'
+    $verifyStderr = Join-Path $crossUserLab 'verify.stderr.log'
+    $verifyArguments = "--win003-cross-user-lab `"$crossUserLab`" --win003-cross-user-action verify-denied --win003-cross-user-output `"$verifyOutput`""
+    $verify = Start-Process -FilePath $copiedHost -Credential $credential -ArgumentList $verifyArguments -WorkingDirectory $copiedHostDirectory -PassThru -WindowStyle Hidden -RedirectStandardOutput $verifyStdout -RedirectStandardError $verifyStderr
+    if (-not $verify.WaitForExit(30000)) {
+        Stop-Process -Id $verify.Id -Force -ErrorAction SilentlyContinue
+        throw 'Different-user safeStorage denial exceeded 30 seconds'
+    }
+    if ($verify.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $verifyOutput)) {
+        throw "Different-user safeStorage denial failed: $(Get-Content -Raw -LiteralPath $verifyStderr -ErrorAction SilentlyContinue)"
+    }
+    $verifyState = Get-Content -Raw -LiteralPath $verifyOutput | ConvertFrom-Json
+    $crossUserDifferentUserDenied = [bool] $verifyState.differentUserDenied
+    if (-not $crossUserSameUserRoundTrip -or -not $crossUserCiphertextExcludesPlaintext -or -not $crossUserDifferentUserDenied) {
+        throw 'Cross-user Electron safeStorage acceptance failed'
+    }
+} finally {
+    $credential = $null
+    if ($randomBytes -is [Array]) { [Array]::Clear($randomBytes, 0, $randomBytes.Length) }
+    $temporaryPasswordText = $null
+    $temporaryPassword = $null
+    if ($crossUserLab) {
+        $crossUserPrefix = [IO.Path]::GetFullPath($crossUserLab).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+        Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+            Where-Object { $_.ExecutablePath -and [IO.Path]::GetFullPath($_.ExecutablePath).StartsWith($crossUserPrefix, [StringComparison]::OrdinalIgnoreCase) } |
+            ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    }
+    if ($temporaryUserName) { Remove-LocalUser -Name $temporaryUserName -ErrorAction SilentlyContinue }
+    if ($temporaryUserSid) {
+        foreach ($attempt in 1..20) {
+            $temporaryProfile = Get-CimInstance Win32_UserProfile -ErrorAction SilentlyContinue |
+                Where-Object { $_.SID -eq $temporaryUserSid } |
+                Select-Object -First 1
+            if (-not $temporaryProfile) { break }
+            $temporaryProfile | Remove-CimInstance -ErrorAction SilentlyContinue
+            Start-Sleep -Milliseconds 250
+        }
+    }
+    if ($crossUserLab) { Remove-Item -LiteralPath $crossUserLab -Recurse -Force -ErrorAction SilentlyContinue }
+    $crossUserCleanupPassed =
+        (-not $temporaryUserName -or $null -eq (Get-LocalUser -Name $temporaryUserName -ErrorAction SilentlyContinue)) -and
+        (-not $temporaryUserSid -or $null -eq (Get-CimInstance Win32_UserProfile -ErrorAction SilentlyContinue | Where-Object { $_.SID -eq $temporaryUserSid })) -and
+        (-not $crossUserLab -or -not (Test-Path -LiteralPath $crossUserLab))
+}
+if (-not $crossUserCleanupPassed) { throw 'Cross-user Electron safeStorage lab cleanup failed' }
+
 $probePath = Join-Path $runnerTemp 'win003-electron-installed-probe.json'
 $probeStdout = Join-Path $outputPath 'installed-probe.stdout.log'
 $probeStderr = Join-Path $outputPath 'installed-probe.stderr.log'
@@ -621,6 +715,8 @@ $result = [ordered]@{
         $bridgeProbeResult.nativeCredentialProtection.credentialDeleted -and
         $bridgeProbeResult.serverSessionCredentialLifecyclePassed -and
         -not $bridgeProbeResult.credentialSecretPresentOutsideMain
+    installedSafeStorageDifferentUserDenied = $crossUserDifferentUserDenied
+    installedSafeStorageCrossUserLabCleanupPassed = $crossUserCleanupPassed
     installedServerSessionCredentialLifecyclePassed = $bridgeProbeResult.serverSessionCredentialLifecyclePassed
     installedCredentialCrashRecoveryPassed = $installedCredentialCrashRecoveryPassed
     installedSingleInstancePassed = $installedSingleInstancePassed

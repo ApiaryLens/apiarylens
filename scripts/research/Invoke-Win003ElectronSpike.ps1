@@ -484,6 +484,20 @@ function retentionRootFromState(statePath) {
   return expected;
 }
 
+function validatedCrossUserLab(presentedPath) {
+  const publicRoot = process.env.PUBLIC;
+  if (!publicRoot) throw new Error("missing-public-profile-root");
+  const commonDocuments = fs.realpathSync.native(path.resolve(publicRoot, "Documents"));
+  const lab = fs.realpathSync.native(path.resolve(presentedPath));
+  if (
+    path.dirname(lab).toLowerCase() !== commonDocuments.toLowerCase() ||
+    !path.basename(lab).startsWith("ApiaryLens-WIN005-Electron-")
+  ) {
+    throw new Error("cross-user-lab-outside-public-documents");
+  }
+  return lab;
+}
+
 function createServerSessionCredentialLifecycle() {
   const directory = path.join(serviceLab, "server-session-credential");
   const currentFile = path.join(directory, "connected-session.bin");
@@ -551,8 +565,46 @@ const retentionRemoveInputIndex = process.argv.indexOf("--win003-retention-remov
 const retentionRemoveOutputIndex = process.argv.indexOf("--win003-retention-remove-output");
 const serviceDirectoryInputIndex = process.argv.indexOf("--win003-service-directory-input");
 const serviceDirectoryOutputIndex = process.argv.indexOf("--win003-service-directory-output");
+const crossUserLabIndex = process.argv.indexOf("--win003-cross-user-lab");
+const crossUserActionIndex = process.argv.indexOf("--win003-cross-user-action");
+const crossUserOutputIndex = process.argv.indexOf("--win003-cross-user-output");
 if (!hasSingleInstanceLock) {
   // The primary instance owns all application and embedded-service work.
+} else if (crossUserLabIndex >= 0 && crossUserActionIndex >= 0 && crossUserOutputIndex >= 0) {
+  app.whenReady().then(() => {
+    if (!safeStorage.isEncryptionAvailable()) throw new Error("safe-storage-unavailable");
+    const lab = validatedCrossUserLab(process.argv[crossUserLabIndex + 1]);
+    const action = process.argv[crossUserActionIndex + 1];
+    const output = path.resolve(process.argv[crossUserOutputIndex + 1]);
+    if (fs.realpathSync.native(path.dirname(output)).toLowerCase() !== lab.toLowerCase()) {
+      throw new Error("cross-user-output-outside-lab");
+    }
+    const fixture = path.join(lab, "protected-session.bin");
+    if (action === "create") {
+      const value = crypto.randomBytes(48).toString("base64url");
+      const ciphertext = safeStorage.encryptString(value);
+      fs.writeFileSync(fixture, ciphertext, { mode: 0o600 });
+      fs.writeFileSync(output, JSON.stringify({
+        sameUserRoundTrip: safeStorage.decryptString(ciphertext) === value,
+        ciphertextExcludesPlaintext: !ciphertext.includes(Buffer.from(value, "utf8"))
+      }));
+    } else if (action === "verify-denied") {
+      let differentUserDenied = false;
+      try {
+        safeStorage.decryptString(fs.readFileSync(fixture));
+      } catch {
+        differentUserDenied = true;
+      }
+      if (!differentUserDenied) throw new Error("cross-user-decryption-unexpectedly-succeeded");
+      fs.writeFileSync(output, JSON.stringify({ differentUserDenied }));
+    } else {
+      throw new Error("unknown-cross-user-action");
+    }
+    app.quit();
+  }).catch((error) => {
+    console.error(`cross-user-credential-probe-failed:${error.message}`);
+    app.exit(83);
+  });
 } else if (serviceDirectoryInputIndex >= 0 && serviceDirectoryOutputIndex >= 0) {
   app.whenReady().then(async () => {
     const requestedLab = path.resolve(process.argv[serviceDirectoryInputIndex + 1]);
