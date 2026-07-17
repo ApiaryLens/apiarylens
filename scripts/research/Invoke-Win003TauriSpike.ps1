@@ -168,7 +168,9 @@ if ($env:WIN003_CERT_THUMBPRINT -and (
     $hostSignature.SignerCertificate.Thumbprint -ne $env:WIN003_CERT_THUMBPRINT -or
     $installerSignature.SignerCertificate.Thumbprint -ne $env:WIN003_CERT_THUMBPRINT
 )) {
-    throw 'Tauri test signatures did not match the ephemeral signing certificate'
+    $hostThumbprint = if ($hostSignature.SignerCertificate) { $hostSignature.SignerCertificate.Thumbprint } else { '<none>' }
+    $installerThumbprint = if ($installerSignature.SignerCertificate) { $installerSignature.SignerCertificate.Thumbprint } else { '<none>' }
+    throw "Tauri signature mismatch: expected $env:WIN003_CERT_THUMBPRINT; host $hostThumbprint ($($hostSignature.Status)); installer $installerThumbprint ($($installerSignature.Status))"
 }
 
 $sqliteProbe = & $sidecarPath -e "const { DatabaseSync } = require('node:sqlite'); const db = new DatabaseSync(':memory:'); db.exec('create table probe(value text)'); db.close(); process.stdout.write('node-sqlite-ok')"
