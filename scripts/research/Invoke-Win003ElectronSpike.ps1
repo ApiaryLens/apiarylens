@@ -1068,7 +1068,8 @@ try {
         throw 'Electron Forge package did not produce the expected host directory'
     }
     $runtimeVersionsPath = Join-Path $labPath 'runtime-versions.json'
-    $runtimeVersionProbe = Start-Process -FilePath $preMakeHost.FullName -ArgumentList @('--apiarylens-packaged-probe', $runtimeVersionsPath) -PassThru -WindowStyle Hidden
+    $runtimeVersionArguments = "--win003-probe-output `"$runtimeVersionsPath`""
+    $runtimeVersionProbe = Start-Process -FilePath $preMakeHost.FullName -ArgumentList $runtimeVersionArguments -WorkingDirectory $preMakePackageDirectory.FullName -PassThru -WindowStyle Hidden
     if (-not $runtimeVersionProbe.WaitForExit(30000)) {
         Stop-Process -Id $runtimeVersionProbe.Id -Force -ErrorAction SilentlyContinue
         throw 'Packaged Electron runtime-version probe exceeded 30 seconds'
