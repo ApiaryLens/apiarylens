@@ -44,11 +44,19 @@ jobs:
           ./scripts/research/Invoke-Win003ElectronSpike.ps1
           -WebDist ./apps/web/dist
           -OutputDirectory "$env:RUNNER_TEMP/win003-electron-signed-evidence"
+      - name: Install, run, and uninstall exact signed Electron package
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003ElectronInstallProbe.ps1
+          -EvidenceDirectory "$env:RUNNER_TEMP/win003-electron-signed-evidence"
+          -OutputDirectory "$env:RUNNER_TEMP/win003-electron-signed-lifecycle"
       - name: Upload sanitized Electron signing evidence
         uses: actions/upload-artifact@v4
         with:
           name: win003-electron-test-signed-evidence
-          path: ${{ runner.temp }}/win003-electron-signed-evidence/measurement.json
+          path: |
+            ${{ runner.temp }}/win003-electron-signed-evidence
+            ${{ runner.temp }}/win003-electron-signed-lifecycle
           if-no-files-found: error
           retention-days: 14
 
@@ -80,10 +88,18 @@ jobs:
           -WebDist ./apps/web/dist
           -IconPath ./apps/web/public/icons/apiarylens-512.png
           -OutputDirectory "$env:RUNNER_TEMP/win003-tauri-signed-evidence"
+      - name: Install, run, and uninstall exact signed Tauri package
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003TauriInstallProbe.ps1
+          -EvidenceDirectory "$env:RUNNER_TEMP/win003-tauri-signed-evidence"
+          -OutputDirectory "$env:RUNNER_TEMP/win003-tauri-signed-lifecycle"
       - name: Upload sanitized Tauri signing evidence
         uses: actions/upload-artifact@v4
         with:
           name: win003-tauri-test-signed-evidence
-          path: ${{ runner.temp }}/win003-tauri-signed-evidence/measurement.json
+          path: |
+            ${{ runner.temp }}/win003-tauri-signed-evidence
+            ${{ runner.temp }}/win003-tauri-signed-lifecycle
           if-no-files-found: error
           retention-days: 14
