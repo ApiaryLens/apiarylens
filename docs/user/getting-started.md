@@ -71,14 +71,16 @@ in this apiary, purchased from a breeder, swarm/removal, unknown, and Other.
 Open **Hives**, select a hive under **Equipment stack**, and add each physical
 component from bottom to top. ApiaryLens supports bottom boards, deep brood boxes,
 medium and shallow honey supers, queen excluders, feeders, inner and outer covers,
-and an Other option for local equipment variations. Record the purpose and frame
-count where applicable.
+and an Other option for local equipment variations. Choosing Other reveals a custom
+type or purpose field, so local equipment and beekeeper terminology are preserved
+instead of being forced into a standard configuration. Record the purpose, installed
+date, and frame count where applicable.
 
 The list is both a visual and textual representation of the hive. Use **Up** or
 **Down** to match the physical order. **Remove** takes a component out of the active
-stack without erasing its history; removed and stored equipment remains available
-under the history disclosure. Stack changes save locally and synchronize like other
-hive records.
+stack without erasing its history; ApiaryLens records the removal time, and removed
+or stored equipment remains available under the history disclosure. Stack changes
+save locally and synchronize like other hive records.
 
 ## Family Access
 

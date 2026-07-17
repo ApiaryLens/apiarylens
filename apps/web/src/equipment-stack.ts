@@ -25,6 +25,20 @@ export const equipmentPurposeLabels = {
 export type EquipmentType = keyof typeof equipmentTypeLabels;
 export type EquipmentPurpose = keyof typeof equipmentPurposeLabels;
 
+export function equipmentTypeLabel(data: Record<string, unknown>): string {
+  if (data.boxType === 'other' && String(data.customType ?? '').trim())
+    return String(data.customType).trim();
+  return equipmentTypeLabels[String(data.boxType) as EquipmentType] ?? 'Other component';
+}
+
+export function equipmentPurposeLabel(data: Record<string, unknown>): string {
+  if (data.purpose === 'other' && String(data.customPurpose ?? '').trim())
+    return String(data.customPurpose).trim();
+  return data.purpose
+    ? (equipmentPurposeLabels[String(data.purpose) as EquipmentPurpose] ?? String(data.purpose))
+    : 'Purpose not recorded';
+}
+
 export function isFrameBox(type: string): boolean {
   return type === 'deep' || type === 'medium' || type === 'shallow';
 }

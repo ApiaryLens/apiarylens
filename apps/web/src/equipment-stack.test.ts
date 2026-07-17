@@ -3,6 +3,8 @@ import type { LocalResource } from './db.js';
 import {
   activeEquipmentForHive,
   adjacentEquipment,
+  equipmentPurposeLabel,
+  equipmentTypeLabel,
   isFrameBox,
   nextEquipmentPosition,
 } from './equipment-stack.js';
@@ -51,5 +53,13 @@ describe('equipment stack', () => {
     expect(isFrameBox('deep')).toBe(true);
     expect(isFrameBox('queen_excluder')).toBe(false);
     expect(isFrameBox('outer_cover')).toBe(false);
+  });
+
+  it('uses beekeeper-defined type and purpose labels without changing stack behavior', () => {
+    expect(equipmentTypeLabel({ boxType: 'other', customType: 'Flow super' })).toBe('Flow super');
+    expect(equipmentPurposeLabel({ purpose: 'other', customPurpose: 'Comb production' })).toBe(
+      'Comb production',
+    );
+    expect(equipmentTypeLabel({ boxType: 'deep' })).toBe('Deep box');
   });
 });

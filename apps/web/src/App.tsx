@@ -28,14 +28,15 @@ import {
 import {
   activeEquipmentForHive,
   adjacentEquipment,
+  equipmentPurposeLabel,
   equipmentPurposeLabels,
+  equipmentTypeLabel,
   equipmentTypeLabels,
   isFrameBox,
   nextEquipmentPosition,
-  type EquipmentPurpose,
   type EquipmentType,
 } from './equipment-stack.js';
-import { formatWeatherSummary } from './weather-fields.js';
+import { formatWeatherSummary, readManualWeatherSnapshot } from './weather-fields.js';
 import { fieldChoices, mergeFieldChoices, recentFieldValues } from './field-intelligence.js';
 
 type Page = 'dashboard' | 'apiaries' | 'hives' | 'inspections' | 'care' | 'version';
@@ -871,6 +872,7 @@ function EquipmentStackBuilder({
 }) {
   const [hiveId, setHiveId] = useState(hives[0]?.id ?? '');
   const [componentType, setComponentType] = useState<EquipmentType>('deep');
+  const [componentPurpose, setComponentPurpose] = useState('');
   const [error, setError] = useState('');
   const active = activeEquipmentForHive(equipment, hiveId);
   const history = equipment.filter(
@@ -888,14 +890,19 @@ function EquipmentStackBuilder({
       await queueCreate(organizationId, 'equipmentBox', {
         hiveId,
         boxType: componentType,
+        customType: componentType === 'other' ? values.customType || null : null,
         purpose: values.purpose || null,
+        customPurpose: values.purpose === 'other' ? values.customPurpose || null : null,
         position,
         frameCount: isFrameBox(componentType) ? Number(values.frameCount) : null,
         status: 'active',
+        installedAt: values.installedAt || null,
+        removedAt: null,
         notes: values.notes || null,
       });
       form.reset();
       setComponentType('deep');
+      setComponentPurpose('');
       onNotice('Hive component added and queued for synchronization.');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Could not add the component.');
@@ -930,21 +937,21 @@ function EquipmentStackBuilder({
         <ol className="equipment-stack" aria-label="Hive equipment, bottom to top">
           {active.map((item, index) => {
             const type = String(item.data.boxType) as EquipmentType;
-            const purpose = item.data.purpose as EquipmentPurpose | undefined;
+            const typeLabel = equipmentTypeLabel(item.data);
             return (
               <li className={`equipment-component component-${type}`} key={item.key}>
                 <div>
-                  <strong>{equipmentTypeLabels[type] ?? 'Other component'}</strong>
+                  <strong>{typeLabel}</strong>
                   <span>
-                    {purpose ? equipmentPurposeLabels[purpose] : 'Purpose not recorded'}
+                    {equipmentPurposeLabel(item.data)}
                     {item.data.frameCount ? ` · ${item.data.frameCount} frames` : ''}
                   </span>
+                  {item.data.installedAt ? (
+                    <span>Installed {String(item.data.installedAt)}</span>
+                  ) : null}
                   {item.data.notes ? <span>{String(item.data.notes)}</span> : null}
                 </div>
-                <div
-                  className="record-actions"
-                  aria-label={`Actions for ${equipmentTypeLabels[type] ?? 'component'}`}
-                >
+                <div className="record-actions" aria-label={`Actions for ${typeLabel}`}>
                   <button
                     className="text-button"
                     disabled={index === 0}
@@ -964,7 +971,10 @@ function EquipmentStackBuilder({
                   <button
                     className="text-button"
                     onClick={() =>
-                      void queueUpdate(item, { status: 'removed' }).then(() =>
+                      void queueUpdate(item, {
+                        status: 'removed',
+                        removedAt: new Date().toISOString(),
+                      }).then(() =>
                         onNotice('Component removed from the active stack; history retained.'),
                       )
                     }
@@ -997,9 +1007,19 @@ function EquipmentStackBuilder({
             ))}
           </select>
         </label>
+        {componentType === 'other' && (
+          <label>
+            Custom component type
+            <input name="customType" required maxLength={120} />
+          </label>
+        )}
         <label>
           Purpose
-          <select name="purpose" defaultValue="">
+          <select
+            name="purpose"
+            value={componentPurpose}
+            onChange={(event) => setComponentPurpose(event.currentTarget.value)}
+          >
             <option value="">Not recorded</option>
             {Object.entries(equipmentPurposeLabels).map(([value, label]) => (
               <option key={value} value={value}>
@@ -1008,12 +1028,22 @@ function EquipmentStackBuilder({
             ))}
           </select>
         </label>
+        {componentPurpose === 'other' && (
+          <label>
+            Custom purpose
+            <input name="customPurpose" required maxLength={120} />
+          </label>
+        )}
         {isFrameBox(componentType) && (
           <label>
             Frame count
             <input name="frameCount" type="number" min="1" max="24" defaultValue="10" required />
           </label>
         )}
+        <label>
+          Installed date
+          <input name="installedAt" type="date" />
+        </label>
         <label>
           Notes
           <textarea name="notes" rows={2} />
@@ -1023,7 +1053,20 @@ function EquipmentStackBuilder({
       {history.length > 0 && (
         <details className="equipment-history">
           <summary>Removed and stored equipment ({history.length})</summary>
-          <RecordList records={history} titleField="boxType" />
+          <ul className="record-list">
+            {history.map((item) => (
+              <li key={item.key}>
+                <strong>{equipmentTypeLabel(item.data)}</strong>
+                <span>{equipmentPurposeLabel(item.data)}</span>
+                <span>
+                  {String(item.data.status)}
+                  {item.data.removedAt
+                    ? ` · removed ${new Date(String(item.data.removedAt)).toLocaleString()}`
+                    : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
         </details>
       )}
     </div>
@@ -1276,19 +1319,11 @@ function InspectionForm({
     const files = Array.from((form.elements.namedItem('photos') as HTMLInputElement).files ?? []);
     const observed = (name: string) =>
       values.get(name) === '' ? null : values.get(name) === 'yes';
-    const weather = {
-      temperature: values.get('temperature') ? Number(values.get('temperature')) : null,
-      temperatureUnit: String(values.get('temperatureUnit')),
-      conditions: String(values.get('conditions') ?? ''),
-      humidity: values.get('humidity') ? Number(values.get('humidity')) : null,
-      windSpeed: values.get('windSpeed') ? Number(values.get('windSpeed')) : null,
-      windSpeedUnit: String(values.get('windSpeedUnit')),
-      windDirection: values.get('windDirection') || null,
-      source: 'manual',
-    };
+    const inspectedAt = new Date(String(values.get('inspectedAt'))).toISOString();
+    const weather = readManualWeatherSnapshot(values, inspectedAt);
     const payload = {
       hiveId: String(values.get('hiveId')),
-      inspectedAt: new Date(String(values.get('inspectedAt'))).toISOString(),
+      inspectedAt,
       inspectorName: String(values.get('inspectorName')),
       state: String(values.get('state')),
       notes: String(values.get('notes') ?? ''),

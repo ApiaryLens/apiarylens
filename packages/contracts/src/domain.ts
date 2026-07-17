@@ -55,13 +55,17 @@ export const equipmentBoxFieldsSchema = z.object({
     'outer_cover',
     'other',
   ]),
+  customType: z.string().trim().max(120).optional().nullable(),
   purpose: z
     .enum(['entrance', 'brood', 'honey', 'feeding', 'ventilation', 'cover', 'other'])
     .optional()
     .nullable(),
+  customPurpose: z.string().trim().max(120).optional().nullable(),
   position: z.number().int().min(1).max(20),
   frameCount: z.number().int().min(1).max(24).optional().nullable(),
   status: z.enum(['active', 'stored', 'removed']).default('active'),
+  installedAt: localDateSchema.optional().nullable(),
+  removedAt: isoDateTimeSchema.optional().nullable(),
   notes: optionalTextSchema,
 });
 export const equipmentBoxSchema = entityMetaSchema.extend(equipmentBoxFieldsSchema.shape);
@@ -79,6 +83,9 @@ export const weatherSnapshotSchema = z.object({
     .nullable(),
   wind: z.string().trim().max(120).optional().nullable(),
   source: z.enum(['manual', 'provider']).default('manual'),
+  providerName: z.string().trim().max(120).optional().nullable(),
+  observedAt: isoDateTimeSchema.optional().nullable(),
+  attribution: z.string().trim().max(500).optional().nullable(),
 });
 
 export const inspectionFieldsSchema = z.object({

@@ -1,3 +1,76 @@
+export type ManualWeatherSnapshot = {
+  temperature: number | null;
+  temperatureUnit: string;
+  conditions: string;
+  humidity: number | null;
+  windSpeed: number | null;
+  windSpeedUnit: string;
+  windDirection: string | null;
+  source: 'manual';
+  observedAt: string;
+};
+
+type FormValues = Pick<FormData, 'get'>;
+
+export function readManualWeatherSnapshot(
+  values: FormValues,
+  observedAt: string,
+): ManualWeatherSnapshot | null {
+  const text = (name: string) => String(values.get(name) ?? '').trim();
+  const numeric = (name: string) => (text(name) === '' ? null : Number(text(name)));
+  const snapshot: ManualWeatherSnapshot = {
+    temperature: numeric('temperature'),
+    temperatureUnit: text('temperatureUnit') || 'f',
+    conditions: text('conditions'),
+    humidity: numeric('humidity'),
+    windSpeed: numeric('windSpeed'),
+    windSpeedUnit: text('windSpeedUnit') || 'mph',
+    windDirection: text('windDirection') || null,
+    source: 'manual',
+    observedAt,
+  };
+  return snapshot.temperature !== null ||
+    snapshot.conditions !== '' ||
+    snapshot.humidity !== null ||
+    snapshot.windSpeed !== null ||
+    snapshot.windDirection !== null
+    ? snapshot
+    : null;
+}
+
+/**
+ * Provider adapters receive only the approved observation time and coordinates.
+ * Hive records, family identity, notes, media, and credentials are intentionally
+ * outside this boundary. No adapter is configured in the preview release.
+ */
+export type WeatherEnrichmentRequest = {
+  observedAt: string;
+  latitude: number;
+  longitude: number;
+};
+
+export function createWeatherEnrichmentRequest(input: {
+  explicitConsent: boolean;
+  observedAt: string;
+  latitude: number;
+  longitude: number;
+}): WeatherEnrichmentRequest {
+  if (!input.explicitConsent) throw new Error('Weather lookup requires explicit consent.');
+  if (input.latitude < -90 || input.latitude > 90) throw new Error('Latitude is out of range.');
+  if (input.longitude < -180 || input.longitude > 180)
+    throw new Error('Longitude is out of range.');
+  return {
+    observedAt: input.observedAt,
+    latitude: input.latitude,
+    longitude: input.longitude,
+  };
+}
+
+export interface WeatherEnrichmentAdapter {
+  readonly providerName: string;
+  lookup(request: WeatherEnrichmentRequest): Promise<Record<string, unknown>>;
+}
+
 export function formatWeatherSummary(value: unknown): string {
   if (!value || typeof value !== 'object') return 'Not recorded';
   const weather = value as Record<string, unknown>;
