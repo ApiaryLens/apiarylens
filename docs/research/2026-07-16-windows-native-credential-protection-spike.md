@@ -1,0 +1,185 @@
+# Windows Native Authentication and Credential Protection Spike
+
+## Status
+
+`WIN-005` is in progress. This record evaluates the durable credential boundary for
+the standalone and connected Windows client. It does not select a host framework,
+change the product authentication contract, or authorize a Windows scaffold.
+
+Official-source review is complete for Windows Credential Manager, DPAPI, Electron
+`safeStorage`, and Tauri Stronghold. Exact Windows API lifecycle, host-bridge, user-
+boundary, recovery, and rotation evidence remain required.
+
+## Decision question
+
+How can ApiaryLens keep a family user signed in across Windows application restarts
+without storing passwords, remote session tokens, bootstrap secrets, or local
+authentication roots in browser storage, SQLite, plaintext files, arguments, logs,
+diagnostics, plans, or repositories?
+
+## Credential inventory
+
+| Value | Lifetime | Proposed owner | Persistence policy |
+|---|---|---|---|
+| Desktop loopback control token | One local-service launch | Native host process | Memory only; never persisted or exposed to ordinary renderer JavaScript |
+| Standalone authentication root | Installation/data lifetime | Native host | Per-user OS-protected secret; recover through protected backup policy, not a plan |
+| Standalone owner password | User input if local app lock is enabled | User / real API | Store only the API's salted password verifier; never store the password |
+| Connected session token | Server session lifetime, rotated | Native host HTTP bridge | Per-user OS credential; replace atomically after rotation |
+| Connected password | One sign-in or recovery operation | User / remote API | Memory only; never persist |
+| CSRF token | Active authenticated session | Native host HTTP bridge | Memory only; reacquire during session rotation |
+| Recovery code | One-time account recovery | User | Display/export only on explicit user action; do not retain automatically |
+| Deployment/cloud/SSH secrets | Deployment operation or target secret-store lifetime | Scout Bee / target | Outside the Windows client and secret-free deployment plan |
+
+Endpoint URLs, organization identifiers, product versions, and display names are not
+credentials, but configuration and diagnostics must still avoid embedding query-
+string tokens or user-entered secret material.
+
+## Non-negotiable requirements
+
+- Ordinary React code receives typed results, not reusable local-control or remote-
+  session credentials.
+- Passwords and recovery codes are never saved for convenience.
+- Durable secrets use the current Windows user's protection boundary. Machine-wide
+  DPAPI scope is forbidden because Microsoft documents that any user on the machine
+  can decrypt machine-scoped data.
+- Credential entries use stable, product-namespaced targets and local-machine
+  persistence. They must not roam through enterprise profiles by default.
+- A failed credential read, corrupt protected value, revoked session, changed
+  Windows identity, or restored database without matching secrets produces guided
+  recovery rather than data deletion or an authentication bypass.
+- Rotation writes the replacement credential before retiring the prior in-memory
+  value, then verifies the new session. Crash recovery must never leave both a
+  plaintext fallback and a protected value.
+- Sign-out deletes the connected credential. **Remove all data** deletes standalone
+  secrets; **keep data** preserves the recovery contract explicitly chosen by the
+  user.
+- Logs, crash reports, diagnostics, exports, backups, release evidence, and
+  `apiarylens-deployment.json` are scanned for known secret values and credential-
+  target payloads.
+
+## Windows platform findings
+
+### Windows Credential Manager
+
+`CredWriteW` creates or replaces a credential in the credential set associated with
+the current token's logon session. `CredReadW` reads from that same user-associated
+set. `CRED_TYPE_GENERIC` is application-defined secure data rather than a credential
+automatically consumed by Windows authentication packages.
+
+The proposed ApiaryLens adapter uses:
+
+- `CRED_TYPE_GENERIC`;
+- a namespaced target such as `ApiaryLens/<installation-id>/<purpose>`;
+- `CRED_PERSIST_LOCAL_MACHINE`, which persists across this user's future logons on
+  the same computer without requesting enterprise roaming;
+- a small versioned binary envelope containing exactly one purpose-scoped secret;
+  and
+- `CredDeleteW` during sign-out, remove-all-data, or abandoned-rotation cleanup.
+
+Microsoft limits `CredentialBlob` to 2,560 bytes. That is sufficient for opaque
+session and root secrets but is not a general configuration store. Usernames,
+endpoints, compatibility metadata, and non-secret state remain in the application's
+normal configuration.
+
+### DPAPI
+
+`CryptProtectData` normally limits decryption to the same Windows logon credential
+on the same computer and provides integrity checking. Optional entropy can domain-
+separate ApiaryLens protected values, but entropy embedded beside ciphertext is not
+an independent secret. Current-user DPAPI is a viable fallback for encrypted files
+or Electron `safeStorage` output when Credential Manager is unavailable or a value
+does not fit its constrained record model.
+
+`CRYPTPROTECT_LOCAL_MACHINE` is rejected for family-client secrets: Microsoft states
+that any user on that computer can decrypt machine-scoped protected data. DPAPI and
+Credential Manager also do not defend against an already-compromised native process
+running as the same Windows user; the product must state that adversary boundary.
+
+Primary sources checked 2026-07-16:
+
+- [CredWriteW](https://learn.microsoft.com/en-us/windows/win32/api/wincred/nf-wincred-credwritew)
+- [CredReadW](https://learn.microsoft.com/en-us/windows/win32/api/wincred/nf-wincred-credreadw)
+- [CREDENTIALW and persistence limits](https://learn.microsoft.com/en-us/windows/win32/api/wincred/ns-wincred-credentialw)
+- [CryptProtectData](https://learn.microsoft.com/en-us/windows/win32/api/dpapi/nf-dpapi-cryptprotectdata)
+
+## Host-option findings
+
+### Electron
+
+Electron exposes `safeStorage` only from the main process. On Windows its encryption
+keys are protected with DPAPI. This is compatible with keeping encryption and
+decryption outside a sandboxed renderer, but ApiaryLens would still own ciphertext
+file location, ACLs, atomic replacement, deletion, versioning, and diagnostics
+redaction.
+
+`safeStorage` is the Electron baseline, not an automatic final choice. A small
+native Credential Manager adapter could align Electron and Tauri storage semantics,
+but its native dependency, signing, licensing, and update provenance must be weighed
+against using the supported Electron API directly.
+
+Primary source:
+
+- [Electron `safeStorage`](https://www.electronjs.org/docs/latest/api/safe-storage)
+
+### Tauri
+
+Tauri's official Stronghold plugin provides an encrypted secret database and denies
+potentially dangerous commands until capabilities permit them. Its documented flow
+still requires a password-derived 32-byte key and exposes permitted operations
+through JavaScript bindings. Hard-coding or silently persisting that vault password
+would move, not solve, the protection problem.
+
+Stronghold remains useful when a user intentionally unlocks a portable vault or for
+future cross-platform policy. It is not the default transparent Windows-family
+credential store unless its unlock key is itself protected by Windows and its
+capabilities prevent ordinary renderer code from reading raw credentials. A narrow
+Rust command over Windows Credential Manager is the simpler Windows-native
+challenger and must be prototype-tested.
+
+Primary sources:
+
+- [Tauri Stronghold plugin](https://v2.tauri.app/plugin/stronghold/)
+- [Tauri plugin support and architecture](https://v2.tauri.app/plugin/)
+
+## Proposed direction to challenge
+
+1. Define one framework-neutral native credential interface: `store`, `load`,
+   `replace`, and `delete`, with a purpose enum rather than arbitrary target names.
+2. Use Windows Credential Manager generic credentials as the primary Windows
+   implementation for the standalone authentication root and connected session.
+3. Keep the loopback control token, CSRF token, passwords, and recovery codes in
+   memory only.
+4. Let the native HTTP bridge own the connected cookie jar and session rotation.
+   React receives the resulting session view, never the opaque cookie value.
+5. Retain Electron `safeStorage` and a Tauri Stronghold design as measured fallback
+   or challenger paths, not parallel product stores.
+6. Version every protected payload and bind its target to installation, environment,
+   organization where applicable, and purpose. Reject cross-purpose substitution.
+7. Treat credential loss separately from hive-data loss. Preserve local data and
+   guide reauthentication, recovery-code use, or backup restore without weakening
+   server authorization.
+
+## Remaining experiments and exit gate
+
+`WIN-005` closes only after:
+
+1. Exercising `CredWriteW`, `CredReadW`, replacement, maximum-size rejection,
+   `CredDeleteW`, missing-entry behavior, and cleanup on a clean Windows user profile.
+2. Exercising current-user DPAPI round-trip, wrong/missing entropy, corrupt
+   ciphertext, cross-process same-user access, and a different-user denial.
+3. Proving Electron main/preload and Tauri Rust-command prototypes can store, rotate,
+   use, and delete a credential while the raw value remains absent from renderer
+   globals, storage, DevTools-visible messages, arguments, logs, and diagnostics.
+4. Testing app crash between server token rotation and local credential replacement,
+   revoked sessions, Windows password/account changes, backup/restore on the same
+   user, restore on another user/computer, and keep-data/remove-all uninstall.
+5. Recording ACL, roaming-profile, Remote Desktop, multiple Windows session, and
+   locked-workstation behavior on supported retail Windows profiles.
+6. Completing dependency/license/provenance review and accepting the authentication
+   and credential-protection section of the Windows security ADR.
+
+## Gallery or registry impact
+
+No gallery or registry is required. Credential adapters are privileged native code
+owned by the signed Windows host and cannot be installed from a community gallery.
+
