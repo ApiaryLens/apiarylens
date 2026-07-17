@@ -6,7 +6,7 @@
   "license": "Apache-2.0",
   "main": "dist/main.js",
   "scripts": {
-    "build": "pnpm --filter @apiarylens/server build && pnpm --filter @apiarylens/web build && tsc -p tsconfig.build.json && node -e \"require('node:fs').copyFileSync('src/preload.cjs','dist/preload.cjs')\"",
+    "build": "pnpm --filter @apiarylens/contracts build && pnpm --filter @apiarylens/database build && pnpm --filter @apiarylens/media build && pnpm --filter @apiarylens/server build && pnpm --filter @apiarylens/web build && tsc -p tsconfig.build.json && node -e \"require('node:fs').copyFileSync('src/preload.cjs','dist/preload.cjs')\"",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "dev": "pnpm build && electron .",
     "lint": "tsc -p tsconfig.json --noEmit",

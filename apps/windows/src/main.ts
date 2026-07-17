@@ -200,10 +200,8 @@ async function start(): Promise<void> {
         2,
       ),
     );
-    primaryWindow.destroy();
-    await supervisor.stop();
-    shutdownStarted = true;
-    app.exit(0);
+    // The exact-host harness reads the evidence and then stops this hidden
+    // process tree, so production code does not gain a self-termination path.
   }
 }
 

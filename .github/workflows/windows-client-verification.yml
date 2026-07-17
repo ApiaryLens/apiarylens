@@ -58,10 +58,41 @@ jobs:
 
       - name: Run hidden exact-host smoke
         shell: pwsh
-        run: >-
-          pnpm --filter @apiarylens/windows start --
-          --desktop-user-data=${{ runner.temp }}/apiarylens-windows-profile
-          --desktop-smoke=${{ runner.temp }}/apiarylens-windows-evidence.json
+        run: |
+          $evidence = "${{ runner.temp }}/apiarylens-windows-evidence.json"
+          $profile = "${{ runner.temp }}/apiarylens-windows-profile"
+          $process = Start-Process -FilePath "pnpm.cmd" -ArgumentList @(
+            "--filter", "@apiarylens/windows", "start", "--",
+            "--desktop-user-data=$profile",
+            "--desktop-smoke=$evidence"
+          ) -PassThru -WindowStyle Hidden
+          try {
+            $deadline = (Get-Date).AddSeconds(30)
+            while (-not (Test-Path -LiteralPath $evidence)) {
+              if ($process.HasExited) {
+                throw "Windows host exited before writing exact-host evidence ($($process.ExitCode))."
+              }
+              if ((Get-Date) -ge $deadline) {
+                throw "Windows host did not write exact-host evidence within 30 seconds."
+              }
+              Start-Sleep -Milliseconds 200
+            }
+          }
+          finally {
+            $all = @(Get-CimInstance Win32_Process)
+            $tree = [System.Collections.Generic.List[int]]::new()
+            $tree.Add($process.Id)
+            for ($index = 0; $index -lt $tree.Count; $index++) {
+              foreach ($child in $all | Where-Object ParentProcessId -eq $tree[$index]) {
+                if (-not $tree.Contains([int]$child.ProcessId)) {
+                  $tree.Add([int]$child.ProcessId)
+                }
+              }
+            }
+            for ($index = $tree.Count - 1; $index -ge 0; $index--) {
+              Stop-Process -Id $tree[$index] -Force -ErrorAction SilentlyContinue
+            }
+          }
 
       - name: Verify secret-free security evidence
         shell: pwsh

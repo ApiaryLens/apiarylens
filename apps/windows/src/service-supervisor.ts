@@ -107,11 +107,16 @@ export class ServiceSupervisor {
       if (!child || child.exitCode !== null) return;
       if (running) {
         try {
-          await fetch(`${running.endpoint}/__desktop/shutdown`, {
-            method: 'POST',
-            headers: { 'x-apiarylens-desktop-control': running.controlToken },
-            signal: AbortSignal.timeout(2_000),
-          });
+          await Promise.race([
+            fetch(`${running.endpoint}/__desktop/shutdown`, {
+              method: 'POST',
+              headers: { 'x-apiarylens-desktop-control': running.controlToken },
+              signal: AbortSignal.timeout(2_000),
+            }),
+            delay(2_500).then(() => {
+              throw new Error('Standalone service shutdown request timed out');
+            }),
+          ]);
         } catch {
           // The host still owns the process and applies the bounded kill below.
         }

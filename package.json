@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "pnpm -r --if-present build",
-    "clean": "pnpm -r --if-present clean",
+    "clean": "pnpm -r --if-present run clean",
     "dev": "pnpm --filter @apiarylens/server dev",
     "dev:web": "pnpm --filter @apiarylens/web dev",
     "dev:worker": "pnpm --filter @apiarylens/worker dev",
