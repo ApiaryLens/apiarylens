@@ -92,6 +92,18 @@ The workflow retained only sanitized runner-temporary evidence for 14 days.
 The result proves a workable loopback and lifecycle shape; it does not prove the
 production server is safe merely by adopting the same mechanics.
 
+## SQLite recovery evidence
+
+GitHub Actions run
+[`29547423940`](https://github.com/ApiaryLens/apiarylens/actions/runs/29547423940)
+exercised the Windows SQLite recovery contract in a disposable database. It proved
+that an interrupted uncommitted write is absent after restart, a committed record is
+retained, a verified backup restores successfully, a corrupt backup is rejected,
+transactional migration succeeds, an incompatible schema is rejected, a failed
+migration rolls back, and an injected post-update health failure restores the prior
+database. The run does not replace replay against the exact packaged real service,
+schema migrations, and update coordinator.
+
 ## Exact portable-server process evidence
 
 GitHub Actions run
@@ -142,6 +154,14 @@ guard before opening SQLite, bound HTTP explicitly to `127.0.0.1` on an assigned
 port, required a per-launch 256-bit token and exact packaged origin on every request,
 and monitored its supervising parent.
 
+Expanded run
+[`29553015915`](https://github.com/ApiaryLens/apiarylens/actions/runs/29553015915)
+repeated the clean install, exact build, 15-test organization-isolation suite,
+unwrapped listener failure, and protected wrapper checks at commit
+`ca5b02c959d6dc98dcb49f92df7e2f7f04f3dc7e`. It also exercised stale
+readiness replacement, four rapid competing launches, readiness protocol identity,
+and corrupt-database startup failure.
+
 | Protected real-API wrapper check | Result |
 |---|---:|
 | Listener addresses | `127.0.0.1` only |
@@ -151,6 +171,8 @@ and monitored its supervising parent.
 | Wrong product bootstrap token | 403 |
 | Owner bootstrap / session | 201 / 200 |
 | Duplicate wrapper/database owner | Rejected; exit 73 |
+| Four rapid competing launches | All rejected; exit 73 |
+| Stale readiness metadata | Replaced with current PID, port, and protocol 1 |
 | Sign-in / session after forced termination and restart | 200 / 200 |
 | Organization identity after restart | Retained |
 | Restarted on a newly assigned port | Yes |
@@ -159,6 +181,7 @@ and monitored its supervising parent.
 | Matching Windows Firewall rules | 0 |
 | Token in arguments, readiness, logs, or evidence | No |
 | SQLite database after shutdown | Present |
+| Corrupt SQLite database at startup | Failed closed before readiness |
 
 This proves that the existing portable API and stores can sit behind the proposed
 desktop boundary without exposing a wildcard listener or requiring a new backend.
@@ -268,14 +291,17 @@ preserve the intended behavior. Those are integration and lifecycle gates.
 2. Proving Electron preload and Tauri command bridges can keep the token outside
    renderer-accessible storage and global JavaScript.
 3. Testing process startup timeout, crash loops, forced termination during writes,
-   WAL recovery, `integrity_check`, disk-full, read-only directory, corrupt database,
-   migration failure, backup restore, and incompatible versions.
+   WAL recovery, `integrity_check`, disk-full, and read-only directories in the real
+   wrapper. Corrupt-database startup now fails before readiness; the separate SQLite
+   recovery probe covers migration failure, backup restore, incompatible versions,
+   and health-triggered rollback, but those cases still require real-wrapper replay.
 4. Integrating the proven current-user/SYSTEM directory ACL and traversal/reparse
    rejection into each finalist, then measuring Windows Job Object versus parent
    polling, sleep/resume, sign-out, shutdown, roaming profiles, Remote Desktop, and
    locked-workstation behavior.
-5. Testing multiple windows, rapid double launch, stale readiness state, port
-   collision, IPv6 loopback, local proxy settings, and firewall policy restrictions.
+5. Testing multiple windows, IPv6 loopback, local proxy settings, and firewall policy
+   restrictions. Rapid competing launch and stale-readiness replacement are proven;
+   the operating-system-assigned port design avoids selecting a colliding fixed port.
 6. Threat-reviewing the selected host bridge and documenting the accepted local
    adversary boundary in the Windows security design and follow-on ADR.
 
