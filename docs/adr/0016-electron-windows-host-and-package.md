@@ -145,6 +145,16 @@ volume. This further advances condition 3; physical-volume-full behavior, startu
 timeout/crash-loop policy, Job Object policy, and the broader Windows lifecycle
 matrix remain open.
 
+Run
+[`29560930136`](https://github.com/ApiaryLens/apiarylens/actions/runs/29560930136)
+then proved that both exact forms can terminate a child that misses a deterministic
+research readiness deadline, stop after a three-attempt pre-readiness crash budget,
+avoid false readiness and orphaned children, and recover the same directory only on
+an explicit retry. The 400 ms injected deadline is a test control, not a proposed
+production value. This closes the host mechanism subgate; production timeout/backoff
+values, recovery UX, Job Object policy, physical-volume-full behavior, and broader
+retail lifecycle evidence remain open.
+
 ## Proposed Decision
 
 Use **Electron** as the initial Windows Preview host. Use a **signed per-user
@@ -292,8 +302,10 @@ must replace it.
    stale-readiness recovery, clean shutdown, forced-write/WAL rollback, integrity,
    committed-state retention, and corrupt-startup rejection now pass in packaged
    and installed artifacts. Deterministic `SQLITE_FULL` rejection and actual Windows
-   ACL-denied startup also pass. Physical-volume-full behavior, startup timeout/crash
-   loops, Job Object policy, and broader Windows lifecycle behavior remain.
+   ACL-denied startup also pass. Bounded readiness timeout, a three-attempt
+   pre-readiness crash budget, and explicit-retry recovery pass in both exact forms.
+   Production timeout/backoff values and recovery UX, physical-volume-full behavior,
+   Job Object policy, and broader Windows lifecycle behavior remain.
 4. Integrate and replay the `WIN-005` DPAPI, rotation/crash, revocation, restore,
    sign-out, keep-data, and remove-all behavior through the actual main-process
    adapter. The proposed adapter is Electron `safeStorage`; Credential Manager is a

@@ -574,6 +574,32 @@ subgates. A physical-volume-full replay, startup timeout/crash-loop policy,
 sleep/resume, sign-out/shutdown, Job Object policy, and retail-device behavior remain
 open.
 
+Startup-failure follow-on run
+[`29560930136`](https://github.com/ApiaryLens/apiarylens/actions/runs/29560930136)
+at commit `40d1f508c94c3601b06422571e180e4bf1c34eab` replayed the exact
+packaged and clean-installed forms. The setup SHA-256 was
+`DA49B28C6327141D1B2380A06D6851048F20B890E4D95B250E3FBE6FE37C4413`.
+
+| Startup-failure check | Packaged | Clean installed |
+|---|---:|---:|
+| Delayed child exceeded the research readiness deadline | Exercised | Exercised |
+| Host terminated the timed-out child | Passed | Passed |
+| Timed-out child never published readiness | Passed | Passed |
+| Three pre-readiness crashes consumed the bounded retry budget | Passed | Passed |
+| No crashed attempt published readiness or remained running | Passed | Passed |
+| Explicit retry recovered the same directory | Passed | Passed |
+| Recovery shutdown removed readiness | Passed | Passed |
+| Existing 50-check API and lifecycle matrix | Passed | Passed |
+
+The probe deliberately uses a 400 ms research deadline against an injected 3-second
+startup delay so it does not pretend to select a production timeout from hosted-runner
+timing. It proves that the Electron host can bound readiness, terminate the child,
+cap automatic attempts at three, stop without an orphan or false-ready state, and
+recover only after an explicit retry. Production timeout/backoff values and final
+user-facing recovery messaging remain design/retail gates. Physical-volume-full,
+Job Object policy, sleep/resume, sign-out/shutdown, and retail-device behavior also
+remain open.
+
 ### Electron package-transition evidence
 
 Exact-artifact replay
@@ -947,9 +973,10 @@ implementations in parallel.
    clean shutdown, data lock, and orphan cleanup. Packaged and clean-installed
    single-instance, forced-parent-death, stale-readiness recovery, restart
    persistence, clean shutdown, forced-write/WAL recovery, deterministic
-   `SQLITE_FULL`, and ACL-denied startup now pass. Physical-volume-full behavior,
-   startup timeout/crash-loop policy, Job Object policy, and the broader Windows
-   lifecycle matrix remain open in the actual host.
+   `SQLITE_FULL`, ACL-denied startup, bounded readiness timeout, three-attempt crash
+   budget, and explicit-retry recovery now pass. Production timeout/backoff values,
+   recovery UX, physical-volume-full behavior, Job Object policy, and the broader
+   Windows lifecycle matrix remain open in the actual host.
 3. Verify Windows 11 and the chosen Windows 10 baseline in clean user profiles with
    no developer tools. Include a profile where WebView2 is absent or its updater is
    policy-disabled.

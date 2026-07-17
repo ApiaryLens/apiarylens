@@ -231,6 +231,19 @@ This closes deterministic database-full and ACL-denied-startup mechanics, but no
 physical-volume-full replay, startup-timeout/crash-loop policy, Job Object policy, or
 the broader retail Windows lifecycle.
 
+Startup-failure run
+[`29560930136`](https://github.com/ApiaryLens/apiarylens/actions/runs/29560930136)
+then proved bounded pre-readiness failure handling in the exact packaged and
+clean-installed hosts. An injected three-second startup delay exceeded a 400 ms
+research deadline; the host terminated the child without readiness or an orphan.
+Three injected exit-75 crashes consumed a three-attempt retry budget without
+publishing readiness, after which an explicit retry recovered and cleanly stopped the
+same directory. The exact setup SHA-256 was
+`DA49B28C6327141D1B2380A06D6851048F20B890E4D95B250E3FBE6FE37C4413`.
+The short deadline is a deterministic test control, not the selected production
+value. Production timeout/backoff values, recovery UX, Job Object policy, and retail
+Windows lifecycle behavior remain open.
+
 ## Windows path-security evidence
 
 GitHub Actions run
@@ -333,8 +346,9 @@ preserve the intended behavior. Those are integration and lifecycle gates.
    storage-fault cases still require real-host replay. Forced termination during a
    real database write, WAL rollback, integrity, committed-state retention, corrupt
    startup, deterministic `SQLITE_FULL`, and ACL-denied startup now pass in packaged
-   and installed Electron artifacts. Physical-volume-full behavior, startup timeout,
-   and crash-loop policy remain.
+   and installed Electron artifacts. Bounded readiness timeout, a three-attempt crash
+   budget, and explicit-retry recovery now pass as well. Production timing/backoff
+   values, recovery UX, and physical-volume-full behavior remain.
 4. Integrating the proven current-user/SYSTEM directory ACL and traversal/reparse
    rejection into each finalist, then measuring Windows Job Object versus parent
    polling, sleep/resume, sign-out, shutdown, roaming profiles, Remote Desktop, and
