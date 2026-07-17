@@ -2,12 +2,23 @@ name: WIN-003 test-signed installers research
 
 on:
   workflow_dispatch:
+    inputs:
+      candidate:
+        description: Candidate to build
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - electron
+          - tauri
 
 permissions:
   contents: read
 
 jobs:
   electron-test-signed:
+    if: inputs.candidate == 'both' || inputs.candidate == 'electron'
     name: Electron ephemeral test-signed package
     runs-on: windows-latest
     timeout-minutes: 35
@@ -42,6 +53,7 @@ jobs:
           retention-days: 14
 
   tauri-test-signed:
+    if: inputs.candidate == 'both' || inputs.candidate == 'tauri'
     name: Tauri ephemeral test-signed package
     runs-on: windows-latest
     timeout-minutes: 45
