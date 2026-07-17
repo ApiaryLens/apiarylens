@@ -1,0 +1,50 @@
+name: WIN-003 package update replay
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Package update workflow run containing both signed versions
+        required: true
+        type: string
+      candidate:
+        description: Candidate transition lifecycle to replay
+        required: true
+        type: choice
+        options:
+          - electron
+          - tauri
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  replay:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download exact signed version pair
+        uses: actions/download-artifact@v4
+        with:
+          name: win003-${{ inputs.candidate }}-update-evidence
+          path: ${{ runner.temp }}/signed-input
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.source_run_id }}
+      - name: Replay package transitions
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003PackageUpdateProbe.ps1
+          -Candidate "${{ inputs.candidate }}"
+          -BaselineEvidenceDirectory "$env:RUNNER_TEMP/signed-input/${{ inputs.candidate }}-baseline"
+          -UpgradeEvidenceDirectory "$env:RUNNER_TEMP/signed-input/${{ inputs.candidate }}-upgrade"
+          -OutputDirectory "$env:RUNNER_TEMP/update-replay"
+      - name: Upload replay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: win003-${{ inputs.candidate }}-update-replay
+          path: ${{ runner.temp }}/update-replay
+          if-no-files-found: warn
+          retention-days: 14

@@ -87,17 +87,17 @@ function Get-InstalledSnapshot {
     } else {
         $null
     }
-    $host = if ($installDirectory -and (Test-Path -LiteralPath $installDirectory)) {
+    $installedHost = if ($installDirectory -and (Test-Path -LiteralPath $installDirectory)) {
         $hostName = if ($Candidate -eq 'electron') { 'ApiaryLensElectronResearch.exe' } else { 'apiarylens_win003_tauri.exe' }
         Get-ChildItem -LiteralPath $installDirectory -Recurse -Filter $hostName -ErrorAction SilentlyContinue |
             Sort-Object FullName -Descending |
             Select-Object -First 1
     } else { $null }
-    $signature = if ($host) { Get-AuthenticodeSignature -LiteralPath $host.FullName } else { $null }
+    $signature = if ($installedHost) { Get-AuthenticodeSignature -LiteralPath $installedHost.FullName } else { $null }
     return [ordered]@{
         displayVersion = if ($entry.PSObject.Properties.Name -contains 'DisplayVersion') { [string] $entry.DisplayVersion } else { $null }
         installDirectory = $installDirectory
-        hostPath = if ($host) { $host.FullName } else { $null }
+        hostPath = if ($installedHost) { $installedHost.FullName } else { $null }
         hostSignerThumbprint = if ($signature -and $signature.SignerCertificate) { $signature.SignerCertificate.Thumbprint } else { $null }
         appDirectories = if ($Candidate -eq 'electron' -and $installDirectory -and (Test-Path -LiteralPath $installDirectory)) {
             @(Get-ChildItem -LiteralPath $installDirectory -Directory -Filter 'app-*' | Select-Object -ExpandProperty Name)
