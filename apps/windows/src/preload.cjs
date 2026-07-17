@@ -7,5 +7,7 @@ contextBridge.exposeInMainWorld(
     bootstrapOwner: (input) => ipcRenderer.invoke('apiarylens:bootstrap-owner', input),
     createStandaloneBackup: () => ipcRenderer.invoke('apiarylens:create-standalone-backup'),
     restoreStandaloneBackup: () => ipcRenderer.invoke('apiarylens:restore-standalone-backup'),
+    migrateStandaloneToConnected: () =>
+      ipcRenderer.invoke('apiarylens:migrate-standalone-to-connected'),
   }),
 );

@@ -366,8 +366,10 @@ export function createApi(options: ApiOptions) {
       const parsed = syncPushRequestSchema.safeParse(await c.req.json().catch(() => undefined));
       if (!parsed.success) return error(c, 400, 'validation_failed', 'The sync batch is invalid');
       const session = c.get('session');
-      const results = parsed.data.operations.map((operation) =>
-        store.applyOperation(session.organization.id, session.user.id, operation),
+      const results = store.applyOperations(
+        session.organization.id,
+        session.user.id,
+        parsed.data.operations,
       );
       for (const [index, operation] of parsed.data.operations.entries()) {
         if (

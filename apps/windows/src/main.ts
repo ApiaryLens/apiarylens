@@ -13,12 +13,14 @@ import {
 } from 'electron';
 import { bootstrapRequestSchema, createBuildIdentity } from '@apiarylens/contracts';
 import { SqliteStore } from '@apiarylens/database';
+import { FilesystemMediaStore } from '@apiarylens/media';
 import {
   desktopBridgeVersion,
   type DesktopBackupResult,
   type DesktopBootstrapSession,
   type DesktopRestoreResult,
   type DesktopRuntimeStatus,
+  type DesktopMigrationResult,
 } from './contracts.js';
 import { createWindowsDataPaths } from './paths.js';
 import { loadOrCreateStandaloneSecrets } from './protected-secrets.js';
@@ -49,6 +51,12 @@ import {
   runHeadlessLifecycle,
   writeHeadlessLifecycleEvidence,
 } from './headless-lifecycle.js';
+import {
+  HttpMigrationTarget,
+  SqliteMigrationJournal,
+  recoverAuthorityCutover,
+  runStandaloneToConnectedMigration,
+} from './standalone-migration.js';
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -120,6 +128,7 @@ async function start(): Promise<void> {
   app.setAccessibilitySupportEnabled(true);
   const userData = app.getPath('userData');
   mkdirSync(userData, { recursive: true, mode: 0o700 });
+  const paths = createWindowsDataPaths(userData);
   const lifecycleRequestArgument = process.argv.find((argument) =>
     argument.startsWith('--desktop-lifecycle-request='),
   );
@@ -150,13 +159,20 @@ async function start(): Promise<void> {
       ? undefined
       : loadSavedConnectionProfile(profilePath);
   if (connection) {
+    if (connection.migration) {
+      const migrationJournal = new SqliteMigrationJournal(paths.migrationJournal);
+      try {
+        recoverAuthorityCutover(migrationJournal, connection);
+      } finally {
+        migrationJournal.close();
+      }
+    }
     // Remote content receives no preload or IPC bridge. Authentication cookies,
     // IndexedDB, service workers, and the offline outbox stay in this isolated partition.
     primaryWindow = secureWindow(connection.backendUrl, true, 'connected');
     await primaryWindow.loadURL(connection.backendUrl);
     return;
   }
-  const paths = createWindowsDataPaths(app.getPath('userData'));
   const secrets = loadOrCreateStandaloneSecrets(paths.protectedSecrets, safeStorage);
   supervisor = new ServiceSupervisor({
     executable: process.execPath,
@@ -257,7 +273,9 @@ async function start(): Promise<void> {
       throw new Error('Untrusted renderer requested a desktop operation');
     }
   };
-  const assertOwnerSession = async (event: Electron.IpcMainInvokeEvent): Promise<void> => {
+  const assertOwnerSession = async (
+    event: Electron.IpcMainInvokeEvent,
+  ): Promise<{ organizationId: string }> => {
     assertTrustedSender(event);
     const active = supervisor?.running;
     if (!active) throw new Error('Standalone service is unavailable');
@@ -268,10 +286,15 @@ async function start(): Promise<void> {
       },
     });
     const body = (await response.json().catch(() => undefined)) as
-      { membership?: { role?: unknown } } | undefined;
-    if (!response.ok || body?.membership?.role !== 'owner') {
+      { membership?: { role?: unknown }; organization?: { id?: unknown } } | undefined;
+    if (
+      !response.ok ||
+      body?.membership?.role !== 'owner' ||
+      typeof body.organization?.id !== 'string'
+    ) {
       throw new Error('A signed-in family owner is required for this recovery operation');
     }
+    return { organizationId: body.organization.id };
   };
   const reloadAfterMaintenance = async (): Promise<void> => {
     if (!supervisor) throw new Error('Standalone host is unavailable');
@@ -315,6 +338,104 @@ async function start(): Promise<void> {
         throw new Error('message' in body && body.message ? body.message : 'Owner setup failed');
       }
       return body as DesktopBootstrapSession;
+    },
+  );
+  ipcMain.handle(
+    'apiarylens:migrate-standalone-to-connected',
+    async (event): Promise<DesktopMigrationResult> => {
+      const owner = await assertOwnerSession(event);
+      if (!primaryWindow || !supervisor) throw new Error('Standalone host is unavailable');
+      if (desktopMaintenanceRunning)
+        throw new Error('Another recovery operation is already running');
+      const selected = await dialog.showOpenDialog(primaryWindow, {
+        title: 'Select the Scout Bee connection profile',
+        filters: [{ name: 'ApiaryLens connection profile', extensions: ['json'] }],
+        properties: ['openFile'],
+      });
+      const selectedPath = selected.filePaths[0];
+      if (selected.canceled || !selectedPath) return { status: 'canceled' };
+      const profile = readConnectionProfile(selectedPath);
+      await verifyConnectedBackend(profile);
+      const confirmation = await dialog.showMessageBox(primaryWindow, {
+        type: 'warning',
+        title: 'Connect this Windows apiary?',
+        message: 'ApiaryLens will copy and verify your standalone records before connecting.',
+        detail:
+          'Your standalone database remains intact and a verified recovery backup is retained. Sign in as the target family owner in the next window. The authority switch occurs only after every record and photo reconciles.',
+        buttons: ['Cancel', 'Sign in and migrate'],
+        defaultId: 0,
+        cancelId: 0,
+        noLink: true,
+      });
+      if (confirmation.response !== 1) return { status: 'canceled' };
+
+      const authWindow = secureWindow(profile.backendUrl, false, 'connected');
+      authWindow.setParentWindow(primaryWindow);
+      authWindow.setTitle('Sign in to the ApiaryLens migration target');
+      await authWindow.loadURL(profile.backendUrl);
+      authWindow.show();
+      await new Promise<void>((resolveClosed) => authWindow.once('closed', resolveClosed));
+      const connectedSession = session.fromPartition('persist:apiarylens-windows-connected');
+      const target = new HttpMigrationTarget(
+        profile,
+        connectedSession.fetch.bind(connectedSession) as typeof fetch,
+      );
+      await target.preflight();
+
+      desktopMaintenanceRunning = true;
+      const stamp = new Date().toISOString().replaceAll(':', '-').replaceAll('.', '-');
+      const backupPath = join(paths.backups, `apiarylens-pre-connect-${stamp}.albackup`);
+      let source: SqliteStore | undefined;
+      let journal: SqliteMigrationJournal | undefined;
+      try {
+        await supervisor.stop();
+        source = new SqliteStore(paths.database, { authRootSecret: secrets.authRootSecret });
+        const sourceMedia = new FilesystemMediaStore(paths.media);
+        journal = new SqliteMigrationJournal(paths.migrationJournal);
+        const identity = createBuildIdentity({ deploymentProfile: 'development' });
+        const completion = await runStandaloneToConnectedMigration({
+          journal,
+          sourceOrganizationId: owner.organizationId,
+          source,
+          sourceMedia,
+          target,
+          profile,
+          backupPath,
+          createVerifiedBackup: () => {
+            createStandaloneBackup(paths, backupPath, {
+              productVersion: identity.productVersion,
+              databaseMigration: identity.databaseMigration,
+            });
+          },
+          cutover: (connectedProfile) => saveConnectionProfile(profilePath, connectedProfile),
+        });
+        await dialog.showMessageBox(primaryWindow, {
+          type: 'info',
+          title: 'ApiaryLens is connected',
+          message: 'Every standalone record and photo was verified before connecting.',
+          detail: `Migration ${completion.migrationId} copied ${completion.recordCount} records and ${completion.mediaCount} media files. Recovery backup: ${backupPath}`,
+        });
+        shutdownStarted = true;
+        app.relaunch();
+        app.exit(0);
+        return {
+          status: 'connected',
+          migrationId: completion.migrationId,
+          records: completion.recordCount,
+          media: completion.mediaCount,
+          backupPath,
+        };
+      } catch (error) {
+        removeConnectionProfile(profilePath);
+        await reloadAfterMaintenance();
+        throw new Error(
+          `Connection migration stopped; standalone data remains authoritative: ${error instanceof Error ? error.message : 'unknown migration error'}`,
+        );
+      } finally {
+        source?.close();
+        journal?.close();
+        desktopMaintenanceRunning = false;
+      }
     },
   );
   ipcMain.handle(

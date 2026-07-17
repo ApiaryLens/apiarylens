@@ -10,6 +10,8 @@ export type WindowsDataPaths = {
   protectedSecrets: string;
   logs: string;
   backups: string;
+  migration: string;
+  migrationJournal: string;
 };
 
 export function createWindowsDataPaths(userDataPath: string): WindowsDataPaths {
@@ -26,6 +28,8 @@ export function createWindowsDataPaths(userDataPath: string): WindowsDataPaths {
     protectedSecrets: join(root, 'credentials', 'standalone.v1.bin'),
     logs: join(root, 'logs'),
     backups: join(root, 'backups'),
+    migration: join(root, 'migration'),
+    migrationJournal: join(root, 'migration', 'standalone-to-connected.v1.sqlite'),
   } satisfies WindowsDataPaths;
 
   for (const directory of [
@@ -36,6 +40,7 @@ export function createWindowsDataPaths(userDataPath: string): WindowsDataPaths {
     join(root, 'credentials'),
     paths.logs,
     paths.backups,
+    paths.migration,
   ]) {
     mkdirSync(directory, { recursive: true, mode: 0o700 });
   }

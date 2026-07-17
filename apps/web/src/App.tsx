@@ -2972,6 +2972,33 @@ function VersionView({
                 >
                   Restore Windows backup
                 </button>
+                <button
+                  className="button secondary"
+                  disabled={backupWorking}
+                  onClick={() => {
+                    setBackupWorking(true);
+                    setBackupMessage('');
+                    void api
+                      .migrateStandaloneToConnected()
+                      .then((result) => {
+                        if (result.status === 'connected') {
+                          setBackupMessage(
+                            `Verified ${result.records} records and ${result.media} media files. Restarting in connected mode…`,
+                          );
+                        }
+                      })
+                      .catch((caught: unknown) =>
+                        setBackupMessage(
+                          caught instanceof Error
+                            ? caught.message
+                            : 'Connection migration could not be completed.',
+                        ),
+                      )
+                      .finally(() => setBackupWorking(false));
+                  }}
+                >
+                  Connect with Scout Bee profile
+                </button>
               </>
             )}
             <a className="button primary link-button" href="/api/v1/export/full">

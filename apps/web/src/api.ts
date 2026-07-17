@@ -22,6 +22,16 @@ type DesktopBootstrapBridge = {
         recoveryBackupPath: string;
       }
   >;
+  migrateStandaloneToConnected?(): Promise<
+    | { status: 'canceled' }
+    | {
+        status: 'connected';
+        migrationId: string;
+        records: number;
+        media: number;
+        backupPath: string;
+      }
+  >;
 };
 
 function desktopBridge(): DesktopBootstrapBridge | undefined {
@@ -59,6 +69,12 @@ export const api = {
     const restore = desktopBridge()?.restoreStandaloneBackup;
     if (!restore) throw new Error('Standalone restore is available only in ApiaryLens for Windows');
     return restore();
+  },
+  migrateStandaloneToConnected: async () => {
+    const migrate = desktopBridge()?.migrateStandaloneToConnected;
+    if (!migrate)
+      throw new Error('Standalone migration is available only in ApiaryLens for Windows');
+    return migrate();
   },
   bootstrapStatus: async () => {
     const status = await json<{ available: boolean; requiresToken?: boolean }>(

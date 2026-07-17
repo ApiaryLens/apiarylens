@@ -18,6 +18,13 @@ export type WindowsConnectionProfile = {
     syncContract: number;
     databaseMigration: string;
   };
+  migration?: {
+    migrationId: string;
+    sourceOrganizationId: string;
+    targetOrganizationId: string;
+    inventorySha256: string;
+    cutoverCursor: string;
+  };
 };
 
 const rootKeys = new Set([
@@ -31,12 +38,20 @@ const rootKeys = new Set([
   'provisioningSource',
   'createdAt',
   'compatibility',
+  'migration',
 ]);
 const compatibilityKeys = new Set([
   'productVersion',
   'apiContract',
   'syncContract',
   'databaseMigration',
+]);
+const migrationKeys = new Set([
+  'migrationId',
+  'sourceOrganizationId',
+  'targetOrganizationId',
+  'inventorySha256',
+  'cutoverCursor',
 ]);
 
 function hasOnlyKeys(value: Record<string, unknown>, allowed: ReadonlySet<string>): boolean {
@@ -55,6 +70,16 @@ export function parseConnectionProfile(value: unknown): WindowsConnectionProfile
   const compatible = compatibility as Record<string, unknown>;
   if (!hasOnlyKeys(compatible, compatibilityKeys))
     throw new Error('Connection compatibility contains unsupported fields');
+  const migration = profile.migration;
+  if (
+    migration !== undefined &&
+    (!migration ||
+      typeof migration !== 'object' ||
+      Array.isArray(migration) ||
+      !hasOnlyKeys(migration as Record<string, unknown>, migrationKeys))
+  )
+    throw new Error('Connection migration evidence is invalid');
+  const migrationEvidence = migration as Record<string, unknown> | undefined;
   const backend = new URL(String(profile.backendUrl ?? ''));
   if (
     backend.protocol !== 'https:' ||
@@ -85,7 +110,18 @@ export function parseConnectionProfile(value: unknown): WindowsConnectionProfile
     typeof compatible.productVersion !== 'string' ||
     typeof compatible.apiContract !== 'string' ||
     !Number.isSafeInteger(compatible.syncContract) ||
-    typeof compatible.databaseMigration !== 'string'
+    typeof compatible.databaseMigration !== 'string' ||
+    (migrationEvidence !== undefined &&
+      (typeof migrationEvidence.migrationId !== 'string' ||
+        !/^[0-9a-f-]{36}$/i.test(migrationEvidence.migrationId) ||
+        typeof migrationEvidence.sourceOrganizationId !== 'string' ||
+        !/^[0-9a-f-]{36}$/i.test(migrationEvidence.sourceOrganizationId) ||
+        typeof migrationEvidence.targetOrganizationId !== 'string' ||
+        !/^[0-9a-f-]{36}$/i.test(migrationEvidence.targetOrganizationId) ||
+        typeof migrationEvidence.inventorySha256 !== 'string' ||
+        !/^[0-9a-f]{64}$/.test(migrationEvidence.inventorySha256) ||
+        typeof migrationEvidence.cutoverCursor !== 'string' ||
+        migrationEvidence.cutoverCursor.length < 1))
   )
     throw new Error('Connection profile is invalid or incompatible');
   return {
@@ -104,6 +140,17 @@ export function parseConnectionProfile(value: unknown): WindowsConnectionProfile
       syncContract: Number(compatible.syncContract),
       databaseMigration: compatible.databaseMigration,
     },
+    ...(migrationEvidence
+      ? {
+          migration: {
+            migrationId: migrationEvidence.migrationId as string,
+            sourceOrganizationId: migrationEvidence.sourceOrganizationId as string,
+            targetOrganizationId: migrationEvidence.targetOrganizationId as string,
+            inventorySha256: migrationEvidence.inventorySha256 as string,
+            cutoverCursor: migrationEvidence.cutoverCursor as string,
+          },
+        }
+      : {}),
   };
 }
 

@@ -31,11 +31,22 @@ export type DesktopRestoreResult =
       recoveryBackupPath: string;
     };
 
+export type DesktopMigrationResult =
+  | { status: 'canceled' }
+  | {
+      status: 'connected';
+      migrationId: string;
+      records: number;
+      media: number;
+      backupPath: string;
+    };
+
 export type DesktopBridge = {
   runtimeStatus(): Promise<DesktopRuntimeStatus>;
   bootstrapOwner(input: DesktopBootstrapInput): Promise<DesktopBootstrapSession>;
   createStandaloneBackup(): Promise<DesktopBackupResult>;
   restoreStandaloneBackup(): Promise<DesktopRestoreResult>;
+  migrateStandaloneToConnected(): Promise<DesktopMigrationResult>;
 };
 
 declare global {

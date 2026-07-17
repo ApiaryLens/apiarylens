@@ -745,6 +745,34 @@ export class SqliteStore {
     userId: string,
     operation: SyncOperation,
   ): SyncOperationResult {
+    return this.transaction(() =>
+      this.applyOperationInTransaction(organizationId, userId, operation),
+    );
+  }
+
+  applyOperations(
+    organizationId: string,
+    userId: string,
+    operations: readonly SyncOperation[],
+  ): SyncOperationResult[] {
+    if (operations.length < 1 || operations.length > 100) {
+      throw new StoreError(
+        'batch_size_invalid',
+        'A mutation batch must contain 1 to 100 operations',
+      );
+    }
+    return this.transaction(() =>
+      operations.map((operation) =>
+        this.applyOperationInTransaction(organizationId, userId, operation),
+      ),
+    );
+  }
+
+  private applyOperationInTransaction(
+    organizationId: string,
+    userId: string,
+    operation: SyncOperation,
+  ): SyncOperationResult {
     const fingerprint = hash(JSON.stringify(operation));
     const previous = this.database
       .prepare(
@@ -766,7 +794,7 @@ export class SqliteStore {
       return { ...stored, status: 'duplicate' };
     }
 
-    const result = this.transaction(() => this.applyNewOperation(organizationId, operation));
+    const result = this.applyNewOperation(organizationId, operation);
     this.database
       .prepare(
         `INSERT INTO idempotency(
