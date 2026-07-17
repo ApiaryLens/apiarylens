@@ -1615,7 +1615,36 @@ $bridgePassed =
     -not $bridgeResult.credentialSecretPresentOutsideMain -and
     $bridgeResult.localStorageEntryCount -eq 0 -and
     $bridgeResult.sessionStorageEntryCount -eq 0
-if (-not $bridgePassed) { throw 'Packaged Electron bridge isolation acceptance checks failed' }
+if (-not $bridgePassed) {
+    [ordered]@{
+        measuredAtUtc = [DateTimeOffset]::UtcNow.ToString('o')
+        sourceCommit = $env:GITHUB_SHA
+        sourceRunId = $env:GITHUB_RUN_ID
+        nativeAccessibilitySupportEnabled = $bridgeResult.nativeAccessibilitySupportEnabled
+        hostZoomReflowPassed = $bridgeResult.hostZoomReflowPassed
+        hostZoomProfiles = @($bridgeResult.hostZoomProfiles)
+        bridgeInvocationCount = $bridgeResult.bridgeInvocationCount
+        rendererToMainArgumentCount = $bridgeResult.rendererToMainArgumentCount
+        trustedWindowsShareOneService = $bridgeResult.trustedWindowsShareOneService
+        ipv6LoopbackRejected = $bridgeResult.ipv6LoopbackRejected
+        environmentProxyDoesNotInterceptLoopbackFetch = $bridgeResult.environmentProxyDoesNotInterceptLoopbackFetch
+        untrustedSenderRejected = $bridgeResult.untrustedSenderRejected
+        tokenPresentInTestedSurfaces =
+            $bridgeResult.tokenPresentInRendererSnapshot -or
+            $bridgeResult.tokenPresentInConsoleMessages -or
+            $bridgeResult.tokenPresentInArguments -or
+            $bridgeResult.tokenPresentInServiceArguments -or
+            $bridgeResult.tokenPresentInReadinessOrServiceOutput
+        apiAcceptancePassed = $bridgeResult.apiAcceptance.passed
+        forcedWriteRecoveryPassed =
+            $bridgeResult.forcedWriteRecovery.forcedExitWasNonZero -and
+            $bridgeResult.forcedWriteRecovery.integrityPassed -and
+            $bridgeResult.forcedWriteRecovery.committedMarkerRetained -and
+            $bridgeResult.forcedWriteRecovery.interruptedMarkerRolledBack
+        credentialsOrSecretValuesRecorded = $false
+    } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $outputPath 'packaged-bridge-acceptance-failure.json') -Encoding utf8NoBOM
+    throw 'Packaged Electron bridge isolation acceptance checks failed'
+}
 
 $readOnlyLab = Join-Path ([IO.Path]::GetTempPath()) "apiarylens-win003-readonly-$([guid]::NewGuid().ToString('N'))"
 $readOnlyProbePath = Join-Path $runnerTemp 'win003-electron-package-readonly-probe.json'
