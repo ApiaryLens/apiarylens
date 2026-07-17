@@ -1,4 +1,5 @@
-const CACHE = 'apiarylens-shell-0.1.0-preview.1';
+const CACHE_PREFIX = 'apiarylens-shell-';
+const CACHE = `${CACHE_PREFIX}0.1.0-preview.1-r2`;
 const BASE = new URL('./', self.registration.scope);
 const SHELL = [
   BASE.pathname,
@@ -9,10 +10,11 @@ const SHELL = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE).then(async (cache) => {
-      const shellResponse = await fetch(BASE.pathname);
+      const shellResponse = await fetch(BASE.pathname, { cache: 'reload' });
+      if (!shellResponse.ok) throw new Error(`Shell fetch failed (${shellResponse.status})`);
       const shell = await shellResponse.clone().text();
       const assets = [...shell.matchAll(/(?:src|href)=["']([^"']+)["']/g)]
-        .map((match) => new URL(match[1], BASE).pathname)
+        .map((match) => new URL(match[1], shellResponse.url || BASE).pathname)
         .filter((pathname) => pathname.startsWith(BASE.pathname));
       await cache.addAll([...new Set([...SHELL, ...assets])]);
     }),
@@ -25,11 +27,18 @@ self.addEventListener('message', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))),
-      ),
+    Promise.all([
+      caches
+        .keys()
+        .then((keys) =>
+          Promise.all(
+            keys
+              .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE)
+              .map((key) => caches.delete(key)),
+          ),
+        ),
+      self.clients.claim(),
+    ]),
   );
 });
 
@@ -38,9 +47,16 @@ self.addEventListener('fetch', (event) => {
     return;
   event.respondWith(
     fetch(event.request)
-      .then((response) => {
+      .then(async (response) => {
+        if (!response.ok && event.request.mode === 'navigate') {
+          const cachedShell =
+            (await caches.match(BASE.pathname)) ??
+            (await caches.match(new URL('index.html', BASE).pathname));
+          if (cachedShell) return cachedShell;
+        }
+        if (!response.ok) return response;
         const copy = response.clone();
-        caches.open(CACHE).then((cache) => cache.put(event.request, copy));
+        await caches.open(CACHE).then((cache) => cache.put(event.request, copy));
         return response;
       })
       .catch(() =>
@@ -52,7 +68,10 @@ self.addEventListener('fetch', (event) => {
               caches.match(new URL('index.html', BASE).pathname)
             );
           }
-          return undefined;
+          return new Response('Offline resource unavailable', {
+            status: 504,
+            headers: { 'content-type': 'text/plain; charset=utf-8' },
+          });
         }),
       ),
   );

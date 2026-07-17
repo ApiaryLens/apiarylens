@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { createBuildIdentity, type BuildIdentity, type SessionView } from '@apiarylens/contracts';
 import { api, type BootstrapSession } from './api.js';
@@ -7,14 +7,18 @@ import {
   cachedSession,
   clearLocalWorkspace,
   db,
+  isRetryableSyncError,
+  LOCAL_CHANGE_EVENT,
   queueCreate,
   queueDelete,
   queueUpdate,
   resolveConflict,
+  requiresSessionRefresh,
   stageImage,
   synchronize,
   type LocalResource,
 } from './db.js';
+import { OnlineSyncScheduler, type SyncTrigger } from './sync-scheduler.js';
 
 type Page = 'dashboard' | 'apiaries' | 'hives' | 'inspections' | 'care' | 'version';
 type ActiveSession = Omit<SessionView, 'csrfToken'> & { csrfToken: string | undefined };
@@ -38,6 +42,8 @@ export function App() {
   const [syncing, setSyncing] = useState(false);
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [updateRegistration, setUpdateRegistration] = useState<ServiceWorkerRegistration>();
+  const sessionRef = useRef<ActiveSession | undefined>(undefined);
+  const schedulerRef = useRef<OnlineSyncScheduler | undefined>(undefined);
   const pendingWork = useLiveQuery(
     async () => {
       const [operations, media] = await Promise.all([
@@ -51,61 +57,110 @@ export function App() {
   );
 
   useEffect(() => {
+    const syncNotice = (trigger: SyncTrigger) => {
+      if (trigger === 'save') return 'Saved and synchronized.';
+      if (trigger === 'reconnect') return 'Reconnected and synchronized.';
+      if (trigger === 'retry') return 'Connection restored and synchronization complete.';
+      return 'Synchronization complete.';
+    };
+    const scheduler = new OnlineSyncScheduler({
+      isOnline: () => navigator.onLine,
+      synchronize: async (signal) => {
+        let active = sessionRef.current;
+        if (!active?.csrfToken) {
+          const refreshed = await api.session();
+          signal.throwIfAborted();
+          await cacheSession(refreshed);
+          active = refreshed;
+          sessionRef.current = refreshed;
+          setSession(refreshed);
+        }
+        const csrfToken = active.csrfToken;
+        if (!csrfToken) throw new Error('Reconnect before synchronizing.');
+        try {
+          await synchronize(active.organization.id, csrfToken, signal);
+        } catch (error) {
+          if (!requiresSessionRefresh(error)) throw error;
+          const refreshed = await api.session();
+          signal.throwIfAborted();
+          await cacheSession(refreshed);
+          sessionRef.current = refreshed;
+          setSession(refreshed);
+          await synchronize(refreshed.organization.id, refreshed.csrfToken, signal);
+        }
+      },
+      shouldRetry: isRetryableSyncError,
+      onStart: () => setSyncing(true),
+      onSuccess: (trigger) => {
+        setSyncing(false);
+        setNotice(syncNotice(trigger));
+      },
+      onError: (error) => {
+        setSyncing(false);
+        setNotice(
+          isRetryableSyncError(error)
+            ? 'Your work is saved on this device. Synchronization will retry automatically.'
+            : error instanceof Error
+              ? error.message
+              : 'Synchronization needs attention.',
+        );
+      },
+      onCanceled: () => setSyncing(false),
+    });
+    schedulerRef.current = scheduler;
     const online = () => {
       setOffline(false);
-      void (async () => {
-        let lastError: unknown;
-        for (let attempt = 0; attempt < 3; attempt += 1) {
-          try {
-            if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
-            const active = await api.session();
-            await cacheSession(active);
-            setSession(active);
-            await synchronize(active.organization.id, active.csrfToken);
-            setNotice('Reconnected and synchronized.');
-            return;
-          } catch (error) {
-            lastError = error;
-          }
-        }
-        setNotice(
-          lastError instanceof Error
-            ? `Reconnected, but synchronization failed: ${lastError.message}`
-            : 'Reconnected, but synchronization failed. Tap Sync now to retry.',
-        );
-      })();
+      void scheduler.request('reconnect');
     };
     const offlineHandler = () => setOffline(true);
+    const resume = () => {
+      if (document.visibilityState === 'visible') void scheduler.request('resume');
+    };
+    const open = () => void scheduler.request('open');
+    const localChange = () => void scheduler.request('save');
     window.addEventListener('online', online);
     window.addEventListener('offline', offlineHandler);
+    window.addEventListener('pageshow', open);
+    window.addEventListener(LOCAL_CHANGE_EVENT, localChange);
+    document.addEventListener('visibilitychange', resume);
     const updateReady = (event: Event) =>
       setUpdateRegistration((event as CustomEvent<ServiceWorkerRegistration>).detail);
     window.addEventListener('apiarylens:update-ready', updateReady);
-    void initialize();
+    void initialize(scheduler);
     return () => {
+      scheduler.stop();
+      schedulerRef.current = undefined;
       window.removeEventListener('online', online);
       window.removeEventListener('offline', offlineHandler);
+      window.removeEventListener('pageshow', open);
+      window.removeEventListener(LOCAL_CHANGE_EVENT, localChange);
+      document.removeEventListener('visibilitychange', resume);
       window.removeEventListener('apiarylens:update-ready', updateReady);
     };
   }, []);
 
-  async function initialize() {
+  async function initialize(scheduler: OnlineSyncScheduler) {
     try {
       if (new URLSearchParams(location.search).get('reset-demo') === '1') {
         await clearLocalWorkspace();
         history.replaceState(null, '', location.pathname);
       }
+      const cached = await cachedSession();
+      if (cached) {
+        const offlineSession = { ...cached, csrfToken: undefined };
+        sessionRef.current = offlineSession;
+        setSession(offlineSession);
+      }
+      if (!navigator.onLine) {
+        setOffline(true);
+        return;
+      }
       const active = await api.session();
       await cacheSession(active);
+      sessionRef.current = active;
       setSession(active);
-      if (navigator.onLine) {
-        await synchronize(active.organization.id, active.csrfToken).catch(() => {
-          setNotice('Your saved local work is ready. Use Sync now when the server is available.');
-        });
-      }
+      if (navigator.onLine) void scheduler.request('open');
     } catch {
-      const cached = await cachedSession();
-      if (cached) setSession({ ...cached, csrfToken: undefined });
       try {
         const status = await api.bootstrapStatus();
         setBootstrapAvailable(status.available);
@@ -120,33 +175,21 @@ export function App() {
 
   async function establish(active: SessionView | BootstrapSession) {
     await cacheSession(active);
+    sessionRef.current = active;
     setSession(active);
     if ('recoveryCodes' in active) setRecoveryCodes(active.recoveryCodes);
     setNotice('Workspace ready.');
+    void schedulerRef.current?.request('open');
   }
 
   async function sync() {
-    setSyncing(true);
-    try {
-      let active = session;
-      if (!active?.csrfToken) {
-        const refreshed = await api.session();
-        await cacheSession(refreshed);
-        active = refreshed;
-        setSession(refreshed);
-      }
-      if (!active?.csrfToken) throw new Error('Reconnect before synchronizing.');
-      await synchronize(active.organization.id, active.csrfToken);
-      setNotice('Synchronization complete.');
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Synchronization failed.');
-    } finally {
-      setSyncing(false);
-    }
+    await schedulerRef.current?.request('manual');
   }
 
   async function signOut() {
+    schedulerRef.current?.cancel();
     if (session?.csrfToken) await api.signOut(session.csrfToken);
+    sessionRef.current = undefined;
     setSession(undefined);
     setNotice('Signed out. Local records remain on this device until you clear them.');
   }
@@ -1431,7 +1474,8 @@ function MediaTile({
           <SyncBadge state={mediaSyncState} />
           {!mediaReady && !hasLocalPhoto && (
             <small>
-              Return to the device that captured this photo, reconnect, and tap Sync now.
+              Return to the device that captured this photo and reconnect. Upload retries
+              automatically; Sync now remains available for recovery.
             </small>
           )}
           {canWrite && (

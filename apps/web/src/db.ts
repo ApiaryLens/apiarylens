@@ -29,6 +29,7 @@ export interface LocalResource {
 
 export interface OutboxItem extends SyncOperation {
   key: string;
+  organizationId?: string;
   attempts: number;
   lastError?: string;
 }
@@ -45,6 +46,39 @@ export interface LocalMedia {
   thumbnail?: Blob;
   state: 'staged' | 'uploading' | 'ready' | 'failed';
   lastError?: string;
+}
+
+export const LOCAL_CHANGE_EVENT = 'apiarylens:local-change';
+
+export class SyncRequestError extends Error {
+  readonly retryable: boolean;
+
+  constructor(
+    operation: string,
+    readonly status: number,
+    message = `${operation} failed (${status})`,
+  ) {
+    super(message);
+    this.name = 'SyncRequestError';
+    this.retryable =
+      status === 401 || status === 403 || status === 408 || status === 429 || status >= 500;
+  }
+}
+
+export function isRetryableSyncError(error: unknown): boolean {
+  if (error instanceof SyncRequestError) return error.retryable;
+  if (error instanceof TypeError) return true;
+  if (error instanceof DOMException)
+    return error.name === 'AbortError' || error.name === 'NetworkError';
+  return Boolean((error as { retryable?: boolean } | null)?.retryable);
+}
+
+export function requiresSessionRefresh(error: unknown): boolean {
+  return error instanceof SyncRequestError && (error.status === 401 || error.status === 403);
+}
+
+function announceLocalChange(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(LOCAL_CHANGE_EVENT));
 }
 
 export class ApiaryLensDb extends Dexie {
@@ -74,6 +108,13 @@ export class ApiaryLensDb extends Dexie {
       resources:
         '&key, organizationId, entityType, syncState, updatedAt, [organizationId+entityType]',
       outbox: '&key, operationId, entityId, queuedAt',
+      settings: '&key',
+      media: '&id, organizationId, state',
+    });
+    this.version(4).stores({
+      resources:
+        '&key, organizationId, entityType, syncState, updatedAt, [organizationId+entityType]',
+      outbox: '&key, operationId, organizationId, entityId, queuedAt',
       settings: '&key',
       media: '&id, organizationId, state',
     });
@@ -135,8 +176,14 @@ export async function queueCreate(
       syncState: 'pending',
       data: payload,
     });
-    await db.outbox.put({ ...operation, key: operation.operationId, attempts: 0 });
+    await db.outbox.put({
+      ...operation,
+      key: operation.operationId,
+      organizationId,
+      attempts: 0,
+    });
   });
+  announceLocalChange();
   return id;
 }
 
@@ -146,19 +193,43 @@ export async function queueUpdate(
 ): Promise<void> {
   const payload = resourceFieldSchemas[record.entityType].parse({ ...record.data, ...fields });
   const timestamp = new Date().toISOString();
+  const operationClientId = await clientId();
   await db.transaction('rw', db.resources, db.outbox, async () => {
+    if (record.syncState === 'failed') {
+      const rejected = await db.outbox.where('entityId').equals(record.id).toArray();
+      await db.outbox.bulkDelete(rejected.map((item) => item.key));
+    }
     if (record.version === 0) {
-      const pendingCreate = await db.outbox
+      let pendingCreate = await db.outbox
         .where('entityId')
         .equals(record.id)
         .filter((item) => item.action === 'create')
         .first();
+      if (!pendingCreate && record.syncState === 'failed') {
+        const operation: SyncOperation = {
+          operationId: crypto.randomUUID(),
+          clientId: operationClientId,
+          entityType: record.entityType,
+          entityId: record.id,
+          action: 'create',
+          baseVersion: 0,
+          payload,
+          queuedAt: timestamp,
+        };
+        pendingCreate = {
+          ...operation,
+          key: operation.operationId,
+          organizationId: record.organizationId,
+          attempts: 0,
+        };
+        await db.outbox.put(pendingCreate);
+      }
       if (!pendingCreate) throw new Error('The local create operation is missing');
       await db.outbox.update(pendingCreate.key, { payload });
     } else {
       const operation: SyncOperation = {
         operationId: crypto.randomUUID(),
-        clientId: await clientId(),
+        clientId: operationClientId,
         entityType: record.entityType,
         entityId: record.id,
         action: 'update',
@@ -166,7 +237,12 @@ export async function queueUpdate(
         payload,
         queuedAt: timestamp,
       };
-      await db.outbox.put({ ...operation, key: operation.operationId, attempts: 0 });
+      await db.outbox.put({
+        ...operation,
+        key: operation.operationId,
+        organizationId: record.organizationId,
+        attempts: 0,
+      });
     }
     await db.resources.update(record.key, {
       data: payload,
@@ -174,6 +250,7 @@ export async function queueUpdate(
       syncState: 'pending',
     });
   });
+  announceLocalChange();
 }
 
 export async function queueDelete(record: LocalResource): Promise<void> {
@@ -197,10 +274,16 @@ export async function queueDelete(record: LocalResource): Promise<void> {
       queuedAt: new Date().toISOString(),
     };
     await db.outbox.bulkDelete(pending.map((item) => item.key));
-    await db.outbox.put({ ...operation, key: operation.operationId, attempts: 0 });
+    await db.outbox.put({
+      ...operation,
+      key: operation.operationId,
+      organizationId: record.organizationId,
+      attempts: 0,
+    });
     await db.resources.update(record.key, { syncState: 'pending', deletedAt: operation.queuedAt });
     if (record.entityType === 'mediaAsset') await db.media.delete(record.id);
   });
+  announceLocalChange();
 }
 
 export async function resolveConflict(
@@ -215,6 +298,7 @@ export async function resolveConflict(
       await db.resources.put(server);
       await db.outbox.bulkDelete(pending.map((item) => item.key));
     });
+    announceLocalChange();
     return;
   }
   const payload = resourceFieldSchemas[record.entityType].parse(record.conflict.clientValue);
@@ -231,7 +315,12 @@ export async function resolveConflict(
   };
   await db.transaction('rw', db.resources, db.outbox, async () => {
     await db.outbox.bulkDelete(pending.map((item) => item.key));
-    await db.outbox.put({ ...operation, key: operation.operationId, attempts: 0 });
+    await db.outbox.put({
+      ...operation,
+      key: operation.operationId,
+      organizationId: record.organizationId,
+      attempts: 0,
+    });
     await db.resources.put({
       ...server,
       data: payload,
@@ -239,6 +328,7 @@ export async function resolveConflict(
       syncState: 'pending',
     });
   });
+  announceLocalChange();
 }
 
 export async function pendingCount(): Promise<number> {
@@ -299,7 +389,12 @@ export async function stageImage(
       syncState: 'pending',
       data: payload,
     });
-    await db.outbox.put({ ...operation, key: operation.operationId, attempts: 0 });
+    await db.outbox.put({
+      ...operation,
+      key: operation.operationId,
+      organizationId,
+      attempts: 0,
+    });
     await db.media.put({
       id,
       organizationId,
@@ -308,11 +403,30 @@ export async function stageImage(
       state: 'staged',
     });
   });
+  announceLocalChange();
   return id;
 }
 
-export async function synchronize(organizationId: string, csrfToken: string): Promise<void> {
-  const batch = await db.outbox.orderBy('queuedAt').limit(100).toArray();
+export async function synchronize(
+  organizationId: string,
+  csrfToken: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  const candidates = await db.outbox.orderBy('queuedAt').toArray();
+  const batch: OutboxItem[] = [];
+  for (const item of candidates) {
+    // Older Preview databases did not persist organizationId on the outbox
+    // item. Resolve those operations through their organization-scoped local
+    // record instead of ever submitting another family's queued work.
+    const localRecord = await db.resources.get(
+      recordKey(organizationId, item.entityType, item.entityId),
+    );
+    const belongsToOrganization =
+      item.organizationId === organizationId ||
+      (item.organizationId === undefined && localRecord !== undefined);
+    if (belongsToOrganization && localRecord?.syncState !== 'failed') batch.push(item);
+    if (batch.length === 100) break;
+  }
   if (batch.length > 0) {
     await Promise.all(
       batch.map((item) =>
@@ -321,37 +435,51 @@ export async function synchronize(organizationId: string, csrfToken: string): Pr
         }),
       ),
     );
+    let results: SyncOperationResult[];
     try {
       const response = await fetch('/api/v1/sync/push', {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'content-type': 'application/json', 'x-csrf-token': csrfToken },
         body: JSON.stringify({ syncContractVersion: 1, operations: batch }),
+        ...(signal ? { signal } : {}),
       });
-      if (!response.ok) throw new Error(`Push failed (${response.status})`);
+      if (!response.ok) throw new SyncRequestError('Push', response.status);
       const body = (await response.json()) as { results: SyncOperationResult[] };
-      await applyPushResults(organizationId, body.results);
+      results = body.results;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Synchronization failed';
       await db.transaction('rw', db.resources, db.outbox, async () => {
         for (const item of batch) {
           await db.outbox.update(item.key, { attempts: item.attempts + 1, lastError: message });
           await db.resources.update(recordKey(organizationId, item.entityType, item.entityId), {
-            syncState: 'failed',
+            // A network, expired-session, throttling, or server outage leaves the
+            // durable operation safely queued. "failed" is reserved for a
+            // permanent server rejection that needs user attention.
+            syncState: isRetryableSyncError(error) ? 'pending' : 'failed',
           });
         }
       });
       throw error;
     }
+    const rejected = await applyPushResults(organizationId, results);
+    if (rejected > 0) {
+      throw new SyncRequestError(
+        'Push operation',
+        422,
+        `${rejected} saved item${rejected === 1 ? '' : 's'} need attention before synchronizing.`,
+      );
+    }
   }
 
-  await uploadStagedMedia(organizationId, csrfToken);
+  await uploadStagedMedia(organizationId, csrfToken, signal);
 
   const cursor = ((await db.settings.get('syncCursor'))?.value as string | undefined) ?? '0';
   const pull = await fetch(`/api/v1/sync/pull?cursor=${encodeURIComponent(cursor)}&limit=250`, {
     credentials: 'same-origin',
+    ...(signal ? { signal } : {}),
   });
-  if (!pull.ok) throw new Error(`Pull failed (${pull.status})`);
+  if (!pull.ok) throw new SyncRequestError('Pull', pull.status);
   const body = (await pull.json()) as {
     changes: Array<{
       entityType: ResourceType;
@@ -377,7 +505,11 @@ export async function synchronize(organizationId: string, csrfToken: string): Pr
   });
 }
 
-async function uploadStagedMedia(organizationId: string, csrfToken: string): Promise<void> {
+async function uploadStagedMedia(
+  organizationId: string,
+  csrfToken: string,
+  signal?: AbortSignal,
+): Promise<void> {
   const staged = await db.media
     .where('organizationId')
     .equals(organizationId)
@@ -391,11 +523,12 @@ async function uploadStagedMedia(organizationId: string, csrfToken: string): Pro
         credentials: 'same-origin',
         headers: { 'content-type': item.blob.type, 'x-csrf-token': csrfToken },
         body: item.blob,
+        ...(signal ? { signal } : {}),
       });
       if (!response.ok) {
         const detail = (await response.json().catch(() => undefined)) as
           { message?: string } | undefined;
-        throw new Error(detail?.message ?? `Image upload failed (${response.status})`);
+        throw new SyncRequestError('Image upload', response.status, detail?.message);
       }
       const value = (await response.json()) as Record<string, unknown>;
       if (item.thumbnail) {
@@ -404,13 +537,12 @@ async function uploadStagedMedia(organizationId: string, csrfToken: string): Pro
           credentials: 'same-origin',
           headers: { 'content-type': 'image/jpeg', 'x-csrf-token': csrfToken },
           body: item.thumbnail,
+          ...(signal ? { signal } : {}),
         });
         if (!thumbnailResponse.ok) {
           const detail = (await thumbnailResponse.json().catch(() => undefined)) as
             { message?: string } | undefined;
-          throw new Error(
-            detail?.message ?? `Thumbnail upload failed (${thumbnailResponse.status})`,
-          );
+          throw new SyncRequestError('Thumbnail upload', thumbnailResponse.status, detail?.message);
         }
       }
       await db.transaction('rw', db.media, db.resources, async () => {
@@ -430,7 +562,7 @@ async function uploadStagedMedia(organizationId: string, csrfToken: string): Pro
       });
     } catch (error) {
       await db.media.update(item.id, {
-        state: 'failed',
+        state: isRetryableSyncError(error) ? 'staged' : 'failed',
         lastError: error instanceof Error ? error.message : 'Image upload failed',
       });
       throw error;
@@ -494,7 +626,8 @@ function serverRecord(entityType: ResourceType, value: Record<string, unknown>):
 async function applyPushResults(
   organizationId: string,
   results: SyncOperationResult[],
-): Promise<void> {
+): Promise<number> {
+  let rejected = 0;
   await db.transaction('rw', db.resources, db.outbox, async () => {
     for (const result of results) {
       const key = recordKey(organizationId, result.entityType, result.entityId);
@@ -511,8 +644,17 @@ async function applyPushResults(
           await db.resources.update(key, { syncState: 'conflicted' });
         }
       } else {
+        rejected += 1;
         await db.resources.update(key, { syncState: 'failed' });
+        const operation = await db.outbox.get(result.operationId);
+        if (operation) {
+          await db.outbox.update(operation.key, {
+            attempts: operation.attempts + 1,
+            lastError: 'The server rejected this saved item.',
+          });
+        }
       }
     }
   });
+  return rejected;
 }

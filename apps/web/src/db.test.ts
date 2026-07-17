@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   clearLocalWorkspace,
   db,
@@ -8,10 +8,13 @@ import {
   queueUpdate,
   resolveConflict,
   stageImage,
+  synchronize,
 } from './db.js';
 
 describe('offline workspace', () => {
   afterEach(async () => {
+    vi.restoreAllMocks();
+    Reflect.deleteProperty(globalThis, 'window');
     await clearLocalWorkspace();
   });
 
@@ -28,6 +31,17 @@ describe('offline workspace', () => {
     expect(record?.data.name).toBe('Back field');
     expect(operations).toHaveLength(1);
     expect(operations[0]?.entityId).toBe(id);
+  });
+
+  it('announces a committed local save so an online client can synchronize immediately', async () => {
+    const browserEvents = new EventTarget();
+    Object.defineProperty(globalThis, 'window', { value: browserEvents, configurable: true });
+    const listener = vi.fn();
+    browserEvents.addEventListener('apiarylens:local-change', listener);
+
+    await queueCreate(crypto.randomUUID(), 'apiary', { name: 'Connected yard' });
+
+    expect(listener).toHaveBeenCalledTimes(1);
   });
 
   it('validates records before writing offline state', async () => {
@@ -123,5 +137,106 @@ describe('offline workspace', () => {
       payload: null,
     });
     expect((await db.resources.get(synced.key))?.deletedAt).not.toBeNull();
+  });
+
+  it('keeps queued work pending when a transient network failure interrupts synchronization', async () => {
+    const organizationId = crypto.randomUUID();
+    const id = await queueCreate(organizationId, 'apiary', { name: 'Offline yard' });
+    vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new TypeError('offline'));
+
+    await expect(synchronize(organizationId, 'csrf')).rejects.toThrow('offline');
+
+    expect((await db.resources.get(`${organizationId}:apiary:${id}`))?.syncState).toBe('pending');
+    expect((await db.outbox.toArray())[0]).toMatchObject({ attempts: 1, lastError: 'offline' });
+  });
+
+  it('reserves failed state for a permanent server rejection', async () => {
+    const organizationId = crypto.randomUUID();
+    const id = await queueCreate(organizationId, 'apiary', { name: 'Invalid server value' });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(null, { status: 422 }));
+
+    await expect(synchronize(organizationId, 'csrf')).rejects.toThrow('Push failed (422)');
+
+    expect((await db.resources.get(`${organizationId}:apiary:${id}`))?.syncState).toBe('failed');
+    expect(await db.outbox.count()).toBe(1);
+  });
+
+  it('keeps image bytes staged and not failed when upload loses connectivity', async () => {
+    const organizationId = crypto.randomUUID();
+    const file = new File([new Uint8Array([0xff, 0xd8, 1, 2])], 'offline-photo.jpg', {
+      type: 'image/jpeg',
+    });
+    const id = await stageImage(organizationId, crypto.randomUUID(), crypto.randomUUID(), file);
+    const localRecord = await db.resources.get(`${organizationId}:mediaAsset:${id}`);
+    const operation = await db.outbox.where('entityId').equals(id).first();
+    if (!localRecord || !operation) throw new Error('Staged media fixture missing');
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        Response.json({
+          results: [
+            {
+              operationId: operation.operationId,
+              entityType: 'mediaAsset',
+              entityId: id,
+              status: 'accepted',
+              serverValue: {
+                id,
+                organizationId,
+                ...localRecord.data,
+                version: 1,
+                createdAt: localRecord.createdAt,
+                updatedAt: localRecord.updatedAt,
+                deletedAt: null,
+              },
+            },
+          ],
+        }),
+      )
+      .mockRejectedValueOnce(new TypeError('connection lost'));
+
+    await expect(synchronize(organizationId, 'csrf')).rejects.toThrow('connection lost');
+
+    expect((await db.media.get(id))?.state).toBe('staged');
+    expect((await db.media.get(id))?.lastError).toBe('connection lost');
+  });
+
+  it("never pushes another organization's queued operations", async () => {
+    const firstOrganization = crypto.randomUUID();
+    const secondOrganization = crypto.randomUUID();
+    const firstId = await queueCreate(firstOrganization, 'apiary', { name: 'First family' });
+    await queueCreate(secondOrganization, 'apiary', { name: 'Second family' });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.includes('/sync/push')) {
+        const request = JSON.parse(String(init?.body)) as {
+          operations: Array<{ entityId: string }>;
+        };
+        expect(request.operations.map((item) => item.entityId)).toEqual([firstId]);
+        return Response.json({
+          results: request.operations.map((item) => ({
+            operationId: (
+              JSON.parse(String(init?.body)) as { operations: Array<{ operationId: string }> }
+            ).operations[0]?.operationId,
+            entityType: 'apiary',
+            entityId: item.entityId,
+            status: 'duplicate',
+            serverValue: {
+              id: item.entityId,
+              organizationId: firstOrganization,
+              name: 'First family',
+              version: 1,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              deletedAt: null,
+            },
+          })),
+        });
+      }
+      return Response.json({ changes: [], nextCursor: '1' });
+    });
+
+    await synchronize(firstOrganization, 'csrf');
+
+    expect(await db.outbox.where('organizationId').equals(secondOrganization).count()).toBe(1);
   });
 });
