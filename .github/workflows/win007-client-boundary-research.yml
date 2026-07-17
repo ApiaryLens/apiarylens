@@ -1,0 +1,35 @@
+name: WIN-007 shared client boundary research
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  client-boundary:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Inventory current client and shared-kernel boundaries
+        shell: pwsh
+        run: >-
+          node scripts/research/win007-client-boundary-probe.mjs
+          --repository "$env:GITHUB_WORKSPACE"
+          --output "$env:RUNNER_TEMP/win007-client-boundary-evidence"
+      - name: Upload sanitized boundary evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: win007-client-boundary-evidence
+          path: ${{ runner.temp }}/win007-client-boundary-evidence
+          if-no-files-found: warn
+          retention-days: 14
