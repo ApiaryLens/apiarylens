@@ -126,6 +126,15 @@ before remove-all. This closes same-user protected-backup mechanics; guided
 cross-user/computer failure, Windows-account changes, final UX, retail profiles, and
 production signing remain open.
 
+Run
+[`29559517037`](https://github.com/ApiaryLens/apiarylens/actions/runs/29559517037)
+then forced the embedded service to terminate with an open real-database transaction
+in both packaged and clean-installed forms. The same data directory restarted,
+passed `PRAGMA integrity_check`, retained committed state, rolled back interrupted
+state, and rejected a separate corrupt database before readiness. This materially
+advances condition 3; disk-full, read-only, startup-timeout/crash-loop policy, and
+the broader Windows lifecycle matrix remain open.
+
 ## Proposed Decision
 
 Use **Electron** as the initial Windows Preview host. Use a **signed per-user
@@ -270,8 +279,10 @@ must replace it.
    readiness, corrupt-database, crash, shutdown, and recovery matrix in the actual
    Electron host; complete forced-write/data-lock faults, Job Object policy, and the
    broader Windows lifecycle evaluation. Single-instance, parent-death,
-   stale-readiness recovery, and clean shutdown now pass in packaged and installed
-   artifacts.
+   stale-readiness recovery, clean shutdown, forced-write/WAL rollback, integrity,
+   committed-state retention, and corrupt-startup rejection now pass in packaged
+   and installed artifacts. Disk-full, read-only, startup timeout/crash loops, Job
+   Object policy, and broader Windows lifecycle behavior remain.
 4. Integrate and replay the `WIN-005` DPAPI, rotation/crash, revocation, restore,
    sign-out, keep-data, and remove-all behavior through the actual main-process
    adapter. The proposed adapter is Electron `safeStorage`; Credential Manager is a

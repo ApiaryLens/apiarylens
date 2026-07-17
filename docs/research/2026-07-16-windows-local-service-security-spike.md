@@ -204,9 +204,18 @@ packaged and clean-installed Electron host. Both artifacts rejected a second hos
 terminated the embedded service after forced host death, detected the resulting
 dead-PID readiness record on the next launch, removed and replaced it only after a
 same-directory restart, and removed readiness on clean shutdown. Both also retained
-the 50-check installed API and organization-isolation matrix. Job Object policy,
-forced-write/WAL faults, disk-full and read-only paths, sleep/sign-out/shutdown, and
-retail Windows behavior remain open.
+the 50-check installed API and organization-isolation matrix. At that point Job
+Object policy, forced-write/WAL faults, disk-full and read-only paths,
+sleep/sign-out/shutdown, and retail Windows behavior remained open.
+
+Actual-storage-fault run
+[`29559517037`](https://github.com/ApiaryLens/apiarylens/actions/runs/29559517037)
+subsequently committed one marker in the real API database, opened an uncommitted
+second transaction, forcibly terminated the packaged/installed embedded service,
+and restarted the same data directory. Both artifacts passed integrity checking,
+retained the committed marker, rolled back the interrupted marker, and rejected a
+separate corrupt database before readiness. Disk-full, read-only directory, startup
+timeout/crash-loop policy, and broader Windows lifecycle behavior remain open.
 
 ## Windows path-security evidence
 
@@ -248,7 +257,7 @@ preserve the intended behavior. Those are integration and lifecycle gates.
 | Compromised packaged renderer steals full authority | Local-only content, strict CSP, sandbox/isolation, narrow host bridge, no token in ordinary page JavaScript | Not yet proven; highest remaining design risk |
 | Two hosts write one SQLite database | Per-user operating-system ownership guard | Duplicate prototype rejected |
 | Child outlives host | Parent liveness watch plus host job/process ownership where available | Packaged and installed Electron service exited after forced host death; Job Object policy remains to document |
-| Crash corrupts or loses data | WAL, transactions, backup-before-update, integrity/health checks | One forced crash preserved a committed record; fault matrix remains |
+| Crash corrupts or loses data | WAL, transactions, backup-before-update, integrity/health checks | Packaged and installed host retained committed state, rolled back an open transaction, passed integrity, and rejected corruption before readiness; disk-full/read-only remain |
 | Local non-loopback exposure | Explicit IPv4/IPv6 loopback bind and listener assertion | Disposable wrapper passed IPv4; exact portable server failed with `::` wildcard |
 | Another Windows account or hostile filesystem redirect reaches local data | Protected current-user/SYSTEM ACL plus canonical child paths that reject traversal and reparse points | Hosted probe denied a second account and rejected traversal/junction paths; retail-host integration remains |
 | Same-user malicious native process | Windows user boundary, protected credentials, least privilege | Such a process may inspect another same-user process; not solved by bearer token alone |
@@ -307,7 +316,10 @@ preserve the intended behavior. Those are integration and lifecycle gates.
    recovery probe covers migration failure, backup restore, incompatible versions,
    and health-triggered rollback. Actual Electron parent death, stale-readiness
    rejection, same-directory restart, and clean shutdown now pass; the remaining
-   storage-fault cases still require real-host replay.
+   storage-fault cases still require real-host replay. Forced termination during a
+   real database write, WAL rollback, integrity, committed-state retention, and
+   corrupt startup now pass in packaged and installed Electron artifacts; disk-full,
+   read-only, startup-timeout, and crash-loop policy remain.
 4. Integrating the proven current-user/SYSTEM directory ACL and traversal/reparse
    rejection into each finalist, then measuring Windows Job Object versus parent
    polling, sleep/resume, sign-out, shutdown, roaming profiles, Remote Desktop, and

@@ -523,6 +523,31 @@ versioned purpose envelope before remove-all. The exact setup SHA-256 was
 All existing API, host-recovery, credential, retention, remove-all, and uninstall
 checks remained green.
 
+Actual-storage-fault run
+[`29559517037`](https://github.com/ApiaryLens/apiarylens/actions/runs/29559517037)
+at commit `61e56db6ac07ee17c2670b177c17f802560101b5` exercised the real
+packaged API database from both packaged and clean-installed hosts. The exact setup
+SHA-256 was
+`BCF557C10600C17BEE651CAF3652394026980DE2B6DBA89E9A02584FC33B73C9`.
+
+| Actual Electron storage-fault check | Packaged | Clean installed |
+|---|---:|---:|
+| Committed real-database marker written | Passed | Passed |
+| Second transaction left open | Exercised | Exercised |
+| Embedded service forcibly terminated | Passed | Passed |
+| Same data directory restarted | Passed | Passed |
+| `PRAGMA integrity_check` after restart | Passed | Passed |
+| Committed marker retained | Passed | Passed |
+| Interrupted marker rolled back | Passed | Passed |
+| Corrupt database rejected before readiness | Passed | Passed |
+| Existing 50-check API, credential, retention, restore, and uninstall suites | Passed | Passed |
+
+The fault routes are control-token and origin protected and exist only in the
+disposable research wrapper. This closes actual-host forced-write/WAL rollback,
+integrity, committed-state retention, and corrupt-startup subgates. Disk-full,
+read-only directory, startup timeout/crash-loop policy, sleep/sign-out/shutdown,
+and retail-device behavior remain open.
+
 ### Electron package-transition evidence
 
 Exact-artifact replay
