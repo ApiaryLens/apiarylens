@@ -280,6 +280,32 @@ and Authenticode embedding path, not publisher reputation, trusted timestamping,
 the production certificate chain. Those require the real CA-backed signing identity
 and release workflow.
 
+### Electron package-transition evidence
+
+Exact-artifact replay
+[`29547059418`](https://github.com/ApiaryLens/apiarylens/actions/runs/29547059418)
+used the signed `0.1.0` and `0.1.1` packages built by run `29546655675` and exercised
+their transition behavior without rebuilding either artifact.
+
+| Transition check | Result |
+|---|---:|
+| Truncated `0.1.1` artifact | SHA-256 mismatch; rejected before execution |
+| Installed version after rejection | `0.1.0`; unchanged |
+| Upgrade | `0.1.0` to `0.1.1`; exit 0 |
+| State and signer after upgrade | Retained / exact signer retained |
+| Downgrade attempt | `0.1.1` to `0.1.0`; exit 0 |
+| State after downgrade | Retained |
+| Repair/re-upgrade | `0.1.0` to `0.1.1`; exit 0 |
+| Final uninstall | Exit 0; registration absent |
+| Synthetic user state after uninstall | Retained |
+
+Squirrel permits a direct downgrade when an older signed setup is executed. That is
+mechanism evidence, not approval to expose an unrestricted downgrade path. The
+product lifecycle must first verify schema compatibility, quiesce writes, create and
+verify a backup, run the package transition, perform health checks, and restore or
+roll back only when the manifest declares that path compatible. Retained state also
+requires explicit **keep data** and **remove all data** uninstall choices.
+
 ## Tauri and packaged Node sidecar baseline
 
 GitHub Actions run
@@ -376,6 +402,31 @@ candidate, this proves Authenticode embedding and signer continuity, not publish
 reputation, trusted timestamping, or the production certificate chain. The runner
 already had WebView2 and was a hosted Windows Server profile, so missing-runtime and
 retail Windows behavior remain open gates.
+
+### Tauri package-transition evidence
+
+Exact-artifact replay
+[`29547216046`](https://github.com/ApiaryLens/apiarylens/actions/runs/29547216046)
+used the signed `0.1.0` and `0.1.1` NSIS packages built by run `29546655675` and
+exercised the same transition sequence as the Electron candidate.
+
+| Transition check | Result |
+|---|---:|
+| Truncated `0.1.1` artifact | SHA-256 mismatch; rejected before execution |
+| Installed version after rejection | `0.1.0`; unchanged |
+| Upgrade | `0.1.0` to `0.1.1`; exit 0 |
+| State and signer after upgrade | Retained / exact signer retained |
+| Downgrade attempt | `0.1.1` to `0.1.0`; exit 0 |
+| State after downgrade | Retained |
+| Repair/re-upgrade | `0.1.0` to `0.1.1`; exit 0 |
+| Final uninstall | Exit 0; registration absent |
+| Synthetic user state after uninstall | Retained |
+
+NSIS also permits a direct signed downgrade. The same product-controlled gates are
+therefore mandatory for either finalist; package-manager success alone does not make
+a schema or data downgrade safe. These tests cover artifact acquisition rejection
+and package transitions. They do not yet cover power loss during installer commit,
+real SQLite migration/health failure, or restore from a verified product backup.
 
 ## Security and lifecycle requirements common to finalists
 
