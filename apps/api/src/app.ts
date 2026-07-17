@@ -272,6 +272,32 @@ export function createApi(options: ApiOptions) {
     c.json({ items: store.listMemberships(c.get('session').organization.id) }),
   );
 
+  app.delete(
+    '/api/v1/members/:membershipId',
+    requireSession,
+    requireCsrf,
+    permit('members:manage'),
+    (c) => {
+      const session = c.get('session');
+      try {
+        return store.revokeMembership(
+          session.organization.id,
+          session.user.id,
+          c.req.param('membershipId'),
+        )
+          ? c.body(null, 204)
+          : error(c, 404, 'membership_not_found', 'The family member was not found');
+      } catch (caught) {
+        if (caught instanceof StoreError) return error(c, 409, caught.code, caught.message);
+        throw caught;
+      }
+    },
+  );
+
+  app.get('/api/v1/invitations', requireSession, permit('members:manage'), (c) =>
+    c.json({ items: store.listPendingInvitations(c.get('session').organization.id) }),
+  );
+
   app.post(
     '/api/v1/invitations',
     requireSession,
@@ -287,6 +313,41 @@ export function createApi(options: ApiOptions) {
         ...parsed.data,
       });
       return c.json(invitation, 201);
+    },
+  );
+
+  app.delete(
+    '/api/v1/invitations/:invitationId',
+    requireSession,
+    requireCsrf,
+    permit('members:manage'),
+    (c) => {
+      const session = c.get('session');
+      return store.revokeInvitation(
+        session.organization.id,
+        session.user.id,
+        c.req.param('invitationId'),
+      )
+        ? c.body(null, 204)
+        : error(c, 404, 'invitation_not_found', 'The invitation was not found');
+    },
+  );
+
+  app.post(
+    '/api/v1/invitations/:invitationId/replace',
+    requireSession,
+    requireCsrf,
+    permit('members:manage'),
+    (c) => {
+      const session = c.get('session');
+      const invitation = store.replaceInvitation(
+        session.organization.id,
+        session.user.id,
+        c.req.param('invitationId'),
+      );
+      return invitation
+        ? c.json(invitation, 201)
+        : error(c, 404, 'invitation_not_found', 'The invitation was not found');
     },
   );
 

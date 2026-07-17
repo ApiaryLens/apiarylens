@@ -26,6 +26,16 @@ async function json<T>(url: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+async function noContent(url: string, init?: RequestInit): Promise<void> {
+  const response = await fetch(url, { credentials: 'same-origin', ...init });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({ message: 'Request failed' }))) as {
+      message?: string;
+    };
+    throw new Error(body.message ?? `Request failed (${response.status})`);
+  }
+}
+
 export const api = {
   bootstrapStatus: async () => {
     const status = await json<{ available: boolean; requiresToken?: boolean }>(
@@ -83,6 +93,32 @@ export const api = {
         status: string;
       }>;
     }>('/api/v1/members'),
+  invitations: () =>
+    json<{
+      items: Array<{
+        id: string;
+        displayName: string;
+        identifier: string;
+        role: string;
+        expiresAt: string;
+        createdAt: string;
+      }>;
+    }>('/api/v1/invitations'),
+  revokeMember: (csrfToken: string, membershipId: string) =>
+    noContent(`/api/v1/members/${encodeURIComponent(membershipId)}`, {
+      method: 'DELETE',
+      headers: { 'x-csrf-token': csrfToken },
+    }),
+  revokeInvitation: (csrfToken: string, invitationId: string) =>
+    noContent(`/api/v1/invitations/${encodeURIComponent(invitationId)}`, {
+      method: 'DELETE',
+      headers: { 'x-csrf-token': csrfToken },
+    }),
+  replaceInvitation: (csrfToken: string, invitationId: string) =>
+    json<{ token: string; expiresAt: string }>(
+      `/api/v1/invitations/${encodeURIComponent(invitationId)}/replace`,
+      { method: 'POST', headers: { 'x-csrf-token': csrfToken } },
+    ),
   invite: (
     csrfToken: string,
     input: { displayName: string; identifier: string; role: 'beekeeper' | 'viewer' },

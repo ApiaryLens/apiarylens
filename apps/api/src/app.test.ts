@@ -440,6 +440,159 @@ describe('ApiaryLens API', () => {
     ).toBe(403);
   });
 
+  it('lets an owner list, replace, revoke, and remove family access', async () => {
+    const owner = await bootstrap();
+    const ownerHeaders = {
+      cookie: owner.cookie,
+      'content-type': 'application/json',
+      'x-csrf-token': owner.body.csrfToken,
+    };
+    const created = await app.request('/api/v1/invitations', {
+      method: 'POST',
+      headers: ownerHeaders,
+      body: JSON.stringify({
+        displayName: 'Temporary Viewer',
+        identifier: 'temporary@example.test',
+        role: 'viewer',
+        expiresInHours: 48,
+      }),
+    });
+    expect(created.status).toBe(201);
+    const pending = (await (
+      await app.request('/api/v1/invitations', { headers: { cookie: owner.cookie } })
+    ).json()) as { items: Array<{ id: string; identifier: string }> };
+    expect(pending.items).toHaveLength(1);
+    expect(pending.items[0]?.identifier).toBe('temporary@example.test');
+
+    const replacement = await app.request(`/api/v1/invitations/${pending.items[0]!.id}/replace`, {
+      method: 'POST',
+      headers: ownerHeaders,
+    });
+    expect(replacement.status).toBe(201);
+    const replacementToken = String((await replacement.json()).token);
+    const replacedPending = (await (
+      await app.request('/api/v1/invitations', { headers: { cookie: owner.cookie } })
+    ).json()) as { items: Array<{ id: string }> };
+    expect(replacedPending.items).toHaveLength(1);
+    expect(replacedPending.items[0]?.id).not.toBe(pending.items[0]?.id);
+
+    const revoked = await app.request(`/api/v1/invitations/${replacedPending.items[0]!.id}`, {
+      method: 'DELETE',
+      headers: ownerHeaders,
+    });
+    expect(revoked.status).toBe(204);
+    expect(
+      (
+        (await (
+          await app.request('/api/v1/invitations', { headers: { cookie: owner.cookie } })
+        ).json()) as { items: unknown[] }
+      ).items,
+    ).toHaveLength(0);
+
+    const nextInvitation = await app.request('/api/v1/invitations', {
+      method: 'POST',
+      headers: ownerHeaders,
+      body: JSON.stringify({
+        displayName: 'Managed Viewer',
+        identifier: 'managed@example.test',
+        role: 'viewer',
+        expiresInHours: 48,
+      }),
+    });
+    const nextToken = String((await nextInvitation.json()).token);
+    expect(nextToken).not.toBe(replacementToken);
+    const accepted = await app.request('/api/v1/invitations/accept', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        token: nextToken,
+        password: 'managed viewer password is long enough',
+      }),
+    });
+    expect(accepted.status).toBe(201);
+    const acceptedBody = (await accepted.json()) as { membership: { id: string } };
+    const viewerCookie = accepted.headers.get('set-cookie')?.split(';')[0] ?? '';
+    expect(
+      (
+        (await (
+          await app.request('/api/v1/members', { headers: { cookie: owner.cookie } })
+        ).json()) as { items: unknown[] }
+      ).items,
+    ).toHaveLength(2);
+
+    const otherOrganizationId = randomUUID();
+    const otherUserId = randomUUID();
+    const otherMembershipId = randomUUID();
+    const otherInvitationId = randomUUID();
+    const timestamp = new Date().toISOString();
+    store.database
+      .prepare(
+        `INSERT INTO organizations(id, name, timezone, created_at, updated_at)
+         VALUES (?, 'Other family', 'UTC', ?, ?)`,
+      )
+      .run(otherOrganizationId, timestamp, timestamp);
+    store.database
+      .prepare(
+        `INSERT INTO users(id, identifier, display_name, password_hash, created_at, updated_at)
+         VALUES (?, 'other-owner@example.test', 'Other Owner', 'not-used', ?, ?)`,
+      )
+      .run(otherUserId, timestamp, timestamp);
+    store.database
+      .prepare(
+        `INSERT INTO memberships(
+          id, organization_id, user_id, role, status, created_at, updated_at
+        ) VALUES (?, ?, ?, 'viewer', 'active', ?, ?)`,
+      )
+      .run(otherMembershipId, otherOrganizationId, otherUserId, timestamp, timestamp);
+    store.database
+      .prepare(
+        `INSERT INTO invitations(
+          id, organization_id, token_hash, identifier, display_name, role,
+          expires_at, created_at, created_by
+        ) VALUES (?, ?, ?, 'other-invite@example.test', 'Other Invite', 'viewer', ?, ?, ?)`,
+      )
+      .run(
+        otherInvitationId,
+        otherOrganizationId,
+        randomUUID(),
+        new Date(Date.now() + 86_400_000).toISOString(),
+        timestamp,
+        otherUserId,
+      );
+    expect(
+      (
+        await app.request(`/api/v1/members/${otherMembershipId}`, {
+          method: 'DELETE',
+          headers: ownerHeaders,
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await app.request(`/api/v1/invitations/${otherInvitationId}/replace`, {
+          method: 'POST',
+          headers: ownerHeaders,
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        store.database
+          .prepare('SELECT status FROM memberships WHERE id = ?')
+          .get(otherMembershipId) as { status: string }
+      ).status,
+    ).toBe('active');
+
+    const removed = await app.request(`/api/v1/members/${acceptedBody.membership.id}`, {
+      method: 'DELETE',
+      headers: ownerHeaders,
+    });
+    expect(removed.status).toBe(204);
+    expect(
+      (await app.request('/api/v1/session', { headers: { cookie: viewerCookie } })).status,
+    ).toBe(401);
+  });
+
   it('consumes a one-time recovery code and revokes prior sessions', async () => {
     const owner = await bootstrap();
     const recovery = await app.request('/api/v1/auth/recover', {

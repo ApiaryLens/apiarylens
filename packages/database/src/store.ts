@@ -375,6 +375,99 @@ export class SqliteStore {
       .all(organizationId);
   }
 
+  listPendingInvitations(organizationId: string) {
+    return this.database
+      .prepare(
+        `SELECT id, identifier, display_name AS displayName, role,
+          expires_at AS expiresAt, created_at AS createdAt
+         FROM invitations
+         WHERE organization_id = ? AND accepted_at IS NULL AND expires_at > ?
+         ORDER BY created_at DESC`,
+      )
+      .all(organizationId, now());
+  }
+
+  revokeMembership(organizationId: string, actorUserId: string, membershipId: string): boolean {
+    const row = this.database
+      .prepare(
+        `SELECT user_id, role, status FROM memberships
+         WHERE id = ? AND organization_id = ? AND deleted_at IS NULL`,
+      )
+      .get(membershipId, organizationId) as Row | undefined;
+    if (!row) return false;
+    if (row.role === 'owner') {
+      throw new StoreError('owner_required', 'The family owner cannot be removed');
+    }
+    const timestamp = now();
+    this.transaction(() => {
+      this.database
+        .prepare(
+          `UPDATE memberships
+           SET status = 'revoked', version = version + 1, updated_at = ?
+           WHERE id = ? AND organization_id = ?`,
+        )
+        .run(timestamp, membershipId, organizationId);
+      this.database
+        .prepare('UPDATE sessions SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL')
+        .run(timestamp, String(row.user_id));
+      this.audit(
+        organizationId,
+        actorUserId,
+        'membership.revoke',
+        'membership',
+        membershipId,
+        'success',
+      );
+    });
+    return true;
+  }
+
+  revokeInvitation(organizationId: string, actorUserId: string, invitationId: string): boolean {
+    const result = this.database
+      .prepare(
+        `DELETE FROM invitations
+         WHERE id = ? AND organization_id = ? AND accepted_at IS NULL`,
+      )
+      .run(invitationId, organizationId);
+    if (Number(result.changes) === 0) return false;
+    this.audit(
+      organizationId,
+      actorUserId,
+      'invitation.revoke',
+      'membership',
+      invitationId,
+      'success',
+    );
+    return true;
+  }
+
+  replaceInvitation(
+    organizationId: string,
+    actorUserId: string,
+    invitationId: string,
+  ): { token: string; expiresAt: string } | undefined {
+    const row = this.database
+      .prepare(
+        `SELECT identifier, display_name, role FROM invitations
+         WHERE id = ? AND organization_id = ? AND accepted_at IS NULL`,
+      )
+      .get(invitationId, organizationId) as Row | undefined;
+    if (!row) return undefined;
+    let replacement: { token: string; expiresAt: string } | undefined;
+    this.transaction(() => {
+      this.database.prepare('DELETE FROM invitations WHERE id = ?').run(invitationId);
+      replacement = this.createInvitation({
+        organizationId,
+        createdBy: actorUserId,
+        identifier: String(row.identifier),
+        displayName: String(row.display_name),
+        role: String(row.role) as Exclude<Role, 'owner'>,
+        expiresInHours: 48,
+      });
+    });
+    return replacement;
+  }
+
   verifyCredentials(identifier: string): { userId: string; passwordHash: string } | undefined {
     const row = this.database
       .prepare(

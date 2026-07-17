@@ -41,10 +41,17 @@ media remain pending.
 
 ## Family Access
 
-Owners can invite members and select owner, beekeeper, or viewer access. Viewers
-cannot create, edit, delete, upload, export, or administer data. Authorization is
-enforced by the server, not only by hidden buttons. Invitations and recovery codes
-are secrets; share them through a private channel.
+Owners can invite members as a beekeeper or viewer. The owner role cannot be
+delegated through an invitation. Open the management view to see active and revoked
+members plus unexpired pending invitations. A pending link can be replaced (which
+invalidates the old link) or revoked. Removing an active non-owner member immediately
+revokes that membership and its existing sessions.
+
+Viewers cannot create, edit, delete, upload, export, or administer data. Authorization
+and family isolation are enforced by the server, not only by hidden buttons.
+Invitation links and recovery codes are secrets; share them through a private channel.
+An invited person creates their own password when accepting the link; the owner never
+chooses or sees that password.
 
 ## Photos
 

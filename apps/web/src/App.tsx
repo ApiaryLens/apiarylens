@@ -2306,13 +2306,34 @@ function FamilyAccess({ csrfToken }: { csrfToken: string }) {
   const [members, setMembers] = useState<
     Array<{ id: string; displayName: string; identifier: string; role: string; status: string }>
   >([]);
+  const [invitations, setInvitations] = useState<
+    Array<{
+      id: string;
+      displayName: string;
+      identifier: string;
+      role: string;
+      expiresAt: string;
+      createdAt: string;
+    }>
+  >([]);
   const [invitationUrl, setInvitationUrl] = useState('');
   const [error, setError] = useState('');
+  const [workingId, setWorkingId] = useState('');
+
+  function invitationLink(token: string): string {
+    const url = new URL(location.origin);
+    url.searchParams.set('invite', token);
+    return url.toString();
+  }
+
+  async function refreshAccess() {
+    const [memberResult, invitationResult] = await Promise.all([api.members(), api.invitations()]);
+    setMembers(memberResult.items);
+    setInvitations(invitationResult.items);
+  }
+
   useEffect(() => {
-    void api
-      .members()
-      .then((result) => setMembers(result.items))
-      .catch(() => setError('Could not load family members.'));
+    void refreshAccess().catch(() => setError('Could not load family access.'));
   }, []);
   async function invite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -2325,12 +2346,54 @@ function FamilyAccess({ csrfToken }: { csrfToken: string }) {
         identifier: String(data.get('identifier')),
         role: String(data.get('role')) as 'beekeeper' | 'viewer',
       });
-      const url = new URL(location.origin);
-      url.searchParams.set('invite', invitation.token);
-      setInvitationUrl(url.toString());
+      setInvitationUrl(invitationLink(invitation.token));
+      await refreshAccess();
       form.reset();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Could not create invitation');
+    }
+  }
+
+  async function removeMember(member: { id: string; displayName: string }) {
+    if (!confirm(`Remove ${member.displayName} from this family and sign out their devices?`))
+      return;
+    setWorkingId(member.id);
+    setError('');
+    try {
+      await api.revokeMember(csrfToken, member.id);
+      await refreshAccess();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not remove family member');
+    } finally {
+      setWorkingId('');
+    }
+  }
+
+  async function revokeInvitation(invitationId: string) {
+    setWorkingId(invitationId);
+    setError('');
+    try {
+      await api.revokeInvitation(csrfToken, invitationId);
+      setInvitationUrl('');
+      await refreshAccess();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not revoke invitation');
+    } finally {
+      setWorkingId('');
+    }
+  }
+
+  async function replaceInvitation(invitationId: string) {
+    setWorkingId(invitationId);
+    setError('');
+    try {
+      const replacement = await api.replaceInvitation(csrfToken, invitationId);
+      setInvitationUrl(invitationLink(replacement.token));
+      await refreshAccess();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not replace invitation');
+    } finally {
+      setWorkingId('');
     }
   }
   return (
@@ -2348,10 +2411,59 @@ function FamilyAccess({ csrfToken }: { csrfToken: string }) {
               <strong>{member.displayName}</strong>
               <small>{member.identifier}</small>
             </span>
-            <span>{member.role}</span>
+            <span className="member-actions">
+              <span>{member.role}</span>
+              {member.role !== 'owner' && member.status === 'active' && (
+                <button
+                  className="text-button"
+                  type="button"
+                  disabled={workingId === member.id}
+                  onClick={() => void removeMember(member)}
+                >
+                  Remove
+                </button>
+              )}
+            </span>
           </li>
         ))}
       </ul>
+      <h3>Pending invitations</h3>
+      {invitations.length === 0 ? (
+        <p>No pending invitations.</p>
+      ) : (
+        <ul className="member-list">
+          {invitations.map((invitation) => (
+            <li key={invitation.id}>
+              <span>
+                <strong>{invitation.displayName}</strong>
+                <small>
+                  {invitation.identifier} · expires{' '}
+                  {new Date(invitation.expiresAt).toLocaleString()}
+                </small>
+              </span>
+              <span className="member-actions">
+                <span>{invitation.role}</span>
+                <button
+                  className="text-button"
+                  type="button"
+                  disabled={workingId === invitation.id}
+                  onClick={() => void replaceInvitation(invitation.id)}
+                >
+                  Replace link
+                </button>
+                <button
+                  className="text-button"
+                  type="button"
+                  disabled={workingId === invitation.id}
+                  onClick={() => void revokeInvitation(invitation.id)}
+                >
+                  Revoke
+                </button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
       <form className="form compact" onSubmit={(event) => void invite(event)}>
         <h3>Invite someone</h3>
         <label>

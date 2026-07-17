@@ -545,6 +545,14 @@ button:focus-visible {
   margin-top: 0.2rem;
   color: var(--muted);
 }
+.member-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  text-align: right;
+}
 .invite-result {
   display: grid;
   gap: 0.5rem;

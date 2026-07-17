@@ -96,7 +96,31 @@ export function buildOpenApiDocument() {
           },
         },
       },
+      '/members/{membershipId}': {
+        delete: {
+          tags: ['Identity'],
+          summary: 'Remove a non-owner family member and revoke their sessions',
+          security: [{ browserSession: [], csrf: [] }],
+          parameters: [
+            { name: 'membershipId', in: 'path', required: true, schema: { type: 'string' } },
+          ],
+          responses: {
+            '204': { description: 'Membership revoked' },
+            '403': { description: 'Permission denied', content: json(apiErrorSchema) },
+            '404': { description: 'Membership not found', content: json(apiErrorSchema) },
+            '409': { description: 'Owner membership is protected', content: json(apiErrorSchema) },
+          },
+        },
+      },
       '/invitations': {
+        get: {
+          tags: ['Identity'],
+          summary: 'List unexpired pending invitations for the current family',
+          responses: {
+            '200': { description: 'Pending invitation collection without invitation tokens' },
+            '403': { description: 'Permission denied', content: json(apiErrorSchema) },
+          },
+        },
         post: csrfOperation(
           operation(
             'Identity',
@@ -105,6 +129,36 @@ export function buildOpenApiDocument() {
             201,
           ),
         ),
+      },
+      '/invitations/{invitationId}': {
+        delete: {
+          tags: ['Identity'],
+          summary: 'Revoke a pending invitation',
+          security: [{ browserSession: [], csrf: [] }],
+          parameters: [
+            { name: 'invitationId', in: 'path', required: true, schema: { type: 'string' } },
+          ],
+          responses: {
+            '204': { description: 'Invitation revoked' },
+            '403': { description: 'Permission denied', content: json(apiErrorSchema) },
+            '404': { description: 'Invitation not found', content: json(apiErrorSchema) },
+          },
+        },
+      },
+      '/invitations/{invitationId}/replace': {
+        post: {
+          tags: ['Identity'],
+          summary: 'Revoke a pending invitation and create a replacement link',
+          security: [{ browserSession: [], csrf: [] }],
+          parameters: [
+            { name: 'invitationId', in: 'path', required: true, schema: { type: 'string' } },
+          ],
+          responses: {
+            '201': { description: 'Replacement invitation created' },
+            '403': { description: 'Permission denied', content: json(apiErrorSchema) },
+            '404': { description: 'Invitation not found', content: json(apiErrorSchema) },
+          },
+        },
       },
       '/invitations/accept': {
         post: publicOperation(
