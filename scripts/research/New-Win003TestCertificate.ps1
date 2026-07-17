@@ -10,19 +10,35 @@ $cerPath = Join-Path $runnerTemp 'win003-ephemeral-code-signing.cer'
 $passwordBytes = [byte[]]::new(32)
 [System.Security.Cryptography.RandomNumberGenerator]::Fill($passwordBytes)
 $passwordText = [Convert]::ToBase64String($passwordBytes)
-$securePassword = ConvertTo-SecureString -String $passwordText -AsPlainText -Force
-$certificate = New-SelfSignedCertificate `
-    -Type CodeSigningCert `
-    -Subject 'CN=ApiaryLens WIN-003 Ephemeral Test Signing' `
-    -CertStoreLocation 'Cert:\CurrentUser\My' `
-    -KeyAlgorithm RSA `
-    -KeyLength 3072 `
-    -HashAlgorithm SHA256 `
-    -NotAfter ([DateTimeOffset]::UtcNow.AddDays(2).UtcDateTime)
+$rsa = [System.Security.Cryptography.RSA]::Create(3072)
+$request = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new(
+    'CN=ApiaryLens WIN-003 Ephemeral Test Signing',
+    $rsa,
+    [System.Security.Cryptography.HashAlgorithmName]::SHA256,
+    [System.Security.Cryptography.RSASignaturePadding]::Pkcs1
+)
+$oids = [System.Security.Cryptography.OidCollection]::new()
+[void] $oids.Add([System.Security.Cryptography.Oid]::new('1.3.6.1.5.5.7.3.3', 'Code Signing'))
+$request.CertificateExtensions.Add([System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension]::new($oids, $false))
+$request.CertificateExtensions.Add([System.Security.Cryptography.X509Certificates.X509KeyUsageExtension]::new(
+    [System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::DigitalSignature,
+    $true
+))
+$certificate = $request.CreateSelfSigned([DateTimeOffset]::UtcNow.AddMinutes(-5), [DateTimeOffset]::UtcNow.AddDays(2))
+[System.IO.File]::WriteAllBytes($pfxPath, $certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12, $passwordText))
+[System.IO.File]::WriteAllBytes($cerPath, $certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert))
 
-Export-PfxCertificate -Cert $certificate -FilePath $pfxPath -Password $securePassword | Out-Null
-Export-Certificate -Cert $certificate -FilePath $cerPath -Type CERT | Out-Null
-Import-Certificate -FilePath $cerPath -CertStoreLocation 'Cert:\CurrentUser\Root' | Out-Null
+$myStore = [System.Security.Cryptography.X509Certificates.X509Store]::new('My', [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser)
+$rootStore = [System.Security.Cryptography.X509Certificates.X509Store]::new('Root', [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser)
+try {
+    $myStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+    $myStore.Add($certificate)
+    $rootStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+    $rootStore.Add([System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)))
+} finally {
+    $myStore.Close()
+    $rootStore.Close()
+}
 
 Write-Output "::add-mask::$passwordText"
 @(
