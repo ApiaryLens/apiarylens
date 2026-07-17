@@ -8,10 +8,12 @@
 Official-source review plus comparable Electron and Tauri/WebView2 packaging,
 test-signing, exact-artifact clean-install and package-transition lifecycle,
 SQLite recovery, SBOM inventory, and automated shared-UI accessibility baselines
-are complete. Retail Windows profile and host accessibility evidence, integrated
-power-loss behavior, distribution-license closure, and the final ADR remain required
-before the spike can close. Authenticated local-service supervision is being
-validated separately under `WIN-004`.
+are complete. A packaged Electron preload/main-process isolation baseline also
+passed, while its lifecycle replay exposed nondeterministic Squirrel uninstall
+cleanup that remains a package-selection risk. Retail Windows profile and host
+accessibility evidence, integrated power-loss behavior, distribution-license
+closure, and the final ADR remain required before the spike can close. Authenticated
+local-service supervision is being validated separately under `WIN-004`.
 
 ## Question
 
@@ -316,6 +318,49 @@ deliberately not added to the runner's trusted-root store. This proves the packa
 and Authenticode embedding path, not publisher reputation, trusted timestamping, or
 the production certificate chain. Those require the real CA-backed signing identity
 and release workflow.
+
+### Electron preload-bridge and uninstall-convergence evidence
+
+Build run
+[`29553663618`](https://github.com/ApiaryLens/apiarylens/actions/runs/29553663618)
+packaged the current React bundle into Electron 43.1.1/Node 24.18.0 at commit
+`032bd741c405eaf5f34c7ae81cd3174fa1069878`. A disposable preload exposed one
+typed `health` method. The renderer sent no argument; the main process modeled
+attaching its private per-launch credential and returned only status and protocol
+identity.
+
+| Electron bridge check | Result |
+|---|---:|
+| Renderer Node `process` | Absent |
+| Renderer `require` | Absent |
+| Exposed bridge keys | `health` only |
+| Renderer-to-main arguments | 0 |
+| Typed health result | 200; service protocol 1 |
+| Untrusted `data:` document using the same preload | Rejected |
+| Token in renderer globals or web storage | No |
+| Token in console messages or process arguments | No |
+| Packaged `node:sqlite` control | Passed |
+| Five renderer-ready launches | Passed; 255.4 ms mean |
+
+This proves the narrow Electron bridge primitive. It does not yet place the exact
+ApiaryLens service or Credential Manager adapter behind that bridge, enumerate the
+full typed desktop API, test navigation/pop-up/file-dialog policy, or prove that
+production diagnostics and crash reporting redact secrets.
+
+The parent workflow's first clean-install job then failed because Squirrel returned
+exit 0 and removed uninstall registration while leaving the 225.5 MB installed host.
+Replay
+[`29553860691`](https://github.com/ApiaryLens/apiarylens/actions/runs/29553860691)
+proved zero processes from the exact installation root before uninstall but still
+retained the host. A second replay of the same installer and SHA-256,
+[`29553925571`](https://github.com/ApiaryLens/apiarylens/actions/runs/29553925571),
+passed: zero installed processes, uninstall convergence in 303 ms, host and
+registration removed, and 3.8 MB known cache residue.
+
+The passing replay does not erase the two failures. Squirrel cleanup is not yet
+stable enough for selection. The package gate requires repeated exact-artifact
+uninstall convergence, explicit cache removal or retention policy, and a
+remove-all-data path before ADR 0016 can be accepted.
 
 ### Electron package-transition evidence
 
