@@ -194,7 +194,7 @@ try {
         measuredAtUtc = [DateTimeOffset]::UtcNow.ToString('o')
         sourceCommit = $env:GITHUB_SHA
         sourceRunId = $env:GITHUB_RUN_ID
-        windowsIdentity = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+        windowsIdentityScope = 'current-runner-user'
         credentialType = 'CRED_TYPE_GENERIC'
         credentialPersistence = 'CRED_PERSIST_LOCAL_MACHINE'
         credentialInitialRoundTrip = $initialRoundTrip
