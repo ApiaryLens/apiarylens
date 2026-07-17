@@ -10,8 +10,10 @@ hosted Windows runner. Exact portable-server process integration and its 15 API
 tests also passed persistence and organization-isolation checks, but exposed a
 release-blocking listener defect: the current server binds to the wildcard interface
 while logging a loopback URL. Credential protection, host-to-renderer secret
-delivery, a safe real-server wrapper, file ACLs, migration failure recovery, and
-threat review remain before the research gate can close.
+delivery, host-specific bridge validation, file ACLs, migration failure recovery,
+and threat review remain before the research gate can close. A disposable wrapper
+around the real API now proves the generic loopback, authentication, ownership, and
+parent-supervision shape.
 
 ## Decision question
 
@@ -126,6 +128,48 @@ artifact fails release if any listener is wildcard or non-loopback, even when it
 console output claims otherwise. No product entry-point change is made by this
 research record; that belongs behind the accepted Windows service/host ADR.
 
+## Protected real-API wrapper evidence
+
+Follow-up run
+[`29549430232`](https://github.com/ApiaryLens/apiarylens/actions/runs/29549430232)
+repeated the exact unwrapped-server finding and all 15 API tests, then placed the
+real `createApi`, `SqliteStore`, and `FilesystemMediaStore` implementation behind a
+disposable desktop wrapper. The wrapper acquired a per-user named-pipe ownership
+guard before opening SQLite, bound HTTP explicitly to `127.0.0.1` on an assigned
+port, required a per-launch 256-bit token and exact packaged origin on every request,
+and monitored its supervising parent.
+
+| Protected real-API wrapper check | Result |
+|---|---:|
+| Listener addresses | `127.0.0.1` only |
+| Missing / wrong control authentication | 401 / 401 |
+| Correct control token from untrusted origin | 403 |
+| Authorized real API health | 200 |
+| Wrong product bootstrap token | 403 |
+| Owner bootstrap / session | 201 / 200 |
+| Duplicate wrapper/database owner | Rejected; exit 73 |
+| Sign-in / session after forced termination and restart | 200 / 200 |
+| Organization identity after restart | Retained |
+| Restarted on a newly assigned port | Yes |
+| Authenticated graceful shutdown | Exit 0; readiness removed |
+| Child after supervising parent disappeared | Exited; readiness removed |
+| Matching Windows Firewall rules | 0 |
+| Token in arguments, readiness, logs, or evidence | No |
+| SQLite database after shutdown | Present |
+
+This proves that the existing portable API and stores can sit behind the proposed
+desktop boundary without exposing a wildcard listener or requiring a new backend.
+It also improves the ownership ordering over the first toy fixture: the named-pipe
+guard is acquired before SQLite is opened, so a duplicate process never becomes a
+second database owner.
+
+The wrapper is deliberately framework-neutral research code. It does not prove that
+an Electron preload bridge or Tauri command keeps the token outside ordinary
+renderer JavaScript, that Windows Credential Manager protects durable connected-mode
+credentials, that per-user directories reject other accounts and reparse attacks,
+or that a Job Object provides stronger termination semantics. Those remain required
+before the host/service ADR can be accepted.
+
 ## Threat analysis
 
 | Threat | Required control | Current evidence / gap |
@@ -183,10 +227,9 @@ research record; that belongs behind the accepted Windows service/host ADR.
 
 `WIN-004` closes only after:
 
-1. Integrating the real portable server and shared SQLite migrations behind the
-   proposed desktop wrapper, including the existing organization-authorization
-   negative tests and a release-failing loopback assertion. The unwrapped exact
-   server process and the authorization suite are measured; the safe wrapper is not.
+1. Repeating the measured real portable server, shared SQLite, organization-
+   authorization negatives, and release-failing loopback assertion inside each
+   finalist's actual host bridge. The framework-neutral safe-wrapper shape is proven.
 2. Proving Electron preload and Tauri command bridges can keep the token outside
    renderer-accessible storage and global JavaScript.
 3. Testing process startup timeout, crash loops, forced termination during writes,
