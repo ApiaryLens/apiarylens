@@ -213,6 +213,34 @@ the final Windows adapter is `safeStorage` or Credential Manager, nor prove a cr
 between server-side token rotation and local replacement, revocation, restore,
 Windows-account changes, or keep-data/remove-all-data behavior.
 
+Interrupted-rotation follow-on run
+[`29557772561`](https://github.com/ApiaryLens/apiarylens/actions/runs/29557772561)
+at commit `ca0554b90e14af593b87741a5441541e21f876be` exercised a
+versioned, purpose-scoped protected-credential journal from both packaged and
+clean-installed artifacts. The exact setup SHA-256 was
+`3EDE260B52F136213743C62077578DB5ACBAFFFF4612C0F56CCDC935B4241B59`.
+
+| Interrupted credential lifecycle | Packaged | Clean installed |
+|---|---:|---:|
+| Host terminated after protecting replacement but before commit | Exercised | Exercised |
+| Secret-free journal detected on next launch | Passed | Passed |
+| Current version 1 and pending version 2 validated by purpose | Passed | Passed |
+| Protected replacement atomically promoted | Passed | Passed |
+| Pending file and journal removed | Passed | Passed |
+| Revoked connected session deleted | Passed | Passed |
+| Sign-out retained non-secret hive data | Passed | Passed |
+| Keep-data preserved protected standalone root and hive data | Passed | Passed |
+| Remove-all deleted protected credential and hive data | Passed | Passed |
+| Existing credential, API, and host-crash suites | Passed | Passed |
+
+The crash handoff retained only a temporary directory reference and a journal with
+schema, purpose, state, and version numbers. It contained no credential, ciphertext,
+entropy, or secret hash. This closes the selected-host synthetic rotation-crash,
+revocation, sign-out, keep-data, and remove-all state-machine subgate. A real remote
+server rotation transaction, same-user backup/restore, different-user/computer
+guided failure, Windows account changes, actual installer UI choices, and final
+adapter decision remain open.
+
 Primary source:
 
 - [Electron `safeStorage`](https://www.electronjs.org/docs/latest/api/safe-storage)
@@ -273,7 +301,10 @@ Primary sources:
    evidence.
 4. Testing app crash between server token rotation and local credential replacement,
    revoked sessions, Windows password/account changes, backup/restore on the same
-   user, restore on another user/computer, and keep-data/remove-all uninstall.
+   user, restore on another user/computer, and keep-data/remove-all uninstall. The
+   packaged and installed synthetic rotation-crash, revocation, sign-out,
+   keep-data, and remove-all state machine now passes; server-integrated rotation,
+   restore, account-change, and actual installer-choice evidence remain.
 5. Recording ACL, roaming-profile, Remote Desktop, multiple Windows session, and
    locked-workstation behavior on supported retail Windows profiles.
 6. Completing dependency/license/provenance review and accepting the authentication

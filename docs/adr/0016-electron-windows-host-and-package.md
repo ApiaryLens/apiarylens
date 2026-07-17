@@ -86,6 +86,17 @@ entered evidence. This advances conditions 2 and 4 without deciding the final
 Credential Manager versus `safeStorage` adapter or proving rotation-crash,
 revocation, restore, Windows-account-change, and uninstall-policy behavior.
 
+Run
+[`29557772561`](https://github.com/ApiaryLens/apiarylens/actions/runs/29557772561)
+then forced both packaged and clean-installed hosts to terminate after writing a
+protected replacement and secret-free journal but before committing rotation. The
+next launch validated the purpose/version state, promoted the protected replacement,
+removed pending state, deleted a revoked connected session, retained hive data on
+sign-out/keep-data, and removed both protected credentials and hive data on
+remove-all. This advances condition 4; server-integrated rotation, backup/restore,
+Windows-account changes, actual installer choices, and the final adapter decision
+remain open.
+
 ## Proposed Decision
 
 Use **Electron** as the initial Windows Preview host. Use a **signed per-user
@@ -234,8 +245,10 @@ must replace it.
 4. Integrate and replay the `WIN-005` Credential Manager, DPAPI, rotation/crash,
    revocation, restore, sign-out, keep-data, and remove-all behavior through the
    actual main-process adapter. The packaged and installed Electron `safeStorage`
-   store/read/rotate/corruption/delete baseline now passes; the remaining lifecycle
-   and final-adapter decision stay open.
+   store/read/rotate/corruption/delete baseline and synthetic interrupted-rotation,
+   revocation, sign-out, keep-data, and remove-all state machine now pass. Real
+   server rotation, restore/account-change behavior, installer choices, and the
+   final-adapter decision stay open.
 5. Resolve or reject the Forge/Squirrel exotic dependency under the repository
    supply-chain policy; reconcile every runtime/build component to an allowlisted
    license and install complete Apache-2.0 and third-party notices.
