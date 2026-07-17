@@ -255,7 +255,7 @@ risks, rejected options, and the ADRs it informs.
 
 - Windows host framework and package format.
 - Embedded standalone service and local data/security boundary.
-- Native-client authentication and credential storage.
+- [Native-client authentication and credential storage](../adr/0017-windows-native-authentication-and-credential-protection.md).
 - Standalone-to-connected migration and conflict semantics.
 - Multi-client shared UI/domain boundary.
 - Windows/product/Scout release-channel and update compatibility policy.

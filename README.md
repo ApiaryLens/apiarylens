@@ -67,6 +67,18 @@ ADRs 0008 through 0011 accept the MVP implementation below.
 | Official public frontend hosting | Cloudflare Workers Static Assets (accepted) |
 | Scout Bee | Embedded React UI with a Go loopback executor |
 
+The table describes the current Public Preview 1 artifact. The accepted post-preview
+direction changes the starting experience without rewriting that release history:
+
+- [ADR 0014](docs/adr/0014-scout-bee-separate-repository-and-release.md) moves Scout
+  Bee to a separate Apache-2.0 public repository and independent release lifecycle.
+- [ADR 0015](docs/adr/0015-windows-first-client-portfolio.md) makes a signed
+  standalone/connected Windows application the future default family starting point.
+- [ADR 0016](docs/adr/0016-electron-windows-host-and-package.md) and
+  [ADR 0017](docs/adr/0017-windows-native-authentication-and-credential-protection.md)
+  are proposed host/package and native-authentication decisions; they are not yet
+  accepted and do not authorize product implementation or release claims.
+
 ## Repository layout
 
 ```text

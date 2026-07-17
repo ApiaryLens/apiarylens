@@ -447,6 +447,7 @@ installed data and release channels.
 - [Windows host and package research](../research/2026-07-16-windows-host-and-package-spike.md)
 - [Windows local-service security research](../research/2026-07-16-windows-local-service-security-spike.md)
 - [Windows credential-protection research](../research/2026-07-16-windows-native-credential-protection-spike.md)
+- [ADR 0017: Windows native authentication and credential protection](0017-windows-native-authentication-and-credential-protection.md)
 - [Windows-first client and Scout Bee design](../deployment/windows-first-client-and-scout-bee.md)
 - [WIN-003](https://github.com/ApiaryLens/apiarylens/issues/7)
 - [WIN-004](https://github.com/ApiaryLens/apiarylens/issues/4)

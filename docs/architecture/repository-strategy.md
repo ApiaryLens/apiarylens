@@ -29,7 +29,8 @@ they do not exist solely because a domain name exists.
 
 | Repository | Visibility | Responsibility | Activation point |
 |---|---|---|---|
-| `apiarylens` | Public | PWA, API, worker, packages, database, Compose, architecture, and ADRs | Active |
+| `apiarylens` | Public | Product clients/backends, shared contracts, migrations, Compose/templates, immutable product artifacts, architecture, and ADRs; build/publish only, never personal-environment deployment | Active |
+| `scout-bee` | Public | Independently versioned lifecycle application for install, update, repair, diagnostics, backup, restore, rollback, uninstall, deployment orchestration, and plan/CI export | Accepted by ADR 0014; repository creation remains implementation-gated |
 | `apiarylens-ops` | Private | Internal planning, dashboards, coordination, and operations | Active |
 | `apiarylens.org` | Private | Marketing, public docs experience, tutorials, releases, roadmap, and community | Active and deployed |
 | `apiarylens.app` | Private | Demo deployment, safe seed data, and hosted-app configuration | Active and deployed |
@@ -47,9 +48,21 @@ deployment status is recorded in the master architecture and MVP evidence.
 ### `apiarylens`
 
 The main repository is authoritative for product behavior, technical architecture,
-ADRs, source OpenAPI contracts, database migrations, self-hosted deployment, and
-versioned product releases. It initially owns shared approved brand assets and their
-public provenance and licensing guidance.
+ADRs, source OpenAPI contracts, database migrations, portable deployment templates,
+and versioned immutable product releases. Its workflows build, test, attest, and
+publish; they never deploy a maintainer's or user's environment. It initially owns
+shared approved brand assets and their public provenance and licensing guidance.
+
+### `scout-bee`
+
+ADR 0014 accepts a separate Apache-2.0 public repository and independent release
+identity for Scout Bee. Scout consumes exact core product releases and owns
+orchestration, lifecycle operations, target execution, verified release caching,
+self-update, recovery, diagnostics, and secret-free plan/lock/CI export. It does not
+copy the product source, own the database/API contracts, or make a personal
+deployment workflow part of the core repository. The existing monorepo prototype is
+migration input until the explicit implementation gate authorizes repository
+creation and cutover.
 
 ### `apiarylens-ops`
 

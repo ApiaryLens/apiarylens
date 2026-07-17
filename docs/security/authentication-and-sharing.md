@@ -78,9 +78,11 @@ Offline use must have an explicit policy for an expired or revoked session and f
 protecting locally cached data. Pending field work must not be discarded merely
 because the server cannot be reached.
 
-The future native client authorization flow must be based on OAuth 2.0 Authorization
-Code with PKCE through an external user-agent. The research and ADR must decide how
-the built-in account path and optional OIDC path expose that contract.
+The proposed native client authorization flow uses OAuth 2.0 Authorization Code with
+PKCE through an external user-agent, an ephemeral loopback redirect, and an opaque
+native session owned by the host rather than the renderer. The built-in account path
+and optional OIDC path converge on that ApiaryLens authorization transaction. See
+[ADR 0017](../adr/0017-windows-native-authentication-and-credential-protection.md).
 
 ## Organization and Authorization Model
 

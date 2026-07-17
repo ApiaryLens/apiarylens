@@ -104,6 +104,13 @@ Accepted decisions:
 - [ADR 0011: Scout Bee and Deployment Execution](../adr/0011-scout-bee-and-deployment-execution.md)
 - [ADR 0012: Public Frontend Implementation Convention](../adr/0012-public-frontend-implementation.md)
 - [ADR 0013: Keyless Release Signing](../adr/0013-keyless-release-signing.md)
+- [ADR 0014: Scout Bee Separate Repository and Release](../adr/0014-scout-bee-separate-repository-and-release.md)
+- [ADR 0015: Windows-First Client Portfolio](../adr/0015-windows-first-client-portfolio.md)
+
+Proposed decisions under review (not yet assembled architecture):
+
+- [ADR 0016: Electron Windows Host and Current-User Package](../adr/0016-electron-windows-host-and-package.md)
+- [ADR 0017: Windows Native Authentication and Credential Protection](../adr/0017-windows-native-authentication-and-credential-protection.md)
 
 Accepted product-scope decision:
 
@@ -160,7 +167,8 @@ and contribution model—not domain ownership alone.
 
 | Repository | Visibility | Responsibility | Activation |
 |---|---|---|---|
-| `apiarylens` | Public | Product monorepo: PWA, API, worker, packages, database, Compose, architecture, ADRs | Active |
+| `apiarylens` | Public | Product monorepo: PWA, portable API/backends, shared contracts, database/migrations, Compose/templates, release artifacts, initial Windows composition, architecture, and ADRs; it never deploys a user's environment | Active |
+| `scout-bee` | Public | Independently versioned installer, updater, repair/recovery, diagnostics, backup/restore/rollback/uninstall, deployment orchestration, and plan/CI export | Accepted and planned; repository creation remains implementation-gated |
 | `apiarylens-ops` | Private | Internal planning, dashboards, coordination, and operational procedures | Active |
 | `apiarylens.org` | Private | Marketing, public docs experience, tutorials, releases, roadmap, and community | Active and deployed |
 | `apiarylens.app` | Private | Public demo deployment, safe seed data, and hosted-app configuration | Active and deployed |
@@ -168,14 +176,17 @@ and contribution model—not domain ownership alone.
 | `.github` | Private | Internal organization configuration, reference templates, and private-repository workflow sources | Active |
 
 The main `apiarylens` repository remains authoritative for product behavior,
-contracts, self-hosted deployment, and releases. Domain repositories consume
-versioned artifacts or generated documentation; they do not copy or fork the
-product implementation. Repository visibility and deployment visibility are
-separate: the `.org`, `.app`, and `.dev` sites are public properties deployed from
-private repositories. The core open-source repository is the only public repository
-in the initial portfolio. It also carries its own public community-health files and
-issue templates because GitHub does not inherit them from a private `.github`
-repository.
+contracts, migrations, portable deployment templates, and immutable product
+artifacts. Its workflows build, test, attest, and publish; they do not deploy a
+maintainer's or user's environment. Scout Bee consumes those versioned artifacts and
+owns orchestration under its independent release identity. Domain and personal
+automation repositories consume versioned artifacts or generated documentation;
+they do not copy or fork product implementation. Repository visibility and
+deployment visibility are separate: the `.org`, `.app`, and `.dev` sites are public
+properties deployed from private repositories. Core carries its own public
+community-health files and issue templates because GitHub does not inherit them from
+a private `.github` repository. ADR 0014 supersedes Scout's initial monorepo
+placement in ADR 0011 while preserving ADR 0011's executor security contract.
 
 Future production SaaS infrastructure may require a private `apiarylens-cloud` or
 `apiarylens-infrastructure` repository. The private `apiarylens-ops` repository must
@@ -257,6 +268,26 @@ verified backup. PWA first remains accepted; native Apple packaging is post-MVP.
 Map rendering and a chart library are added only when an accepted P0 screen needs
 them and after accessibility/license review.
 
+### Windows Client
+
+ADR 0015 makes a signed Windows application the future default family starting
+point. One client supports standalone mode with local database/media and no cloud,
+Linux, or server prerequisite, plus optional connected mode against a compatible
+Scout-deployed backend. Connecting is a controlled, reversible data migration and
+synchronization transition rather than a server-URL preference.
+
+The Windows client reuses versioned contracts, domain rules, API behavior, offline
+sync/conflict semantics, media lifecycle, and accessible React UI where platform-
+appropriate. Native host, transport, credential, filesystem, process, and lifecycle
+adapters remain narrow boundaries. The portable backend and optional web frontend
+remain the shared connected foundation for Windows, PWA, and later mobile clients.
+
+ADR 0016 proposes Electron and a signed per-user package; ADR 0017 proposes external-
+browser PKCE, opaque host-owned native sessions, and main-process `safeStorage`.
+Both remain Proposed and do not authorize implementation or release. Their exact
+acceptance conditions, retail-device evidence, signing, and owner decisions remain
+gates.
+
 ### iPhone App Store Client
 
 An iPhone application users can download from the Apple App Store is a committed
@@ -270,7 +301,8 @@ or the future ApiaryLens SaaS. Deployment connection and onboarding should suppo
 plain server URL plus a safe guided mechanism such as a QR code or connection file,
 subject to security research.
 
-The PWA remains the first implementation and proves the mobile workflows. Research
+The PWA remains the first mobile implementation and proves the mobile workflows.
+The Windows-first direction does not authorize native iOS/Android implementation. Research
 and an ADR will decide whether the App Store client uses Capacitor, another thin
 wrapper, or native code. The decision must address offline storage, background
 synchronization, camera and media access, notifications, TLS and self-hosted server
@@ -530,8 +562,19 @@ self-hosted path must cover:
 - Air-gapped or restricted-network considerations where practical
 
 Docker Compose is the portable server foundation, not the complete experience for a
-non-technical family. Scout Bee provides a React guide and Go loopback executor that
-can install or update a profile or emit a secret-free, versioned deployment plan.
+non-technical family. Under ADR 0014, Scout Bee becomes a separate Apache-2.0 public
+repository and independently versioned lifecycle product. It installs, updates,
+repairs, diagnoses, backs up, restores, rolls back, uninstalls, and recovers
+ApiaryLens; deploys Cloudflare or remote Linux from Windows; and exports secret-free
+plans, artifact locks, verification, and CI instructions. The core repository
+publishes the immutable inputs but never performs the personal deployment.
+
+The current embedded React/Go prototype is migration input, not a permanent
+repository or toolchain decision. End-user Windows distribution must require no Go,
+Node, WSL, Linux shell, Docker, Rust, or .NET SDK. The Linux distribution is one
+versioned executable archive. Stable is the default channel; Preview/RC requires an
+explicit advanced opt-in. Final executor/packaging technology remains gated by the
+Scout research and implementation plan.
 
 For cloud deployment, the ranked targets are:
 

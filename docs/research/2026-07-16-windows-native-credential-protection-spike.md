@@ -401,6 +401,9 @@ Primary sources:
 
 ## Proposed direction to challenge
 
+The resulting decision is now captured as proposed
+[ADR 0017](../adr/0017-windows-native-authentication-and-credential-protection.md).
+
 1. Define one framework-neutral native credential interface: `store`, `load`,
    `replace`, and `delete`, with a purpose enum rather than arbitrary target names.
 2. Use Electron `safeStorage` with versioned, purpose-scoped protected files and an
