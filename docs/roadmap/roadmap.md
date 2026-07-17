@@ -166,7 +166,7 @@ the backend and optional web frontend as the portable connected core.
 - ADR 0015 keeps the initial Windows client in the product monorepo. The Electron
   host now runs the real React/API/SQLite/media composition, supports standalone and
   connected profiles, verified backup/restore, and produces Squirrel Setup/update
-  artifacts. Exact Windows run `29601638394` passed package, installed-host, and
+  artifacts. Exact Windows run `29604870862` passed package, installed-host, and
   keep-data-uninstall verification; production signing and physical UAT remain
 - Keep follow-on ADRs and the detailed security, UX, lifecycle, and data designs
   synchronized as implementation evidence closes or changes a decision

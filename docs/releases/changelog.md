@@ -19,9 +19,20 @@ verification, and feedback instructions.
 
 ### 2026-07-17 Preview updates
 
+- Published the directly installable unsigned Windows Public Preview from source
+  `b433d9f`. Exact Windows run `29604870862` passed build, manifest and package
+  hashes, packaged-host smoke, clean current-user install, installed-host security
+  and health smoke, and keep-data uninstall.
+- Completed automatic online synchronization across open, resume, reconnect, and
+  connected saves, including complete multi-batch push and paginated pull handling,
+  organization-scoped cursors, and protection for unsynchronized/conflicted local
+  records.
+- Added a protected headless Windows backup/restore boundary with exact compatibility,
+  verified recovery backup, staged SQLite integrity checks, session revocation,
+  post-restore health verification, and rollback verification.
 - Added the standalone/connected Electron Windows host, secret-free deployment
   profile import, verified `.albackup` backup, atomic restore/rollback, and real
-  Squirrel current-user Setup/update artifacts. Exact Windows run `29601638394`
+  Squirrel current-user Setup/update artifacts. Exact Windows run `29604870862`
   passed package hashes, packaged-host smoke, clean install, installed-host smoke,
   and keep-data uninstall. Production Authenticode signing and physical UAT remain
   release gates.
