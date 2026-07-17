@@ -37,4 +37,11 @@ describe('installed PWA shell', () => {
     expect(appSource).toContain("onClick={() => onNavigate('care')}");
     expect(appSource).toContain('className="metric metric-link"');
   });
+
+  it('blocks update activation while local records or media are pending', () => {
+    expect(appSource).toContain('updateRegistration.waiting.postMessage');
+    expect(appSource).toContain('disabled={pendingWork > 0}');
+    expect(appSource).toContain("pendingWork === 1 ? '' : 's'");
+    expect(serviceWorker).toContain("event.data?.type === 'SKIP_WAITING'");
+  });
 });
