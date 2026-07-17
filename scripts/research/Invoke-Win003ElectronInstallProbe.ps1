@@ -106,6 +106,8 @@ $passwordTransitionCreatedBeforeChange = $false
 $passwordTransitionCiphertextExcludesPlaintext = $false
 $sameUserDecryptsAfterPasswordChange = $false
 $passwordChangeApiSucceeded = $false
+$administratorPasswordResetSucceeded = $false
+$sameSidDeniedAfterAdministratorReset = $false
 $crossUserCleanupPassed = $false
 $crossUserLab = $null
 $temporaryUserName = $null
@@ -115,6 +117,9 @@ $temporaryPasswordText = $null
 $replacementPassword = $null
 $replacementPasswordText = $null
 $replacementRandomBytes = $null
+$resetPassword = $null
+$resetPasswordText = $null
+$resetRandomBytes = $null
 $randomBytes = $null
 $credential = $null
 try {
@@ -181,7 +186,8 @@ try {
     $passwordExpectedHash = Join-Path $crossUserLab 'password-transition.expected.sha256'
     $passwordCreateOutput = Join-Path $crossUserLab 'password-create.json'
     $passwordVerifyOutput = Join-Path $crossUserLab 'password-verify.json'
-    foreach ($passwordPath in @($passwordFixture, $passwordExpectedHash, $passwordCreateOutput, $passwordVerifyOutput)) {
+    $passwordResetVerifyOutput = Join-Path $crossUserLab 'password-reset-verify.json'
+    foreach ($passwordPath in @($passwordFixture, $passwordExpectedHash, $passwordCreateOutput, $passwordVerifyOutput, $passwordResetVerifyOutput)) {
         New-Item -ItemType File -Path $passwordPath -Force | Out-Null
         $passwordPathAcl = Get-Acl -LiteralPath $passwordPath
         $passwordPathModify = [Security.AccessControl.FileSystemAccessRule]::new(
@@ -270,6 +276,38 @@ public static class Win005NetApi {
     $passwordVerifyState = Get-Content -Raw -LiteralPath $passwordVerifyOutput | ConvertFrom-Json
     $sameUserDecryptsAfterPasswordChange = [bool] $passwordVerifyState.sameUserDecryptsAfterPasswordChange
 
+    $resetRandomBytes = [byte[]]::new(24)
+    [Security.Cryptography.RandomNumberGenerator]::Fill($resetRandomBytes)
+    $resetPasswordText = "W5E-A-$([Convert]::ToHexString($resetRandomBytes))!"
+    [Array]::Clear($resetRandomBytes, 0, $resetRandomBytes.Length)
+    $resetPassword = ConvertTo-SecureString -String $resetPasswordText -AsPlainText -Force
+    Set-LocalUser -Name $temporaryUserName -Password $resetPassword
+    $administratorPasswordResetSucceeded = $true
+    $credential = [pscredential]::new("$env:COMPUTERNAME\$temporaryUserName", $resetPassword)
+
+    $passwordResetVerifyStdout = Join-Path $crossUserLab 'password-reset-verify.stdout.log'
+    $passwordResetVerifyStderr = Join-Path $crossUserLab 'password-reset-verify.stderr.log'
+    $passwordResetVerifyArguments = @(
+        '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+        '-File', "`"$crossUserChildScript`"",
+        '-HostPath', "`"$copiedHost`"",
+        '-HostWorkingDirectory', "`"$copiedHostDirectory`"",
+        '-LabDirectory', "`"$crossUserLab`"",
+        '-ResultPath', "`"$passwordResetVerifyOutput`"",
+        '-Action', 'verify-password-reset-denied'
+    )
+    $passwordResetVerify = Start-Process -FilePath (Join-Path $PSHOME 'pwsh.exe') -Credential $credential -ArgumentList $passwordResetVerifyArguments -WorkingDirectory $crossUserLab -PassThru -WindowStyle Hidden -RedirectStandardOutput $passwordResetVerifyStdout -RedirectStandardError $passwordResetVerifyStderr
+    if (-not $passwordResetVerify.WaitForExit(45000)) {
+        Stop-Process -Id $passwordResetVerify.Id -Force -ErrorAction SilentlyContinue
+        throw 'Same-SID post-administrator-reset safeStorage verification exceeded 45 seconds'
+    }
+    $passwordResetVerifyWritten = (Get-Item -LiteralPath $passwordResetVerifyOutput).Length -gt 0
+    if ($passwordResetVerify.ExitCode -ne 0 -or -not $passwordResetVerifyWritten) {
+        throw 'Same-SID post-administrator-reset safeStorage denial verification failed'
+    }
+    $passwordResetVerifyState = Get-Content -Raw -LiteralPath $passwordResetVerifyOutput | ConvertFrom-Json
+    $sameSidDeniedAfterAdministratorReset = [bool] $passwordResetVerifyState.sameSidDeniedAfterAdministratorReset
+
     $verifyStdout = Join-Path $crossUserLab 'verify.stdout.log'
     $verifyStderr = Join-Path $crossUserLab 'verify.stderr.log'
     $verifyArguments = @(
@@ -316,6 +354,8 @@ public static class Win005NetApi {
         -not $passwordTransitionCiphertextExcludesPlaintext -or
         -not $passwordChangeApiSucceeded -or
         -not $sameUserDecryptsAfterPasswordChange -or
+        -not $administratorPasswordResetSucceeded -or
+        -not $sameSidDeniedAfterAdministratorReset -or
         -not $crossUserDifferentUserDenied) {
         throw 'Cross-user Electron safeStorage acceptance failed'
     }
@@ -323,10 +363,13 @@ public static class Win005NetApi {
     $credential = $null
     if ($randomBytes -is [Array]) { [Array]::Clear($randomBytes, 0, $randomBytes.Length) }
     if ($replacementRandomBytes -is [Array]) { [Array]::Clear($replacementRandomBytes, 0, $replacementRandomBytes.Length) }
+    if ($resetRandomBytes -is [Array]) { [Array]::Clear($resetRandomBytes, 0, $resetRandomBytes.Length) }
     $temporaryPasswordText = $null
     $temporaryPassword = $null
     $replacementPasswordText = $null
     $replacementPassword = $null
+    $resetPasswordText = $null
+    $resetPassword = $null
     if ($crossUserLab) {
         $crossUserPrefix = [IO.Path]::GetFullPath($crossUserLab).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
         Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
@@ -931,6 +974,8 @@ $result = [ordered]@{
     installedSafeStoragePasswordChangeApiSucceeded = $passwordChangeApiSucceeded
     installedSafeStorageSameUserDecryptsAfterPasswordChange = $sameUserDecryptsAfterPasswordChange
     installedSafeStoragePasswordTransitionCiphertextExcludesPlaintext = $passwordTransitionCiphertextExcludesPlaintext
+    installedSafeStorageAdministratorPasswordResetSucceeded = $administratorPasswordResetSucceeded
+    installedSafeStorageSameSidDeniedAfterAdministratorReset = $sameSidDeniedAfterAdministratorReset
     installedSafeStorageCrossUserLabCleanupPassed = $crossUserCleanupPassed
     installedServerSessionCredentialLifecyclePassed = $bridgeProbeResult.serverSessionCredentialLifecyclePassed
     installedCredentialCrashRecoveryPassed = $installedCredentialCrashRecoveryPassed

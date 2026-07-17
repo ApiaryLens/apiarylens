@@ -13,7 +13,7 @@ param(
     [string] $ResultPath,
 
     [Parameter(Mandatory)]
-    [ValidateSet('verify-denied', 'create-password-transition', 'verify-password-transition')]
+    [ValidateSet('verify-denied', 'create-password-transition', 'verify-password-transition', 'verify-password-reset-denied')]
     [string] $Action
 )
 

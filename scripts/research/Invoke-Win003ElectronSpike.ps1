@@ -787,7 +787,10 @@ if (!hasSingleInstanceLock) {
     if (fs.realpathSync.native(path.dirname(output)).toLowerCase() !== lab.toLowerCase()) {
       throw new Error("cross-user-output-outside-lab");
     }
-    const passwordTransition = action === "create-password-transition" || action === "verify-password-transition";
+    const passwordTransition =
+      action === "create-password-transition" ||
+      action === "verify-password-transition" ||
+      action === "verify-password-reset-denied";
     const fixture = path.join(
       lab,
       passwordTransition ? "password-transition-session.bin" : "protected-session.bin"
@@ -830,6 +833,17 @@ if (!hasSingleInstanceLock) {
         sameUserDecryptsAfterPasswordChange:
           crypto.createHash("sha256").update(decrypted).digest("hex") === expectedHash
       }));
+    } else if (action === "verify-password-reset-denied") {
+      let sameSidDeniedAfterAdministratorReset = false;
+      try {
+        safeStorage.decryptString(fs.readFileSync(fixture));
+      } catch {
+        sameSidDeniedAfterAdministratorReset = true;
+      }
+      if (!sameSidDeniedAfterAdministratorReset) {
+        throw new Error("administrator-password-reset-decryption-unexpectedly-succeeded");
+      }
+      fs.writeFileSync(output, JSON.stringify({ sameSidDeniedAfterAdministratorReset }));
     } else {
       throw new Error("unknown-cross-user-action");
     }
