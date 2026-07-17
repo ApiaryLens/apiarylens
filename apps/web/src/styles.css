@@ -500,7 +500,8 @@ button:focus-visible {
   flex-wrap: wrap;
 }
 .text-button {
-  padding: 0.35rem;
+  min-height: 44px;
+  padding: 0.65rem 0.5rem;
   color: var(--honey-dark);
   background: none;
   border: 0;
