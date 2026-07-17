@@ -2650,11 +2650,6 @@ function VersionView({
           >
             Beekeeping glossary
           </a>
-          {session.membership.role === 'owner' && (
-            <a className="button secondary link-button" href="/api/v1/export/full">
-              Download full export
-            </a>
-          )}
           <button className="button secondary" onClick={onSignOut}>
             Sign out
           </button>
@@ -2663,6 +2658,41 @@ function VersionView({
           </button>
         </div>
       </section>
+      {session.membership.role === 'owner' && (
+        <section className="card backup-recovery">
+          <div>
+            <p className="eyebrow">Data protection</p>
+            <h2>Backup and recovery</h2>
+            <p>
+              This device's offline working copy is not a server backup. A full export gives you a
+              portable copy of family records and original photos. A verified server backup and
+              restore are performed through Scout Bee for the{' '}
+              {backendBuild?.deploymentProfile ?? 'current'} deployment profile.
+            </p>
+          </div>
+          <dl>
+            <dt>Last verified server backup</dt>
+            <dd>Open Scout Bee on the operator computer to see its protected operation history.</dd>
+            <dt>Restore prerequisites</dt>
+            <dd>
+              Compatible verified archive, a pre-restore recovery backup, maintenance access, and a
+              passing post-restore health check. Restore replaces server data and revokes active
+              sessions.
+            </dd>
+          </dl>
+          <div className="button-row">
+            <a className="button primary link-button" href="/api/v1/export/full">
+              Download full export
+            </a>
+            <a
+              className="button secondary link-button"
+              href="https://apiarylens.org/docs/user/scout-bee-guide/#backup"
+            >
+              Open backup and restore guide
+            </a>
+          </div>
+        </section>
+      )}
       {session.membership.role === 'owner' && session.csrfToken && (
         <FamilyAccess csrfToken={session.csrfToken} />
       )}

@@ -90,8 +90,18 @@ are authenticated; the storage bucket or filesystem is not public.
 
 An owner can download a complete export from the management view. The ZIP includes
 a manifest, JSON data, CSV tables, and original photos. Store it somewhere you
-control. Recovery codes are single-use; after using one, sign in and create a new
-set through the family recovery workflow.
+control. This portable export is separate from a deployment backup, and a phone or
+browser's offline working copy is not a server backup.
+
+Open Scout Bee on the operator computer to create and verify a deployment backup or
+to see the last backup and restore result recorded there. Before restore, Scout
+requires a compatible verified archive, creates a recovery backup of the current
+deployment, warns that current records and media will be replaced, revokes active
+sessions, and verifies health afterward. See the [Scout Bee backup and restore
+guide](scout-bee-guide.md#backup).
+
+Recovery codes are single-use; after using one, sign in and create a new set through
+the family recovery workflow.
 
 ## Demo Safety
 
