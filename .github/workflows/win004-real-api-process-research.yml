@@ -1,0 +1,42 @@
+name: WIN-004 real API process research
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-api-process:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Install exact workspace dependencies
+        shell: pwsh
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - name: Build exact portable server and dependencies
+        shell: pwsh
+        run: pnpm --filter @apiarylens/server... build
+      - name: Run real API organization-isolation suite
+        shell: pwsh
+        run: pnpm --filter @apiarylens/server test
+      - name: Probe exact real API process lifecycle and listener
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win004RealApiProcessProbe.ps1
+          -OutputDirectory "$env:RUNNER_TEMP/win004-real-api-process-evidence"
+      - name: Upload sanitized real-process evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: win004-real-api-process-evidence
+          path: ${{ runner.temp }}/win004-real-api-process-evidence
+          if-no-files-found: warn
+          retention-days: 14
