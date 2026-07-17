@@ -357,10 +357,25 @@ retained the host. A second replay of the same installer and SHA-256,
 passed: zero installed processes, uninstall convergence in 303 ms, host and
 registration removed, and 3.8 MB known cache residue.
 
-The passing replay does not erase the two failures. Squirrel cleanup is not yet
-stable enough for selection. The package gate requires repeated exact-artifact
-uninstall convergence, explicit cache removal or retention policy, and a
-remove-all-data path before ADR 0016 can be accepted.
+The passing replay did not erase the two failures, so repeated exact-artifact
+convergence was required before interpreting the result.
+
+Three additional independent clean-runner replays of that same immutable installer
+then passed:
+
+| Replay | Processes before uninstall | Convergence | Host / registration | Residual cache |
+|---|---:|---:|---:|---:|
+| [`29554024726`](https://github.com/ApiaryLens/apiarylens/actions/runs/29554024726) | 0 | 307 ms | Removed / removed | 10.0 MB |
+| [`29554025881`](https://github.com/ApiaryLens/apiarylens/actions/runs/29554025881) | 0 | 312 ms | Removed / removed | 10.0 MB |
+| [`29554026869`](https://github.com/ApiaryLens/apiarylens/actions/runs/29554026869) | 0 | 403 ms | Removed / removed | 10.0 MB |
+
+All three verified SHA-256
+`8FD007D03D730D6702EBDD0C8632FB4A420606D789B1E75D3D11D28008D69C9F`,
+installed without an external developer runtime, and passed the installed
+`node:sqlite` control. The strengthened quiesce and bounded-convergence contract now
+has four consecutive passing replays. Cache retention remains variable (3.8 MB in
+the first pass and 10.0 MB in the next three), so explicit cache ownership,
+diagnostics, cleanup, keep-data, and remove-all behavior remain open.
 
 ### Electron package-transition evidence
 
