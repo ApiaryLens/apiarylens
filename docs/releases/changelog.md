@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.0-preview.3 — 2026-07-17
+
+Preview 3 adds production-grade standalone-to-connected Windows migration,
+transactional exact-once import receipts, the accessible hive equipment stack,
+offline weather snapshots and a privacy-preserving enrichment boundary. It also
+records complete released-byte Cloudflare, Windows-to-Linux, and installed-Windows
+automated acceptance while retaining signing and physical assistive-technology gates.
+
+See the [Preview 3 release notes](0.1.0-preview.3.md).
+
 ## 0.1.0-preview.2 — 2026-07-17
 
 Preview 2 publishes the standalone Windows product, automatic connected sync,

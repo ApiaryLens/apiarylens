@@ -1,6 +1,6 @@
 # ApiaryLens Marketing Overview
 
-- **Status:** Public Preview 2 product messaging
+- **Status:** Public Preview 3 product messaging
 - **Last reviewed:** 2026-07-17
 
 > **Tagline:** Know every hive. Empower every beekeeper.
@@ -21,14 +21,14 @@ It is being designed to help answer practical questions:
 - What may be blooming nearby?
 - Should we ask a mentor to review this frame or inspection?
 
-ApiaryLens Public Preview 2 is an early, usable product—not GA or a stable release.
+ApiaryLens Public Preview 3 is an early, usable product—not GA or a stable release.
 The safe synthetic demo, installable PWA, Cloudflare family profile, Docker Compose
 profile, Scout Bee, documentation, and verifiable artifacts are available for
 controlled evaluation. Features and workflows may change, and updates may arrive
 frequently, sometimes multiple times in a day. Physical-device,
 assistive-technology, and final owner acceptance gates remain open.
 
-Keep current backups while evaluating Preview 2. ApiaryLens must not be the sole
+Keep current backups while evaluating Preview 3. ApiaryLens must not be the sole
 copy of irreplaceable hive records or media.
 
 ## What ApiaryLens Helps You Do
@@ -51,7 +51,7 @@ The first target is a family or hobbyist beekeeper using phones, tablets, and
 computers. ApiaryLens begins with an offline-first Progressive Web App so field
 records remain usable when service is poor or absent.
 
-Public Preview 2 supports two approachable server profiles:
+Public Preview 3 supports two approachable server profiles:
 
 - **Family Cloud:** synchronized records in the beekeeper's own Cloudflare account
 - **My Own Hardware or VM:** the complete Docker Compose server on an ordinary Linux

@@ -1,14 +1,14 @@
 # MVP Release Gate Checklist
 
-**Release:** 0.1.0-preview.2
+**Release:** 0.1.0-preview.3
 
 **Date:** 2026-07-17
 
 **Status:** Public Preview; owner/device and final acceptance gates remain open
 
-Public Preview 2 is the current corrective acceptance release. It includes the
+Public Preview 3 is the current corrective acceptance release. It includes the
 Windows standalone client, automatic synchronization, PWA/media reliability fixes,
-backend-only deployment choice, and Scout Bee Preview 3 compatibility. It is
+backend-only deployment choice, and Scout Bee Preview 4 compatibility. It is
 published with exact checksums and independent attestations. The Windows Preview
 executables are explicitly unsigned; signing remains a later gate. Preview is not GA or a stable
 release: features and workflows may change, updates may arrive frequently (sometimes

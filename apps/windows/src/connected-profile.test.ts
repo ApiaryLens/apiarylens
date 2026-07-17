@@ -21,7 +21,7 @@ const profile: WindowsConnectionProfile = {
   provisioningSource: 'scout',
   createdAt: '2026-07-17T16:00:00.000Z',
   compatibility: {
-    productVersion: '0.1.0-preview.2',
+    productVersion: '0.1.0-preview.3',
     apiContract: '1.0',
     syncContract: 1,
     databaseMigration: '0004',
@@ -69,7 +69,7 @@ describe('Windows connected profile', () => {
             status: 'ok',
             build: {
               product: 'ApiaryLens',
-              productVersion: '0.1.0-preview.2',
+              productVersion: '0.1.0-preview.3',
               deploymentProfile: 'cloudflare',
               apiContract: '1.0',
               syncContract: 1,
@@ -82,7 +82,7 @@ describe('Windows connected profile', () => {
         return Promise.resolve(response);
       }),
     );
-    expect((await verifyConnectedBackend(profile)).productVersion).toBe('0.1.0-preview.2');
+    expect((await verifyConnectedBackend(profile)).productVersion).toBe('0.1.0-preview.3');
     const mismatch = { ...profile, compatibility: { ...profile.compatibility, syncContract: 2 } };
     await expect(verifyConnectedBackend(mismatch)).rejects.toThrow(/compatibility lock/);
   });

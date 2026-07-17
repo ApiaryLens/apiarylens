@@ -35,7 +35,7 @@ const profile: WindowsConnectionProfile = {
   provisioningSource: 'scout',
   createdAt: '2026-07-17T16:00:00.000Z',
   compatibility: {
-    productVersion: '0.1.0-preview.2',
+    productVersion: '0.1.0-preview.3',
     apiContract: '1.0',
     syncContract: 1,
     databaseMigration: '0004',

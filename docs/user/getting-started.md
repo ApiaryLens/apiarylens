@@ -123,11 +123,11 @@ SSH key, deployment secret, or recovery code. Authentication happens in the Wind
 client after import. Returning to standalone mode preserves the prior standalone
 data; it does not silently copy newer remote-only records back into that database.
 
-ApiaryLens for Windows Preview 2 is available as a current-user
-[`ApiaryLensSetup-UNSIGNED-PREVIEW.exe`](https://github.com/ApiaryLens/apiarylens/releases/download/v0.1.0-preview.2/ApiaryLensSetup-UNSIGNED-PREVIEW.exe).
+ApiaryLens for Windows Preview 3 is available as a current-user
+[`ApiaryLensSetup-UNSIGNED-PREVIEW.exe`](https://github.com/ApiaryLens/apiarylens/releases/download/v0.1.0-preview.3/ApiaryLensSetup-UNSIGNED-PREVIEW.exe).
 It installs without administrator rights and does not require Node, Go, WSL, Docker,
 or a Linux shell. Review the
-[official versioned release](https://github.com/ApiaryLens/apiarylens/releases/tag/v0.1.0-preview.2)
+[official versioned release](https://github.com/ApiaryLens/apiarylens/releases/tag/v0.1.0-preview.3)
 before running Setup. The current Preview installer is **not Authenticode-signed**;
 its SHA-256 is
 `696276fdd0c4c537b34ea757f2d17a40383cb385d8c72ac0de2779af404c0b1e`.

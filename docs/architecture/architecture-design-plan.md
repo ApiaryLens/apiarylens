@@ -80,10 +80,10 @@ the current plan.
 
 ## Current Project State
 
-The product architecture and MVP contract are accepted. ApiaryLens Public Preview 2
+The product architecture and MVP contract are accepted. ApiaryLens Public Preview 3
 publishes the PWA, Windows client, both backends, shared contracts and schema,
-Compose profile, separately versioned Scout Bee Preview 3, public properties,
-attested release artifacts, and documentation. Preview 2 is not GA or a stable
+Compose profile, separately versioned Scout Bee Preview 4, public properties,
+attested release artifacts, and documentation. Preview 3 is not GA or a stable
 release; features and workflows may change and updates may arrive frequently. Stable
 promotion remains gated by the open physical-device, manual accessibility,
 pending-work update, and project-owner UAT evidence. Preview users must keep backups

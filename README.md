@@ -47,7 +47,7 @@ remain open in the [MVP UAT record](docs/testing/mvp-uat.md).
 
 Preview users should keep current backups and must not treat ApiaryLens as the sole
 copy of irreplaceable hive records or media. See the
-[Public Preview 2 release notes](docs/releases/0.1.0-preview.2.md) for scope,
+[Public Preview 3 release notes](docs/releases/0.1.0-preview.3.md) for scope,
 verification, and recovery guidance.
 
 ## Project direction

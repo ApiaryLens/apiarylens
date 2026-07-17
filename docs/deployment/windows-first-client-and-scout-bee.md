@@ -10,9 +10,9 @@ frontend. It implements the product direction accepted in
 [ADR 0015](../adr/0015-windows-first-client-portfolio.md) and the Scout repository
 boundary accepted in [ADR 0014](../adr/0014-scout-bee-separate-repository-and-release.md).
 
-Public Preview 2 is the current testable product release. It includes the Windows
-package, and Scout Bee Preview 3 is independently published for Windows and Linux
-with exact Product Preview 2 compatibility. Both Windows executables are explicitly
+Public Preview 3 is the current testable product release. It includes the Windows
+package, and Scout Bee Preview 4 is independently published for Windows and Linux
+with exact Product Preview 3 compatibility. Both Windows executables are explicitly
 unsigned Preview artifacts; signing and remaining physical-target acceptance are
 not complete.
 

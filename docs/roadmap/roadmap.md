@@ -1,12 +1,12 @@
 # ApiaryLens Roadmap
 
-## Current release: Public Preview 2
+## Current release: Public Preview 3
 
-ApiaryLens is in Public Preview 2, not GA. The core MVP implementation is available
+ApiaryLens is in Public Preview 3, not GA. The core MVP implementation is available
 for real-world evaluation, while owner/device acceptance continues. Preview features
 and workflows may change, with updates sometimes arriving multiple times per day.
-Keep backups and exports current; Preview 2 must not be the sole copy of irreplaceable
-hive records or media. See the [Preview 2 release notes](../releases/0.1.0-preview.2.md)
+Keep backups and exports current; Preview 3 must not be the sole copy of irreplaceable
+hive records or media. See the [Preview 3 release notes](../releases/0.1.0-preview.3.md)
 and [MVP UAT record](../testing/mvp-uat.md).
 
 The independently versioned
@@ -154,7 +154,7 @@ the completed Preview 1 artifact.
 - Cross-device authentication/session explanations and session-management UX without
   weakening secure-cookie or server-side authorization boundaries
 
-## Active Preview 2 Direction: Windows-First Client and Scout Bee
+## Active Preview 3 Direction: Windows-First Client and Scout Bee
 
 This strategic program takes precedence over Phase 2 and later feature expansion.
 It makes a packaged Windows client the default family starting point while keeping

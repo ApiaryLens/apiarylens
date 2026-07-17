@@ -2,7 +2,7 @@
 
 ## Status
 
-Active Public Preview 2 delivery sequence. Preview 2 is not GA or a stable release:
+Active Public Preview 3 delivery sequence. Preview 3 is not GA or a stable release:
 features and workflows may change, updates may arrive frequently (sometimes multiple
 times per day), and preview users must keep backups and exports rather than relying
 on ApiaryLens as the sole copy of irreplaceable records or media. The
@@ -21,7 +21,7 @@ which the portfolio moves from foundation through release.
   Windows Authenticode signing remains open
 - MVP core implementation: Cloudflare family profile, approved Hyper-V Compose
   profile, Scout Bee, documentation, and release artifacts are available in Public
-  Preview 2.
+  Preview 3.
 - Post-MVP Version 1.1 backlog: AWS/provider expansion and broader operational polish;
   remaining MVP acceptance work is tracked explicitly in the UAT record.
 - Remaining release action: complete owner/device acceptance before any stable/GA
@@ -191,4 +191,4 @@ and deployment support rather than treating them as later cleanup.
 7. Track AWS, extended physical-device sessions, assistive-technology review, and
    formal support operations in the Version 1.1 backlog.
 8. Record project-owner acceptance only after the remaining GA gates close; do not
-   promote Preview 2 directly to stable merely because the preview is available.
+   promote Preview 3 directly to stable merely because the preview is available.

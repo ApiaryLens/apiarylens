@@ -5,7 +5,7 @@ manager. Run Scout on the computer in front of you; it can manage ApiaryLens on
 that Windows computer, in Cloudflare, or on a separate Linux computer over SSH.
 Windows users do not need to type Linux commands.
 
-> **Preview availability:** Scout Bee `0.1.0-preview.2` is available from the
+> **Preview availability:** Scout Bee `0.1.0-preview.4` is available from the
 > [official versioned release](https://github.com/ApiaryLens/scout-bee/releases/tag/v0.1.0-preview.3)
 > for Windows and Linux. The Windows Preview executable is explicitly unsigned;
 > verify the checksum below before running it. A source clone is a contributor

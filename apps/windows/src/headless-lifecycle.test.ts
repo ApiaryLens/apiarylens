@@ -12,7 +12,7 @@ import {
   writeHeadlessLifecycleEvidence,
 } from './headless-lifecycle.js';
 
-const identity = { productVersion: '0.1.0-preview.2', databaseMigration: '0004' };
+const identity = { productVersion: '0.1.0-preview.3', databaseMigration: '0004' };
 
 describe('headless Windows lifecycle', () => {
   const roots: string[] = [];

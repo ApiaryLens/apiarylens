@@ -1,5 +1,5 @@
 export const PRODUCT_NAME = 'ApiaryLens';
-export const PRODUCT_VERSION = '0.1.0-preview.2';
+export const PRODUCT_VERSION = '0.1.0-preview.3';
 export const RELEASE_CHANNEL = 'preview';
 export const API_CONTRACT_VERSION = '1.0';
 export const SYNC_CONTRACT_VERSION = 1;
