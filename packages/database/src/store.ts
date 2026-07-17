@@ -15,6 +15,15 @@ import { migration0001, migration0002, migration0003, migration0004 } from './sc
 type SqlValue = string | number | null;
 type Row = Record<string, SqlValue>;
 
+const migrationHistory = [
+  { version: '0001', sql: migration0001 },
+  { version: '0002', sql: migration0002 },
+  { version: '0003', sql: migration0003 },
+  { version: '0004', sql: migration0004 },
+] as const;
+
+type MigrationLedgerRow = { version: string; checksum: string };
+
 export interface AuthenticatedSession {
   user: User;
   organization: Organization;
@@ -87,17 +96,83 @@ export class SqliteStore {
   constructor(path = ':memory:', options: { authRootSecret?: string } = {}) {
     this.authRootSecret = options.authRootSecret ?? 'apiarylens-development-auth-root-secret';
     this.database = new DatabaseSync(path);
-    for (const [version, sql] of [
-      ['0001', migration0001],
-      ['0002', migration0002],
-      ['0003', migration0003],
-      ['0004', migration0004],
-    ] as const) {
-      this.database.exec(sql);
-      this.database
-        .prepare('INSERT OR IGNORE INTO migrations(version, applied_at, checksum) VALUES (?, ?, ?)')
-        .run(version, now(), hash(sql));
+    try {
+      this.database.exec('PRAGMA foreign_keys = ON');
+      this.applyMigrations();
+    } catch (error) {
+      this.database.close();
+      throw error;
     }
+  }
+
+  private applyMigrations(): void {
+    this.transaction(() => {
+      const appliedCount = this.validateMigrationLedger(false);
+      for (const migration of migrationHistory.slice(appliedCount)) {
+        this.database.exec(migration.sql);
+        this.database
+          .prepare('INSERT INTO migrations(version, applied_at, checksum) VALUES (?, ?, ?)')
+          .run(migration.version, now(), hash(migration.sql));
+      }
+      this.validateMigrationLedger(true);
+    });
+  }
+
+  private validateMigrationLedger(requireHead: boolean): number {
+    const ledgerExists = this.database
+      .prepare(
+        "SELECT 1 AS present FROM sqlite_master WHERE type = 'table' AND name = 'migrations'",
+      )
+      .get();
+    if (!ledgerExists) {
+      if (requireHead) {
+        throw new StoreError('migration_ledger_invalid', 'The migration ledger is missing');
+      }
+      return 0;
+    }
+
+    const rows = this.database
+      .prepare('SELECT version, checksum FROM migrations ORDER BY rowid')
+      .all() as MigrationLedgerRow[];
+    const knownVersions = new Set(migrationHistory.map(({ version }) => version));
+
+    for (let index = 0; index < rows.length; index += 1) {
+      const row = rows[index];
+      const expected = migrationHistory[index];
+      if (!row) {
+        throw new StoreError('migration_ledger_invalid', 'The migration ledger is unreadable');
+      }
+      if (!knownVersions.has(row.version as (typeof migrationHistory)[number]['version'])) {
+        throw new StoreError(
+          'migration_ledger_invalid',
+          `The migration ledger contains unknown version ${row.version}`,
+        );
+      }
+      if (!expected) {
+        throw new StoreError('migration_ledger_invalid', 'The migration ledger is too long');
+      }
+      if (row.version !== expected.version) {
+        throw new StoreError(
+          'migration_ledger_invalid',
+          `The migration ledger is skipped or out of order: expected ${expected.version} but found ${row.version}`,
+        );
+      }
+      if (row.checksum !== hash(expected.sql)) {
+        throw new StoreError(
+          'migration_checksum_mismatch',
+          `The recorded checksum for migration ${row.version} does not match the release`,
+        );
+      }
+    }
+
+    if (requireHead && rows.length !== migrationHistory.length) {
+      throw new StoreError(
+        'migration_ledger_invalid',
+        `The migration ledger stopped at ${rows.at(-1)?.version ?? 'no version'}`,
+      );
+    }
+
+    return rows.length;
   }
 
   private sessionHash(value: string): string {
