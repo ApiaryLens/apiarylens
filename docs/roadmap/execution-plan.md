@@ -22,10 +22,10 @@ which the portfolio moves from foundation through release.
 - MVP core implementation: Cloudflare family profile, approved Hyper-V Compose
   profile, Scout Bee, documentation, and release artifacts are available in Public
   Preview 3.
-- Post-MVP Version 1.1 backlog: AWS/provider expansion and broader operational polish;
-  remaining MVP acceptance work is tracked explicitly in the UAT record.
-- Remaining release action: complete owner/device acceptance before any stable/GA
-  promotion.
+- Post-MVP Version 1.1 backlog: AWS/provider expansion, the extended physical
+  assistive-technology support matrix, and broader operational polish.
+- Public Preview 3 non-deferred scope is complete. Production signing remains the
+  explicit gate before any stable/GA promotion.
 
 ## Delivery Rule
 

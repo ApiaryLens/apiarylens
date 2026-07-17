@@ -2,9 +2,9 @@
 
 ## Status
 
-`WIN-005` is in progress. This record evaluates the durable credential boundary for
-the standalone and connected Windows client. It does not select a host framework,
-change the product authentication contract, or authorize a Windows scaffold.
+`WIN-005` research is complete. The owner subsequently accepted ADR 0017 and
+authorized the credential boundary delivered in Public Preview 3. This record
+preserves the evaluation that informed that decision.
 
 Official-source review is complete for Windows Credential Manager, DPAPI, Electron
 `safeStorage`, and Tauri Stronghold. The first exact Credential Manager and current-

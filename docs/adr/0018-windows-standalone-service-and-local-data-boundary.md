@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted and implemented for Public Preview
 
 ## Date
 
@@ -10,8 +10,7 @@ Proposed
 
 ## Deciders
 
-ApiaryLens project owner after WIN-004 and the acceptance conditions below are
-satisfied. This proposal does not authorize product implementation.
+Kristopher Turner, ApiaryLens project owner. Implementation authorized 2026-07-17.
 
 ## Context
 

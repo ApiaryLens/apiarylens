@@ -2,12 +2,12 @@
 
 ## Status and authority
 
-This is the detailed design baseline for the post-Preview Scout Bee product. The
+This is the implemented design baseline for Scout Bee Preview 4. The
 repository split is accepted by [ADR 0014](../adr/0014-scout-bee-separate-repository-and-release.md).
 The executor security boundary in [ADR 0011](../adr/0011-scout-bee-and-deployment-execution.md)
-still applies. The project owner approved implementation on 2026-07-17 and the
-repository transition began. Package publication and release promotion remain
-subject to the lifecycle, security, and UAT gates in this design.
+still applies. The project owner approved implementation on 2026-07-17, the
+repository transition is complete, and Preview 4 is independently published with
+exact Product Preview 3 compatibility. Production signing remains a GA gate.
 
 Scout Bee is not an ApiaryLens product client. It is the separately installed and
 released lifecycle application for acquiring, installing, updating, repairing,

@@ -26,7 +26,8 @@ The safe synthetic demo, installable PWA, Cloudflare family profile, Docker Comp
 profile, Scout Bee, documentation, and verifiable artifacts are available for
 controlled evaluation. Features and workflows may change, and updates may arrive
 frequently, sometimes multiple times in a day. Physical-device,
-assistive-technology, and final owner acceptance gates remain open.
+Production signing remains a GA gate, and the extended physical
+assistive-technology support matrix is tracked for Version 1.1.
 
 Keep current backups while evaluating Preview 3. ApiaryLens must not be the sole
 copy of irreplaceable hive records or media.

@@ -2,7 +2,9 @@
 
 ## Status and intent
 
-**Status:** Public Preview implementation published; remaining physical and GA gates remain open.
+**Status:** Product Preview 3 and Scout Bee Preview 4 published; authorized Preview
+scope accepted. Production signing remains a GA gate, and the extended manual
+assistive-technology matrix is scheduled for Version 1.1.
 
 This is the detailed post-Preview design for making the packaged Windows client the
 default family starting point while preserving the existing portable backend and web
@@ -13,15 +15,15 @@ boundary accepted in [ADR 0014](../adr/0014-scout-bee-separate-repository-and-re
 Public Preview 3 is the current testable product release. It includes the Windows
 package, and Scout Bee Preview 4 is independently published for Windows and Linux
 with exact Product Preview 3 compatibility. Both Windows executables are explicitly
-unsigned Preview artifacts; signing and remaining physical-target acceptance are
-not complete.
+unsigned Preview artifacts; production signing is not complete and therefore no GA
+claim is made.
 
-The first production tranche now exists in [`apps/windows`](../../apps/windows/README.md).
+The accepted Windows implementation exists in [`apps/windows`](../../apps/windows/README.md).
 It composes the real React UI and portable API in a single-instance Electron host,
 supervises an IPv4-loopback-only local service, protects standalone secrets in the
-main process, and exposes only a versioned preload bridge. This does not accept ADR
-0016, produce a signed package, or satisfy the clean-profile and physical-device
-release gates below.
+main process, and exposes only a versioned preload bridge. ADR 0016 is accepted and
+the exact installed Preview package passed security, recovery, and migration
+acceptance; signing remains a separate GA gate.
 
 ## Product experience
 

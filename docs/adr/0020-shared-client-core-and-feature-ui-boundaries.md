@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted for Windows and implemented for Public Preview
 
 ## Date
 
@@ -10,9 +10,9 @@ Proposed
 
 ## Deciders
 
-ApiaryLens project owner after WIN-007 review and the acceptance conditions below
-are satisfied. This proposal does not authorize Windows or native-mobile
-implementation.
+Kristopher Turner, ApiaryLens project owner. Windows implementation was authorized
+2026-07-17. Native iOS and Android clients remain deferred and are not authorized by
+this decision.
 
 ## Context
 

@@ -2,8 +2,9 @@
 
 ## Status
 
-`WIN-003` is in progress. The owner authorized research and follow-on ADR work on
-2026-07-16. This record does not select a framework or authorize product code.
+`WIN-003` research is complete. The owner subsequently accepted ADR 0016 and
+authorized the Electron implementation delivered in Public Preview 3. This record
+preserves the research evidence that informed that decision.
 
 Official-source review plus comparable Electron and Tauri/WebView2 packaging,
 test-signing, exact-artifact clean-install and package-transition lifecycle,

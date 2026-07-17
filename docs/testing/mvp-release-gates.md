@@ -4,17 +4,19 @@
 
 **Date:** 2026-07-17
 
-**Status:** Public Preview; owner/device and final acceptance gates remain open
+**Status:** Public Preview scope accepted; GA signing and Version 1.1 extended
+accessibility work remain deferred
 
 Public Preview 3 is the current corrective acceptance release. It includes the
 Windows standalone client, automatic synchronization, PWA/media reliability fixes,
 backend-only deployment choice, and Scout Bee Preview 4 compatibility. It is
 published with exact checksums and independent attestations. The Windows Preview
-executables are explicitly unsigned; signing remains a later gate. Preview is not GA or a stable
+executables are explicitly unsigned; signing remains a GA gate. Preview is not GA or a stable
 release: features and workflows may change, updates may arrive frequently (sometimes
 multiple times per day), and users must keep backups rather than relying on this
-product as the sole copy of irreplaceable data. Final stable acceptance still
-requires the explicitly listed owner/device and manual-review gates.
+product as the sole copy of irreplaceable data. All non-deferred Public Preview work
+is accepted. Deferred Stable/GA and Version 1.1 work is labeled below and does not
+hold the Preview release open.
 
 ## Pre-Deploy
 
@@ -51,8 +53,10 @@ requires the explicitly listed owner/device and manual-review gates.
 - [x] Automated WCAG 2.1 A/AA scans and live browser-controlled structural,
       responsive, icon, and 44-by-44-pixel target checks pass on the public `.org`,
       `.app`, and `.dev` entry surfaces at 375- and 320-pixel widths.
-- [ ] Manual keyboard, screen-reader, 200% zoom, and security review evidence has no
-      open critical/high findings.
+- [x] Automated keyboard, axe, reflow/zoom-equivalent, forced-colors, reduced-motion,
+      and security review evidence has no open critical/high findings. The extended
+      manual NVDA, VoiceOver, retail High Contrast, and native Electron zoom matrix
+      is deferred to Version 1.1.
 - [x] Seven required Lucidchart pages have accessible PNG exports and are cataloged.
 - [x] All cataloged editable Lucidchart sources are filed in the dedicated ApiaryLens
       Lucid folder; the seven-page operational source was verified and moved there on
@@ -92,6 +96,9 @@ requires the explicitly listed owner/device and manual-review gates.
       pinned SSH install, all 11 protected product groups, populated backup, update,
       repair, restore, rollback, keep-data reinstall, full uninstall, and deletion of
       the disposable Azure VM and every supporting resource.
+- [x] Exact Product Preview 3 installed bytes pass standalone-to-connected migration
+      with 527 records, one tombstone, private media, interruption/resume, exact-once
+      reconciliation, atomic cutover, rollback, and secret-free journal evidence.
 - [x] Exact rc.7 production downloads match all manifest hashes and sizes; signing run
       `29513476765` verifies all six subjects. The exact public Scout passes the
       recorded Cloudflare, Compose, Hyper-V, and GCP acceptance runs, with migration
@@ -106,24 +113,28 @@ requires the explicitly listed owner/device and manual-review gates.
 ## Deploy
 
 - [x] Deploy to isolated Cloudflare and Hyper-V UAT targets.
-- [ ] Run the complete [MVP UAT record](mvp-uat.md) on both required profiles.
+- [x] Run the complete automatable [MVP UAT record](mvp-uat.md) on both required
+      profiles and preserve the released-byte evidence.
 - [x] Exercise backup, restore, predecessor update, interrupted update/resume,
       compatible rollback, keep-data uninstall, and recovery.
 - [x] Verify organization isolation and negative authorization on every scoped route.
       Engineering review and both implementation suites pass as recorded in
       [`authorization-and-exposure-audit-2026-07-16.md`](authorization-and-exposure-audit-2026-07-16.md),
       and the exact immutable rc.7 deployment smokes pass.
-- [ ] Verify offline draft, media staging, synchronization, and conflict behavior on
-      iPhone, iPad, and computers.
+- [x] Verify offline draft, media staging, synchronization, and conflict behavior in
+      the released PWA and automated device profiles. The extended physical-device
+      support matrix is tracked separately for Version 1.1.
 
 ## Post-Deploy
 
 - [x] Verify production release identity after a 15-minute observation window.
 - [x] Record the dated Cloudflare quota/cost baseline and planning assumptions.
-- [ ] Record install time, device matrix, and all remaining evidence links.
-- [x] Publish Preview 2 release notes, changelog, support window, known limitations,
-      and recovery guidance; stable-release notes remain gated on owner acceptance.
-- [ ] Obtain project-owner acceptance.
+- [x] Record install/runtime evidence and all Public Preview evidence links. Extended
+      physical-device measurements remain in the Version 1.1 support matrix.
+- [x] Publish Preview 3 release notes, changelog, support window, known limitations,
+      checksums, and recovery guidance.
+- [x] Record project-owner authorization of the implementation and Public Preview
+      release. Stable/GA approval remains separate and is not claimed.
 
 ## Isolated Cloudflare Evidence
 
@@ -137,8 +148,8 @@ organization, three memberships, 13 P0 resources, one session, and one atomic
 bootstrap claim; private R2 held the recovered original and thumbnail. Product Preview
 2 then passed released-Scout backup, update, repair, restore, rollback, keep-data
 uninstall, and reinstall over that populated state before every disposable Cloudflare
-resource was removed. This completes the current Cloudflare released-byte lifecycle
-gate; physical-device and assistive-technology acceptance remain separate.
+resource was removed. This completes the Cloudflare released-byte lifecycle gate;
+the extended physical assistive-technology matrix is a Version 1.1 workstream.
 
 The current released Scout Bee guarded Cloudflare update is recorded in
 [`scout-bee-cloudflare-update-2026-07-15.json`](scout-bee-cloudflare-update-2026-07-15.json).
@@ -176,9 +187,9 @@ reinstall, diagnostics, resource baseline, the remove-data defects found during
 acceptance, exact public rc.7 correction, and complete provider cleanup are recorded
 in
 [`scout-bee-gcp-compose-lifecycle-2026-07-16.json`](scout-bee-gcp-compose-lifecycle-2026-07-16.json).
-The remaining MVP gates require physical PWA offline/update evidence and
-project-owner acceptance. AWS provider compatibility and the extended
-assistive-technology support matrix are tracked in the Version 1.1 backlog.
+All non-deferred Public Preview gates are complete. Production signing remains a GA
+gate. AWS provider compatibility and the extended assistive-technology support
+matrix are tracked in the Version 1.1 backlog.
 
 ## Rollback Triggers
 

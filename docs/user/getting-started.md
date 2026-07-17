@@ -130,7 +130,7 @@ or a Linux shell. Review the
 [official versioned release](https://github.com/ApiaryLens/apiarylens/releases/tag/v0.1.0-preview.3)
 before running Setup. The current Preview installer is **not Authenticode-signed**;
 its SHA-256 is
-`696276fdd0c4c537b34ea757f2d17a40383cb385d8c72ac0de2779af404c0b1e`.
+`529a40ac910c749fc289003d13280381dccabc571af4130d2d6a86dc7223032c`.
 Windows may show **Windows protected your PC**. Choose **More info → Run anyway**
 only after the downloaded file matches that exact hash. A future signed release
 must show the publisher documented on its own release page; this unsigned Preview

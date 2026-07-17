@@ -3,16 +3,17 @@
 ## Current release: Public Preview 3
 
 ApiaryLens is in Public Preview 3, not GA. The core MVP implementation is available
-for real-world evaluation, while owner/device acceptance continues. Preview features
+for real-world evaluation, with all non-deferred Preview scope accepted. Preview features
 and workflows may change, with updates sometimes arriving multiple times per day.
 Keep backups and exports current; Preview 3 must not be the sole copy of irreplaceable
 hive records or media. See the [Preview 3 release notes](../releases/0.1.0-preview.3.md)
 and [MVP UAT record](../testing/mvp-uat.md).
 
 The independently versioned
-[Scout Bee 0.1.0 Preview 3](https://github.com/ApiaryLens/scout-bee/releases/tag/v0.1.0-preview.3)
+[Scout Bee 0.1.0 Preview 4](https://github.com/ApiaryLens/scout-bee/releases/tag/v0.1.0-preview.4)
 is now available for Windows and Linux. It manages verified product lifecycle
-operations while production signing and physical-target acceptance continue.
+operations. Production signing remains a GA gate; the extended physical
+assistive-technology matrix is scheduled for Version 1.1.
 
 ## MVP Target
 
@@ -160,19 +161,21 @@ This strategic program takes precedence over Phase 2 and later feature expansion
 It makes a packaged Windows client the default family starting point while keeping
 the backend and optional web frontend as the portable connected core.
 
-### Now — authorized implementation and release-gate evidence
+### Now — Public Preview 3 delivered
 
-- The owner approved the detailed project plan and live tracker; production
-  implementation is active while exact package, security, accessibility, and UAT
-  gates remain open
+- The owner approved the detailed project plan and live tracker. Product Preview 3
+  and Scout Bee Preview 4 complete the authorized, non-deferred Preview scope with
+  exact package, security, migration, deployment, recovery, and automated
+  accessibility evidence.
 - Scout Bee now has a separate public repository, independent version, UI, Go
-  executor, Windows/Linux verification, and release workflow; production signing
-  and released-artifact lifecycle evidence remain open
+  executor, Windows/Linux verification, and release workflow. Production signing
+  remains an explicit GA gate rather than a Public Preview blocker.
 - ADR 0015 keeps the initial Windows client in the product monorepo. The Electron
   host now runs the real React/API/SQLite/media composition, supports standalone and
   connected profiles, verified backup/restore, and produces Squirrel Setup/update
-  artifacts. Exact Windows run `29604870862` passed package, installed-host, and
-  keep-data-uninstall verification; production signing and physical UAT remain
+  artifacts. Exact Windows package and migration acceptance passed; production
+  signing remains deferred to GA, and the extended physical assistive-technology
+  matrix is tracked for Version 1.1.
 - Keep follow-on ADRs and the detailed security, UX, lifecycle, and data designs
   synchronized as implementation evidence closes or changes a decision
 - Maintain the authoritative Lucidchart diagrams and accessible exports for

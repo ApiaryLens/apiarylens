@@ -2,8 +2,9 @@
 
 ## Status
 
-`WIN-004` is in progress. The owner authorized research on 2026-07-16. This record
-does not authorize a Windows product scaffold or select Electron or Tauri.
+`WIN-004` research is complete. The owner subsequently accepted ADR 0018 and
+authorized the supervised loopback service delivered in Public Preview 3. This
+record preserves the original security evidence.
 
 The first disposable lifecycle and security prototype passed on a fresh GitHub-
 hosted Windows runner. Exact portable-server process integration and its 15 API

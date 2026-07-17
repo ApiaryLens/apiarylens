@@ -2,7 +2,8 @@
 
 - **Backlog:** WIN-006
 - **Date:** 2026-07-16
-- **Status:** Research complete; implementation is not authorized
+- **Status:** Research complete; implementation subsequently authorized and
+  delivered in Public Preview 3
 - **Scope:** Windows standalone client to a connected ApiaryLens family deployment
 
 ## Decision sought
@@ -184,10 +185,10 @@ outcomes are satisfied as follows:
 | Completion evidence | Source inventory, target receipts, counts, hashes, cursor, migration ID, and secret-free report |
 | Rollback | Pre-remote-write rollback succeeds; remote-only writes make destructive rollback ineligible |
 
-This closes the research gate. It does not authorize implementation and does not
-claim that a packaged Windows client, migration API, D1/R2 target, or released
-artifact has passed. Those remain downstream design, implementation, WIN-018, and
-release-UAT requirements.
+This closed the research gate; the owner later authorized implementation. The
+downstream packaged Windows migration and released-artifact UAT subsequently passed
+for Public Preview 3; the original spike itself remains research evidence rather
+than release evidence.
 
 ## Proposed migration protocol
 

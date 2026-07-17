@@ -6,15 +6,15 @@ that Windows computer, in Cloudflare, or on a separate Linux computer over SSH.
 Windows users do not need to type Linux commands.
 
 > **Preview availability:** Scout Bee `0.1.0-preview.4` is available from the
-> [official versioned release](https://github.com/ApiaryLens/scout-bee/releases/tag/v0.1.0-preview.3)
+> [official versioned release](https://github.com/ApiaryLens/scout-bee/releases/tag/v0.1.0-preview.4)
 > for Windows and Linux. The Windows Preview executable is explicitly unsigned;
 > verify the checksum below before running it. A source clone is a contributor
 > workflow, not a substitute installer.
 
 | Package | SHA-256 |
 |---|---|
-| [Windows x64 unsigned Preview](https://github.com/ApiaryLens/scout-bee/releases/download/v0.1.0-preview.3/scout-bee-0.1.0-preview.3-windows-amd64-UNSIGNED-PREVIEW.exe) | `95f1c11324d59dc7244e93f04207a37c517d13b2d5c86092a59b39d23b5985e0` |
-| [Linux x64 archive](https://github.com/ApiaryLens/scout-bee/releases/download/v0.1.0-preview.3/scout-bee-0.1.0-preview.3-linux-amd64.tar.gz) | `fd03a2571182e289ce811fdfaf5b0c542dd75bfc18f53694721386af24f7896a` |
+| [Windows x64 unsigned Preview](https://github.com/ApiaryLens/scout-bee/releases/download/v0.1.0-preview.4/scout-bee-0.1.0-preview.4-windows-amd64-UNSIGNED-PREVIEW.exe) | `e0cb4ef0bcd237ccfd9ac376a7c98500ab9b8e898fa7048c94bcd183354bac3e` |
+| [Linux x64 archive](https://github.com/ApiaryLens/scout-bee/releases/download/v0.1.0-preview.4/scout-bee-0.1.0-preview.4-linux-amd64.tar.gz) | `18d129700cb6b108992412090cee4e4c087e04749ef5067f3c7b5674bf15c87a` |
 
 ## Choose what Scout should manage
 

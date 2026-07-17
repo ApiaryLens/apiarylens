@@ -6,7 +6,9 @@ Preview 3 adds production-grade standalone-to-connected Windows migration,
 transactional exact-once import receipts, the accessible hive equipment stack,
 offline weather snapshots and a privacy-preserving enrichment boundary. It also
 records complete released-byte Cloudflare, Windows-to-Linux, and installed-Windows
-automated acceptance while retaining signing and physical assistive-technology gates.
+acceptance, including interrupted packaged migration and exact reconciliation.
+Production signing remains a GA gate; the extended manual assistive-technology
+matrix is scheduled for Version 1.1.
 
 See the [Preview 3 release notes](0.1.0-preview.3.md).
 

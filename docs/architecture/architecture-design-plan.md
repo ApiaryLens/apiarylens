@@ -274,7 +274,7 @@ them and after accessibility/license review.
 
 ### Windows Client
 
-ADR 0015 makes a signed Windows application the future default family starting
+ADR 0015 makes the Windows application the default family starting
 point. One client supports standalone mode with local database/media and no cloud,
 Linux, or server prerequisite, plus optional connected mode against a compatible
 Scout-deployed backend. Connecting is a controlled, reversible data migration and
@@ -286,11 +286,12 @@ appropriate. Native host, transport, credential, filesystem, process, and lifecy
 adapters remain narrow boundaries. The portable backend and optional web frontend
 remain the shared connected foundation for Windows, PWA, and later mobile clients.
 
-ADRs 0016 through 0021 propose Electron packaging, external-browser native
+ADRs 0016 through 0021 accept Electron packaging, external-browser native
 authentication, the supervised standalone service, journaled connected migration,
-shared client boundaries, and independent release compatibility. All remain
-Proposed and do not authorize implementation or release. Their exact acceptance
-conditions, retail-device evidence, signing, and owner decisions remain gates.
+shared client boundaries, and independent release compatibility. Their Windows and
+shared-core scope is implemented in Public Preview 3, with exact installed-package
+and migration evidence. Production signing remains a GA gate; native iOS/Android
+implementation remains deferred.
 
 ### iPhone App Store Client
 

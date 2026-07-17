@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted and implemented for Public Preview
 
 ## Date
 
@@ -10,8 +10,8 @@ Proposed
 
 ## Deciders
 
-ApiaryLens project owner after manifest/schema review and the acceptance conditions
-below are satisfied. This proposal does not authorize release publication.
+Kristopher Turner, ApiaryLens project owner. Implementation and Public Preview
+publication authorized 2026-07-17.
 
 ## Context
 

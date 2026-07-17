@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted and implemented for Public Preview
 
 ## Date
 
@@ -10,8 +10,7 @@ Proposed
 
 ## Deciders
 
-ApiaryLens project owner after the `WIN-005` evidence and acceptance conditions in
-this ADR are satisfied. This proposal does not authorize product implementation.
+Kristopher Turner, ApiaryLens project owner. Implementation authorized 2026-07-17.
 
 ## Context
 
@@ -268,9 +267,9 @@ This ADR may move to Accepted only after:
    public API contract, compatibility metadata, and authoritative Lucidchart export
    are synchronized.
 
-Implementation remains behind the explicit owner implementation gate. ADR acceptance
-does not itself authorize Preview 2, Stable, GA, personal-environment deployment, or
-release claims; those require exact signed-artifact and owner UAT evidence.
+The owner subsequently authorized implementation and the accepted design is included
+in Public Preview 3. This acceptance does not authorize a Stable or GA claim;
+production signing remains a separate GA gate.
 
 ## Revisit conditions
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted for Preview implementation; production release gates remain open
+Accepted and implemented for Public Preview; production signing remains a GA gate
 
 ## Date
 
