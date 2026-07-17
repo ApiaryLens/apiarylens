@@ -27,7 +27,7 @@ Linux shell.
 host, and native WinUI. Exact hosted-Windows evidence includes packaging, clean
 current-user installation, test signing, `node:sqlite`, upgrade/downgrade/repair,
 uninstall, SQLite recovery algorithms, SBOM generation, and automated shared-UI
-accessibility. The evidence-weighted result is Electron 390/500 and Tauri 380/500.
+accessibility. The evidence-weighted result is Electron 395/500 and Tauri 380/500.
 
 Electron has the larger footprint, but directly carries the runtime used by the
 existing application and does not add WebView2 acquisition or a second product-
@@ -164,6 +164,20 @@ was `A40D49122EDBEBC084955C8780687FB3CE24578E85924CE28C0DEE6CB6289CB2`.
 This closes the automated top-level Electron notice and manifest gap. Final
 installer-vendor binary review, signed provenance, production signing, and retail
 evidence remain open.
+
+Run
+[`29565936418`](https://github.com/ApiaryLens/apiarylens/actions/runs/29565936418)
+then loaded the real bundled migrations in both packaged and clean-installed forms.
+Upgrades from `0001`, `0002`, and `0003` reached `0004`, preserved the owner
+organization, backfilled the bootstrap claim, retained exact expected checksums,
+and passed integrity. An incompatible `0004` rejected readiness without advancing
+the ledger or losing committed data, and an explicit repair/retry reached `0004`.
+The run also exposed [WIN-026](https://github.com/ApiaryLens/apiarylens/issues/47):
+a deliberately wrong recorded `0003` checksum was accepted at readiness and
+remained stored because the current migration ledger is not validated before
+`INSERT OR IGNORE`. Historical and failed-migration mechanics advance, but
+condition 1 remains open until immutable-prefix checksum validation, atomic ledger
+writes, and the remaining negative fixtures are implemented and proven.
 
 Run
 [`29559517037`](https://github.com/ApiaryLens/apiarylens/actions/runs/29559517037)
@@ -334,7 +348,9 @@ mechanism must replace it.
 
 1. Package the exact built ApiaryLens server and dependencies inside the Electron
    candidate and pass the real API, organization-isolation, media, migration, and
-   standalone lifecycle suites from the installed artifact.
+   standalone lifecycle suites from the installed artifact. Current and historical
+   upgrades plus failed-migration repair/retry pass; `WIN-026` checksum, unknown-
+   ahead, skipped-version, and out-of-order ledger rejection remain open.
 2. Prove the sandboxed preload/main bridge keeps local-control and connected-session
    credentials out of renderer globals, browser storage, DevTools-visible messages,
    arguments, logs, diagnostics, and crash evidence. The packaged and installed
@@ -404,3 +420,4 @@ installed data and release channels.
 - [WIN-003](https://github.com/ApiaryLens/apiarylens/issues/7)
 - [WIN-004](https://github.com/ApiaryLens/apiarylens/issues/4)
 - [WIN-005](https://github.com/ApiaryLens/apiarylens/issues/8)
+- [WIN-026](https://github.com/ApiaryLens/apiarylens/issues/47)

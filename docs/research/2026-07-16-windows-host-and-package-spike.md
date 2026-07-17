@@ -13,9 +13,9 @@ now starts the real portable ApiaryLens service for a protected health probe and
 disposable SQLite/media creation. Exact API, organization-isolation, media,
 credential, recovery, and current-user uninstall/reinstall replay now passes.
 Retail Windows profiles, host accessibility, integrated power-loss behavior,
-historical/failed migrations, production signing and attestation, final binary
-license review, and owner ADR acceptance remain required before the spike can
-close. Authenticated local-service supervision continues separately under
+migration-ledger checksum rejection, production signing and attestation, final
+binary license review, and owner ADR acceptance remain required before the spike
+can close. Authenticated local-service supervision continues separately under
 `WIN-004`.
 
 ## Question
@@ -614,6 +614,39 @@ recover only after an explicit retry. Production timeout/backoff values and fina
 user-facing recovery messaging remain design/retail gates. Physical-volume-full,
 Job Object policy, sleep/resume, sign-out/shutdown, and retail-device behavior also
 remain open.
+
+### Exact historical and failed migration evidence
+
+Exact-artifact run
+[`29565936418`](https://github.com/ApiaryLens/apiarylens/actions/runs/29565936418)
+at commit `26208e7423f22d904e6e5c217409d710a1309226` used setup SHA-256
+`569EB1E72EE0CA40E8CB92E5AE2532739A991DA936DF1C4F2B61871C032C718C`.
+Both the packaged and clean-installed Electron runtime loaded the real bundled
+`@apiarylens/database` migration modules rather than copied SQL.
+
+| Migration check | Packaged | Clean installed |
+|---|---:|---:|
+| Upgrade from ledger head `0001` to `0004` | Passed | Passed |
+| Upgrade from ledger head `0002` to `0004` | Passed | Passed |
+| Upgrade from ledger head `0003` to `0004` | Passed | Passed |
+| Seeded owner organization preserved | Passed | Passed |
+| `0004` bootstrap claim backfilled | Passed | Passed |
+| Audit index, exact checksums, and integrity after valid upgrade | Passed | Passed |
+| Incompatible `0004` rejected before readiness | Passed | Passed |
+| Failed attempt left ledger at `0003` and committed data intact | Passed | Passed |
+| Explicit repair followed by retry reached `0004` | Passed | Passed |
+| Deliberately wrong recorded `0003` checksum rejected | **Failed** | **Failed** |
+| Wrong checksum remained after readiness | **Yes** | **Yes** |
+
+The historical-prefix and failed-migration repair/retry mechanisms now have exact
+artifact evidence. The same test exposed a release-blocking defect: `SqliteStore`
+executes migration SQL and then uses `INSERT OR IGNORE`, but it does not validate an
+existing version's recorded checksum. A modified `0003` ledger entry therefore
+reached readiness and remained modified. [WIN-026](https://github.com/ApiaryLens/apiarylens/issues/47)
+requires ordered immutable-prefix validation, atomic migration-plus-ledger writes,
+unknown/skipped/out-of-order rejection, and exact packaged/installed negative tests.
+The migration acceptance condition remains open until that product fix is
+authorized, implemented, and proven.
 
 ### Electron package-transition evidence
 
