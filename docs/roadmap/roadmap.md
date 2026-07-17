@@ -155,26 +155,27 @@ This strategic program takes precedence over Phase 2 and later feature expansion
 It makes a packaged Windows client the default family starting point while keeping
 the backend and optional web frontend as the portable connected core.
 
-### Now — owner approval, research, decisions, and foundations
+### Now — authorized implementation and release-gate evidence
 
-- Review and approve the detailed project plan, HeritageVA-style live tracker,
-  ADR 0014/0015 direction, and open repository decisions before product code starts
-- Move Scout Bee to a separate public repository, independent version, signing, and
-  release channel while the core repository publishes product artifacts only
-- Decide through evidence and a follow-on ADR whether the Windows client remains in
-  the product monorepo initially or receives an independent repository; do not
-  scaffold either outcome before the approval and research gates
-- Run measured Windows host, packaging, embedded service, authentication, migration,
-  shared UI, update, and Scout orchestration research spikes
-- Accept follow-on ADRs and produce detailed security, UX, lifecycle, and data designs
-- Create authoritative Lucidchart diagrams and accessible exports for standalone,
-  connected, migration, update, backup, and repository/artifact flows
+- The owner approved the detailed project plan and live tracker; production
+  implementation is active while exact package, security, accessibility, and UAT
+  gates remain open
+- Scout Bee now has a separate public repository, independent version, UI, Go
+  executor, Windows/Linux verification, and release workflow; production signing
+  and released-artifact lifecycle evidence remain open
+- ADR 0015 keeps the initial Windows client in the product monorepo; the first
+  production host composition is now being built from the measured Electron,
+  loopback-service, credential, migration, accessibility, and recovery evidence
+- Keep follow-on ADRs and the detailed security, UX, lifecycle, and data designs
+  synchronized as implementation evidence closes or changes a decision
+- Maintain the authoritative Lucidchart diagrams and accessible exports for
+  standalone, connected, migration, update, backup, and repository/artifact flows
 - Continue framework-neutral standalone/connected connection contracts and tests
 - Define Scout's signed portable Windows executable (no Go, Node, WSL, or Linux
   shell required), Linux single-executable archive, Stable-default channels,
   verified artifact cache, secret-free plan export, and `my-apiarylens` CI handoff
 
-### Next — Windows standalone and connected family
+### Next release outcome — Windows standalone and connected family
 
 - Ship a signed Windows application that runs completely standalone with embedded
   loopback service, SQLite, local media, offline use, updates, and backup/restore
