@@ -10,6 +10,9 @@ assets/graphics/**/*.png
 pnpm-lock.yaml
 apps/worker/worker-configuration.d.ts
 
+# Immutable published release evidence must retain its exact released bytes.
+release/release-manifest.json
+
 # Imported and separately maintained prose/assets predate the code formatter.
 **/*.md
 .ai
