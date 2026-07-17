@@ -9,8 +9,10 @@ change the product authentication contract, or authorize a Windows scaffold.
 Official-source review is complete for Windows Credential Manager, DPAPI, Electron
 `safeStorage`, and Tauri Stronghold. The first exact Credential Manager and current-
 user DPAPI lifecycle passed on a fresh hosted Windows profile, including denial and
-cleanup for a disposable second Windows user. Host-bridge, different-computer,
-recovery, and rotation evidence remain required.
+cleanup for a disposable second Windows user. A second clean hosted Windows machine
+also failed to decrypt a synthetic current-user DPAPI fixture while its local DPAPI
+control succeeded. Host-bridge, retail-profile, recovery, and rotation evidence
+remain required.
 
 ## Decision question
 
@@ -139,8 +141,32 @@ model language.
 
 The evidence artifact deliberately records only `current-runner-user`; it does not
 retain either user's name or SID, the credential target, password, ciphertext,
-entropy, hashes of secrets, or generated values. Different-computer denial remains
-open and must not upload machine or identity data.
+entropy, hashes of secrets, or generated values.
+
+## Different-computer DPAPI evidence
+
+GitHub Actions run
+[`29553196968`](https://github.com/ApiaryLens/apiarylens/actions/runs/29553196968)
+executed commit `3a966f00bf07b474b01d7c2dd86dfdc85439303c` in separate fresh
+Windows jobs. The source job created a random synthetic secret, protected it with
+current-user DPAPI and random optional entropy, verified a same-machine round-trip,
+and transferred only the protected synthetic fixture with one-day retention. The
+destination job could not decrypt that value, then successfully protected and
+unprotected a new local control value to prove DPAPI itself was working.
+
+| Cross-computer check | Result |
+|---|---:|
+| Separate fresh hosted Windows job | Yes |
+| Source same-machine control | Passed |
+| Destination decryption of source fixture | Denied |
+| Destination local DPAPI control | Passed |
+| Synthetic plaintext sequence in protected fixture | No |
+| Username or SID in sanitized evidence | No |
+| Plaintext, ciphertext, entropy, or hash in sanitized evidence | No |
+
+This is the direct hosted-Windows baseline for the documented same-user/same-
+computer scope. It does not replace validation on two supported retail Windows
+computers or backup/restore UX for a user who legitimately moves devices.
 
 ## Host-option findings
 
@@ -206,9 +232,9 @@ Primary sources:
 1. Replaying the passing `CredWriteW`, `CredReadW`, replacement, maximum-size
    rejection, `CredDeleteW`, missing-entry, and cleanup lifecycle in the selected
    signed host package. The direct Windows API baseline is complete.
-2. Extending the passing current-user DPAPI, wrong/missing entropy, corruption,
-   cross-process same-user, and disposable different-user baseline with a different-
-   computer denial.
+2. Repeating the passing current-user DPAPI, wrong/missing entropy, corruption,
+   cross-process same-user, different-user, and separate-computer denial baselines on
+   supported retail Windows profiles. The hosted baselines are complete.
 3. Proving Electron main/preload and Tauri Rust-command prototypes can store, rotate,
    use, and delete a credential while the raw value remains absent from renderer
    globals, storage, DevTools-visible messages, arguments, logs, and diagnostics.
