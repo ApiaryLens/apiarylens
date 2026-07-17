@@ -168,6 +168,10 @@ export function App() {
         const offlineSession = { ...cached, csrfToken: undefined };
         sessionRef.current = offlineSession;
         setSession(offlineSession);
+        // Render the durable local workspace immediately. An iOS PWA can report
+        // online while its first request stalls after process termination; that
+        // network refresh must never hold the cached app behind the launch gate.
+        setLoading(false);
       }
       if (!navigator.onLine) {
         setOffline(true);

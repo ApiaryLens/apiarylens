@@ -24,10 +24,15 @@ describe('installed PWA shell', () => {
   });
 
   it('hydrates the cached session before any launch-time network session request', () => {
-    expect(appSource.indexOf('const cached = await cachedSession()')).toBeGreaterThan(-1);
-    expect(appSource.indexOf('const cached = await cachedSession()')).toBeLessThan(
-      appSource.indexOf('const active = await api.session()'),
-    );
+    const cachedSession = appSource.indexOf('const cached = await cachedSession()');
+    const cachedWorkspace = appSource.indexOf('setSession(offlineSession)', cachedSession);
+    const launchGateDismissed = appSource.indexOf('setLoading(false)', cachedWorkspace);
+    const networkSession = appSource.indexOf('const active = await api.session()', cachedSession);
+
+    expect(cachedSession).toBeGreaterThan(-1);
+    expect(cachedWorkspace).toBeGreaterThan(cachedSession);
+    expect(launchGateDismissed).toBeGreaterThan(cachedWorkspace);
+    expect(launchGateDismissed).toBeLessThan(networkSession);
     expect(appSource).toContain('if (!navigator.onLine)');
   });
 
