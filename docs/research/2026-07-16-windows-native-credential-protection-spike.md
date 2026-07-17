@@ -11,8 +11,11 @@ Official-source review is complete for Windows Credential Manager, DPAPI, Electr
 user DPAPI lifecycle passed on a fresh hosted Windows profile, including denial and
 cleanup for a disposable second Windows user. A second clean hosted Windows machine
 also failed to decrypt a synthetic current-user DPAPI fixture while its local DPAPI
-control succeeded. Host-bridge, retail-profile, recovery, and rotation evidence
-remain required.
+control succeeded. The selected Electron candidate now also passes a packaged and
+clean-installed main-process `safeStorage` store/read/rotate/corruption/delete
+lifecycle without exposing either generated credential through tested renderer or
+diagnostic surfaces. Credential Manager integration, rotation-crash recovery,
+retail-profile, restore, and uninstall-policy evidence remain required.
 
 ## Decision question
 
@@ -183,6 +186,33 @@ native Credential Manager adapter could align Electron and Tauri storage semanti
 but its native dependency, signing, licensing, and update provenance must be weighed
 against using the supported Electron API directly.
 
+Exact-artifact run
+[`29557388536`](https://github.com/ApiaryLens/apiarylens/actions/runs/29557388536)
+at commit `73c6ad118292df5f8f6f7ed0de2d53313f33206d` exercised that
+baseline inside both the packaged and clean-installed Electron main process. The
+exact setup SHA-256 was
+`F438862EB10D2597B44F497E4C250727467395DA0889039B8899F9D9F4F81166`.
+
+| Electron main-process credential check | Packaged | Clean installed |
+|---|---:|---:|
+| Windows encryption available | Passed | Passed |
+| Initial protected store/read | Passed | Passed |
+| Ciphertext excluded initial plaintext | Passed | Passed |
+| Replacement protected store/read | Passed | Passed |
+| Replacement excluded old and new plaintext | Passed | Passed |
+| Corrupt ciphertext rejected | Passed | Passed |
+| Protected credential deleted | Passed | Passed |
+| Raw generated values in renderer/storage/console/arguments/readiness/service output | No | No |
+| Existing API assertions | 50 / 50 | 50 / 50 |
+| Existing host crash/recovery matrix | Passed | Passed |
+
+Only booleans were serialized; the initial and replacement values, ciphertext, and
+hashes were not retained. This proves Electron's supported current-user DPAPI-backed
+adapter can satisfy the basic main-process boundary. It does not yet decide whether
+the final Windows adapter is `safeStorage` or Credential Manager, nor prove a crash
+between server-side token rotation and local replacement, revocation, restore,
+Windows-account changes, or keep-data/remove-all-data behavior.
+
 Primary source:
 
 - [Electron `safeStorage`](https://www.electronjs.org/docs/latest/api/safe-storage)
@@ -238,6 +268,9 @@ Primary sources:
 3. Proving Electron main/preload and Tauri Rust-command prototypes can store, rotate,
    use, and delete a credential while the raw value remains absent from renderer
    globals, storage, DevTools-visible messages, arguments, logs, and diagnostics.
+   The packaged and installed Electron `safeStorage` path now passes; the Credential
+   Manager candidate and any retained Tauri challenger still require selected-scope
+   evidence.
 4. Testing app crash between server token rotation and local credential replacement,
    revoked sessions, Windows password/account changes, backup/restore on the same
    user, restore on another user/computer, and keep-data/remove-all uninstall.

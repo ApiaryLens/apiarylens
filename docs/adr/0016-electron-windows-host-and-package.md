@@ -76,6 +76,16 @@ artifacts retained the 50-check API matrix. This materially advances condition 3
 forced-write/data-lock faults, Job Object policy, and the broader Windows lifecycle
 matrix remain open.
 
+Run
+[`29557388536`](https://github.com/ApiaryLens/apiarylens/actions/runs/29557388536)
+then passed Electron's main-process, current-user DPAPI-backed `safeStorage`
+store/read/rotate/corruption/delete lifecycle from both packaged and clean-installed
+artifacts. Neither generated credential appeared in the tested renderer globals,
+browser storage, console, arguments, readiness, or service output, and only booleans
+entered evidence. This advances conditions 2 and 4 without deciding the final
+Credential Manager versus `safeStorage` adapter or proving rotation-crash,
+revocation, restore, Windows-account-change, and uninstall-policy behavior.
+
 ## Proposed Decision
 
 Use **Electron** as the initial Windows Preview host. Use a **signed per-user
@@ -212,7 +222,9 @@ must replace it.
    standalone lifecycle suites from the installed artifact.
 2. Prove the sandboxed preload/main bridge keeps local-control and connected-session
    credentials out of renderer globals, browser storage, DevTools-visible messages,
-   arguments, logs, diagnostics, and crash evidence.
+   arguments, logs, diagnostics, and crash evidence. The packaged and installed
+   `safeStorage` lifecycle now passes the tested renderer/storage/console/argument/
+   readiness/service-output surfaces; final diagnostics and crash evidence remain.
 3. Integrate and replay the `WIN-004` loopback, ownership, ACL/reparse, stale-
    readiness, corrupt-database, crash, shutdown, and recovery matrix in the actual
    Electron host; complete forced-write/data-lock faults, Job Object policy, and the
@@ -221,7 +233,9 @@ must replace it.
    artifacts.
 4. Integrate and replay the `WIN-005` Credential Manager, DPAPI, rotation/crash,
    revocation, restore, sign-out, keep-data, and remove-all behavior through the
-   actual main-process adapter.
+   actual main-process adapter. The packaged and installed Electron `safeStorage`
+   store/read/rotate/corruption/delete baseline now passes; the remaining lifecycle
+   and final-adapter decision stay open.
 5. Resolve or reject the Forge/Squirrel exotic dependency under the repository
    supply-chain policy; reconcile every runtime/build component to an allowlisted
    license and install complete Apache-2.0 and third-party notices.
