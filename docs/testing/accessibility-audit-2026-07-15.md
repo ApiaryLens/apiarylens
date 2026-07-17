@@ -32,6 +32,7 @@ the signed UAT device matrix remain release gates.
 | 6 | Public-site brand, footer, and inline-link targets rendered below the project's 44 by 44 CSS-pixel gate | 2.5.5 Target Size | Major | Fixed across `.org`, generated docs, `.app`, and `.dev`; live mobile recheck found no undersized visible targets |
 | 7 | Generated `.org` documentation pages relied on implicit root favicon discovery | 1.1.1 Non-text Content | Minor | Fixed with explicit SVG favicon and Apple touch-icon metadata on every generated document |
 | 8 | Current shared-client recovery-code button rendered at 28.2 CSS pixels high | 2.5.5 Target Size | Major | Fixed in `23dac44`; five-profile rerun found no target below 44 CSS pixels |
+| 9 | Packaged Electron host at exact 400% zoom retained a 320-pixel body minimum while the Windows scrollbar reduced usable width to 316 pixels | 1.4.10 Reflow | Major | Open as [`WIN-027`](https://github.com/ApiaryLens/apiarylens/issues/48); exact run `29573274135` records four pixels of horizontal overflow |
 
 The live browser pass also found no unnamed visible control, missing image alternative,
 or page-level horizontal overflow on the six inspected public entry surfaces. This is
@@ -59,6 +60,16 @@ valid landmarks, visible keyboard focus, and active forced-colors/reduced-motion
 media queries. The detailed interpretation and remaining native-host limitations are
 recorded in
 [`2026-07-16-windows-host-and-package-spike.md`](../research/2026-07-16-windows-host-and-package-spike.md#shared-ui-accessibility-evidence).
+
+The later native Electron zoom probe proved why the shared headless profile is not a
+complete host substitute. Once the research package loaded the real relative-base
+React UI, run
+[`29573274135`](https://github.com/ApiaryLens/apiarylens/actions/runs/29573274135)
+passed landmarks and reflow at 100% and 200% but found four pixels of horizontal
+overflow at an exact 320-CSS-pixel/400% host profile. Windows reserved four pixels
+for its scrollbar while the current body minimum remained 320 pixels. This is finding
+9 and remains open; no Preview accessibility claim may treat the headless result as
+overriding the packaged-host failure.
 
 ## Automated Scan Evidence
 

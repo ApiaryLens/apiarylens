@@ -954,6 +954,40 @@ Headless Chromium also cannot replace NVDA, retail Windows High Contrast, physic
 keyboard use, Electron/WebView2 host chrome, file dialogs, update prompts, or native
 error surfaces. Those remain manual host-specific acceptance gates.
 
+### Packaged host zoom evidence and open defect
+
+Adding native-host zoom measurement first exposed that the disposable Electron
+package still used the PWA's root-relative HTTP asset URLs. Run
+[`29572482662`](https://github.com/ApiaryLens/apiarylens/actions/runs/29572482662)
+therefore enabled Electron accessibility support but correctly found no rendered
+`main` or `h1`. Commit `7e0b291` changed only the copied research package assembly to
+use relative entry assets; it did not mutate the source PWA build.
+
+The corrected package rendered the real React UI. Exact diagnostic run
+[`29573274135`](https://github.com/ApiaryLens/apiarylens/actions/runs/29573274135)
+at source `4c294a7013ccb298e475a2b447ba04a2e96575ff` then measured the
+following through actual Electron host zoom controls:
+
+| Host zoom | Inner width | Client / scroll width | Main / H1 | Horizontal overflow |
+|---:|---:|---:|---:|---:|
+| 100% | 1280 | 1280 / 1280 | 1 / 1 | 0 px |
+| 200% | 640 | 632 / 632 | 1 / 1 | 0 px |
+| 400% | 320 | 316 / 320 | 1 / 1 | 4 px |
+
+Electron native accessibility support was enabled and the bridge, API, security,
+multi-window, IPv6, proxy, and recovery assertions remained green. The four-pixel
+failure comes from the current `body { min-width: 320px; }` rule: Windows reserves
+four CSS pixels for the vertical scrollbar at 400% zoom, while `#root` and
+`main.auth-layout` remain 320 pixels wide. Headless Chromium's overlay scrollbar did
+not expose this in the earlier reflow-equivalent scan.
+
+The defect is tracked as
+[`WIN-027`](https://github.com/ApiaryLens/apiarylens/issues/48), P0 and Planned.
+Product CSS remediation remains behind the explicit implementation gate. Acceptance
+requires both packaged and clean-installed host replay at exact 1280/640/320 widths,
+the shared five-profile regression, and later manual NVDA/High Contrast/device work;
+the automated failure is not waived.
+
 ## Security and lifecycle requirements common to finalists
 
 Regardless of framework:
