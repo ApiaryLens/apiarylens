@@ -106,7 +106,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, safeStorage } = require("electron");
 
 if (require("electron-squirrel-startup")) app.quit();
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
@@ -234,6 +234,56 @@ function sqliteProbe() {
   return "electron-node-sqlite-ok";
 }
 
+function safeStorageCredentialProbe() {
+  if (!safeStorage.isEncryptionAvailable()) throw new Error("safe-storage-unavailable");
+  const credentialDirectory = path.join(serviceLab, "credential-probe");
+  const credentialFile = path.join(credentialDirectory, "connected-session.bin");
+  const replacementFile = path.join(credentialDirectory, "connected-session.next");
+  fs.mkdirSync(credentialDirectory, { recursive: true });
+
+  const initialSecret = crypto.randomBytes(48).toString("base64url");
+  const replacementSecret = crypto.randomBytes(48).toString("base64url");
+  const initialCiphertext = safeStorage.encryptString(initialSecret);
+  fs.writeFileSync(credentialFile, initialCiphertext, { mode: 0o600 });
+  const storedInitial = fs.readFileSync(credentialFile);
+  const initialRoundTrip = safeStorage.decryptString(storedInitial) === initialSecret;
+  const initialCiphertextExcludesPlaintext =
+    !storedInitial.includes(Buffer.from(initialSecret, "utf8"));
+
+  const replacementCiphertext = safeStorage.encryptString(replacementSecret);
+  fs.writeFileSync(replacementFile, replacementCiphertext, { mode: 0o600 });
+  fs.renameSync(replacementFile, credentialFile);
+  const storedReplacement = fs.readFileSync(credentialFile);
+  const replacementRoundTrip =
+    safeStorage.decryptString(storedReplacement) === replacementSecret;
+  const replacementCiphertextExcludesPlaintext =
+    !storedReplacement.includes(Buffer.from(initialSecret, "utf8")) &&
+    !storedReplacement.includes(Buffer.from(replacementSecret, "utf8"));
+
+  const corruptCiphertext = Buffer.from(storedReplacement);
+  corruptCiphertext[Math.floor(corruptCiphertext.length / 2)] ^= 0xff;
+  let corruptCiphertextRejected = false;
+  try {
+    safeStorage.decryptString(corruptCiphertext);
+  } catch {
+    corruptCiphertextRejected = true;
+  }
+
+  fs.rmSync(credentialDirectory, { recursive: true, force: true });
+  return {
+    evidence: Object.freeze({
+      encryptionAvailable: true,
+      initialRoundTrip,
+      initialCiphertextExcludesPlaintext,
+      replacementRoundTrip,
+      replacementCiphertextExcludesPlaintext,
+      corruptCiphertextRejected,
+      credentialDeleted: !fs.existsSync(credentialFile)
+    }),
+    secrets: [initialSecret, replacementSecret]
+  };
+}
+
 const probeIndex = process.argv.indexOf("--win003-probe-output");
 const bridgeProbeIndex = process.argv.indexOf("--win003-bridge-output");
 const crashProbeIndex = process.argv.indexOf("--win003-crash-probe-output");
@@ -300,6 +350,7 @@ if (!hasSingleInstanceLock) {
       migrationVersions: serviceReady.migrationVersions,
       restartService: restartRealService
     });
+    const credentialProbe = safeStorageCredentialProbe();
     const consoleMessages = [];
     const trustedWindow = new BrowserWindow({
       width: 800,
@@ -352,6 +403,14 @@ if (!hasSingleInstanceLock) {
     `);
 
     const rendererSnapshot = JSON.stringify(rendererResult);
+    const credentialSecretPresentOutsideMain = credentialProbe.secrets.some((secret) =>
+      rendererSnapshot.includes(secret) ||
+      consoleMessages.some((message) => message.includes(secret)) ||
+      process.argv.some((argument) => argument.includes(secret)) ||
+      serviceProcess.spawnargs.some((argument) => argument.includes(secret)) ||
+      JSON.stringify(serviceReady).includes(secret) ||
+      serviceOutput.includes(secret)
+    );
     await stopRealService();
     const databasePath = path.join(serviceLab, "data", "apiarylens.sqlite");
     const mediaPath = path.join(serviceLab, "data", "media");
@@ -375,6 +434,8 @@ if (!hasSingleInstanceLock) {
       realServiceMediaDirectoryCreated: fs.existsSync(mediaPath),
       realServiceExitCode: serviceProcess.exitCode,
       apiAcceptance,
+      nativeCredentialProtection: credentialProbe.evidence,
+      credentialSecretPresentOutsideMain,
       localStorageEntryCount: rendererResult.localStorage.length,
       sessionStorageEntryCount: rendererResult.sessionStorage.length
     };
@@ -544,6 +605,14 @@ $bridgePassed =
     $bridgeResult.apiAcceptance.viewerAuthorizationPassed -and
     $bridgeResult.apiAcceptance.mediaOriginalThumbnailExportDeletePassed -and
     $bridgeResult.apiAcceptance.restartPersistencePassed -and
+    $bridgeResult.nativeCredentialProtection.encryptionAvailable -and
+    $bridgeResult.nativeCredentialProtection.initialRoundTrip -and
+    $bridgeResult.nativeCredentialProtection.initialCiphertextExcludesPlaintext -and
+    $bridgeResult.nativeCredentialProtection.replacementRoundTrip -and
+    $bridgeResult.nativeCredentialProtection.replacementCiphertextExcludesPlaintext -and
+    $bridgeResult.nativeCredentialProtection.corruptCiphertextRejected -and
+    $bridgeResult.nativeCredentialProtection.credentialDeleted -and
+    -not $bridgeResult.credentialSecretPresentOutsideMain -and
     $bridgeResult.localStorageEntryCount -eq 0 -and
     $bridgeResult.sessionStorageEntryCount -eq 0
 if (-not $bridgePassed) { throw 'Packaged Electron bridge isolation acceptance checks failed' }
@@ -679,6 +748,15 @@ $measurement = [ordered]@{
     packagedApiOrganizationIsolationPassed = $bridgeResult.apiAcceptance.organizationIsolationPassed
     packagedApiMediaLifecyclePassed = $bridgeResult.apiAcceptance.mediaOriginalThumbnailExportDeletePassed
     packagedApiRestartPersistencePassed = $bridgeResult.apiAcceptance.restartPersistencePassed
+    packagedNativeCredentialProtectionPassed =
+        $bridgeResult.nativeCredentialProtection.encryptionAvailable -and
+        $bridgeResult.nativeCredentialProtection.initialRoundTrip -and
+        $bridgeResult.nativeCredentialProtection.initialCiphertextExcludesPlaintext -and
+        $bridgeResult.nativeCredentialProtection.replacementRoundTrip -and
+        $bridgeResult.nativeCredentialProtection.replacementCiphertextExcludesPlaintext -and
+        $bridgeResult.nativeCredentialProtection.corruptCiphertextRejected -and
+        $bridgeResult.nativeCredentialProtection.credentialDeleted -and
+        -not $bridgeResult.credentialSecretPresentOutsideMain
     packagedSingleInstancePassed = $singleInstancePassed
     packagedServiceExitedAfterHostCrash = $serviceExitedAfterHostCrash
     packagedReadyFileRemovedAfterHostCrash = $readyFileRemovedAfterHostCrash

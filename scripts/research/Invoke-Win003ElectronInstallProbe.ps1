@@ -179,6 +179,14 @@ $installedRealServiceBridgeProbePassed =
     $bridgeProbeResult.apiAcceptance.viewerAuthorizationPassed -and
     $bridgeProbeResult.apiAcceptance.mediaOriginalThumbnailExportDeletePassed -and
     $bridgeProbeResult.apiAcceptance.restartPersistencePassed -and
+    $bridgeProbeResult.nativeCredentialProtection.encryptionAvailable -and
+    $bridgeProbeResult.nativeCredentialProtection.initialRoundTrip -and
+    $bridgeProbeResult.nativeCredentialProtection.initialCiphertextExcludesPlaintext -and
+    $bridgeProbeResult.nativeCredentialProtection.replacementRoundTrip -and
+    $bridgeProbeResult.nativeCredentialProtection.replacementCiphertextExcludesPlaintext -and
+    $bridgeProbeResult.nativeCredentialProtection.corruptCiphertextRejected -and
+    $bridgeProbeResult.nativeCredentialProtection.credentialDeleted -and
+    -not $bridgeProbeResult.credentialSecretPresentOutsideMain -and
     $bridgeProbeResult.localStorageEntryCount -eq 0 -and
     $bridgeProbeResult.sessionStorageEntryCount -eq 0
 if (-not $installedRealServiceBridgeProbePassed) {
@@ -380,6 +388,15 @@ $result = [ordered]@{
     installedApiOrganizationIsolationPassed = $bridgeProbeResult.apiAcceptance.organizationIsolationPassed
     installedApiMediaLifecyclePassed = $bridgeProbeResult.apiAcceptance.mediaOriginalThumbnailExportDeletePassed
     installedApiRestartPersistencePassed = $bridgeProbeResult.apiAcceptance.restartPersistencePassed
+    installedNativeCredentialProtectionPassed =
+        $bridgeProbeResult.nativeCredentialProtection.encryptionAvailable -and
+        $bridgeProbeResult.nativeCredentialProtection.initialRoundTrip -and
+        $bridgeProbeResult.nativeCredentialProtection.initialCiphertextExcludesPlaintext -and
+        $bridgeProbeResult.nativeCredentialProtection.replacementRoundTrip -and
+        $bridgeProbeResult.nativeCredentialProtection.replacementCiphertextExcludesPlaintext -and
+        $bridgeProbeResult.nativeCredentialProtection.corruptCiphertextRejected -and
+        $bridgeProbeResult.nativeCredentialProtection.credentialDeleted -and
+        -not $bridgeProbeResult.credentialSecretPresentOutsideMain
     installedSingleInstancePassed = $installedSingleInstancePassed
     installedServiceExitedAfterHostCrash = $installedServiceExitedAfterHostCrash
     installedReadyFileRemovedAfterHostCrash = $installedReadyFileRemovedAfterHostCrash
