@@ -520,6 +520,10 @@ $installedRealServiceBridgeProbePassed =
     $bridgeProbeResult.exposedBridgeKeys[0] -eq 'health' -and
     $bridgeProbeResult.typedHealthStatus -eq 200 -and
     $bridgeProbeResult.typedHealthProtocolVersion -eq 1 -and
+    $bridgeProbeResult.nativeAccessibilitySupportEnabled -and
+    $bridgeProbeResult.hostZoomReflowPassed -and
+    @($bridgeProbeResult.hostZoomProfiles).Count -eq 3 -and
+    @($bridgeProbeResult.hostZoomProfiles | Where-Object horizontalOverflow).Count -eq 0 -and
     $bridgeProbeResult.bridgeInvocationCount -eq 2 -and
     $bridgeProbeResult.rendererToMainArgumentCount -eq 0 -and
     $bridgeProbeResult.trustedWindowsShareOneService -and
@@ -997,6 +1001,9 @@ $result = [ordered]@{
     installedRealServiceMediaDirectoryCreated = $bridgeProbeResult.realServiceMediaDirectoryCreated
     installedRealServiceExitCode = $bridgeProbeResult.realServiceExitCode
     installedBridgeUntrustedSenderRejected = $bridgeProbeResult.untrustedSenderRejected
+    installedBridgeNativeAccessibilitySupportEnabled = $bridgeProbeResult.nativeAccessibilitySupportEnabled
+    installedBridgeHostZoomReflowPassed = $bridgeProbeResult.hostZoomReflowPassed
+    installedBridgeHostZoomProfiles = @($bridgeProbeResult.hostZoomProfiles)
     installedBridgeTrustedWindowsShareOneService = $bridgeProbeResult.trustedWindowsShareOneService
     installedBridgeIpv6LoopbackRejected = $bridgeProbeResult.ipv6LoopbackRejected
     installedBridgeEnvironmentProxyDoesNotInterceptLoopbackFetch = $bridgeProbeResult.environmentProxyDoesNotInterceptLoopbackFetch

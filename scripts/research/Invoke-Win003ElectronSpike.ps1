@@ -1114,6 +1114,7 @@ if (!hasSingleInstanceLock) {
   });
 } else if (bridgeProbeIndex >= 0) {
   app.whenReady().then(async () => {
+    app.setAccessibilitySupportEnabled(true);
     await startRealService();
     const serverRoot = path.join(process.resourcesPath, "server");
     const acceptanceModule = await import(
@@ -1133,8 +1134,8 @@ if (!hasSingleInstanceLock) {
     const credentialProbe = safeStorageCredentialProbe();
     const consoleMessages = [];
     const trustedWindow = new BrowserWindow({
-      width: 800,
-      height: 600,
+      width: 1280,
+      height: 800,
       show: false,
       webPreferences: {
         preload: path.join(__dirname, "preload.cjs"),
@@ -1165,6 +1166,24 @@ if (!hasSingleInstanceLock) {
         stringGlobals
       };
     })()`);
+
+    const hostZoomProfiles = [];
+    for (const factor of [1, 2, 4]) {
+      trustedWindow.webContents.setZoomFactor(factor);
+      await delay(100);
+      hostZoomProfiles.push(await trustedWindow.webContents.executeJavaScript(`(() => ({
+        factor: ${factor},
+        innerWidth: window.innerWidth,
+        mainCount: document.querySelectorAll("main").length,
+        h1Count: document.querySelectorAll("h1").length,
+        horizontalOverflow:
+          document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+      }))()`));
+    }
+    trustedWindow.webContents.setZoomFactor(1);
+    const hostZoomReflowPassed = hostZoomProfiles.every((profile) =>
+      !profile.horizontalOverflow && profile.mainCount === 1 && profile.h1Count === 1
+    );
 
     const servicePidBeforeSecondWindow = serviceProcess.pid;
     const secondTrustedWindow = new BrowserWindow({
@@ -1259,6 +1278,9 @@ if (!hasSingleInstanceLock) {
       exposedBridgeKeys: rendererResult.bridgeKeys,
       typedHealthStatus: rendererResult.health.status,
       typedHealthProtocolVersion: rendererResult.health.serviceProtocolVersion,
+      nativeAccessibilitySupportEnabled: app.accessibilitySupportEnabled,
+      hostZoomProfiles,
+      hostZoomReflowPassed,
       trustedWindowsShareOneService,
       secondWindowHealthStatus: secondWindowHealth.status,
       ipv6LoopbackRejected,
@@ -1532,6 +1554,10 @@ $bridgePassed =
     $bridgeResult.exposedBridgeKeys[0] -eq 'health' -and
     $bridgeResult.typedHealthStatus -eq 200 -and
     $bridgeResult.typedHealthProtocolVersion -eq 1 -and
+    $bridgeResult.nativeAccessibilitySupportEnabled -and
+    $bridgeResult.hostZoomReflowPassed -and
+    @($bridgeResult.hostZoomProfiles).Count -eq 3 -and
+    @($bridgeResult.hostZoomProfiles | Where-Object horizontalOverflow).Count -eq 0 -and
     $bridgeResult.bridgeInvocationCount -eq 2 -and
     $bridgeResult.rendererToMainArgumentCount -eq 0 -and
     $bridgeResult.trustedWindowsShareOneService -and
@@ -1785,6 +1811,9 @@ $measurement = [ordered]@{
     bridgeSurfaceKeys = @($bridgeResult.exposedBridgeKeys)
     bridgeRendererToMainArgumentCount = $bridgeResult.rendererToMainArgumentCount
     bridgeUntrustedSenderRejected = $bridgeResult.untrustedSenderRejected
+    bridgeNativeAccessibilitySupportEnabled = $bridgeResult.nativeAccessibilitySupportEnabled
+    bridgeHostZoomReflowPassed = $bridgeResult.hostZoomReflowPassed
+    bridgeHostZoomProfiles = @($bridgeResult.hostZoomProfiles)
     bridgeTrustedWindowsShareOneService = $bridgeResult.trustedWindowsShareOneService
     bridgeIpv6LoopbackRejected = $bridgeResult.ipv6LoopbackRejected
     bridgeEnvironmentProxyDoesNotInterceptLoopbackFetch = $bridgeResult.environmentProxyDoesNotInterceptLoopbackFetch
