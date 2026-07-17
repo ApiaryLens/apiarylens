@@ -25,6 +25,7 @@ const cloudflarePlanSchema = baseSchema.extend({
     r2BucketName: z.string().regex(/^apiarylens-[a-z0-9-]+$/),
     customDomain: z.string().min(1).max(253).optional(),
     costProfile: z.literal('family-free-guarded'),
+    includeWebFrontend: z.boolean().default(true),
   }),
 });
 
@@ -42,6 +43,7 @@ const composePlanSchema = baseSchema.extend({
       .refine((url) => url.startsWith('https://'), 'HTTPS is required'),
     sshHostKeySha256: z.string().regex(/^SHA256:[A-Za-z0-9+/=]+$/),
     backupRetention: z.number().int().min(2).max(90).default(14),
+    includeWebFrontend: z.boolean().default(true),
   }),
 });
 

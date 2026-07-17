@@ -61,6 +61,8 @@ services:
         condition: service_healthy
     environment:
       APIARYLENS_SITE_ADDRESS: ${APIARYLENS_SITE_ADDRESS:-localhost}
+    command:
+      ['run', '--config', '/etc/caddy/${APIARYLENS_CADDYFILE:-Caddyfile}', '--adapter', 'caddyfile']
     ports:
       - '${APIARYLENS_HTTP_PORT:-80}:80'
       - '${APIARYLENS_HTTPS_PORT:-443}:443'
