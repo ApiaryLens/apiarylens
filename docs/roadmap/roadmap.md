@@ -163,17 +163,20 @@ the backend and optional web frontend as the portable connected core.
 - Scout Bee now has a separate public repository, independent version, UI, Go
   executor, Windows/Linux verification, and release workflow; production signing
   and released-artifact lifecycle evidence remain open
-- ADR 0015 keeps the initial Windows client in the product monorepo; the first
-  production host composition is now being built from the measured Electron,
-  loopback-service, credential, migration, accessibility, and recovery evidence
+- ADR 0015 keeps the initial Windows client in the product monorepo. The Electron
+  host now runs the real React/API/SQLite/media composition, supports standalone and
+  connected profiles, verified backup/restore, and produces Squirrel Setup/update
+  artifacts. Exact Windows run `29601638394` passed package, installed-host, and
+  keep-data-uninstall verification; production signing and physical UAT remain
 - Keep follow-on ADRs and the detailed security, UX, lifecycle, and data designs
   synchronized as implementation evidence closes or changes a decision
 - Maintain the authoritative Lucidchart diagrams and accessible exports for
   standalone, connected, migration, update, backup, and repository/artifact flows
 - Continue framework-neutral standalone/connected connection contracts and tests
-- Define Scout's signed portable Windows executable (no Go, Node, WSL, or Linux
+- Complete Scout's signed portable Windows executable (no Go, Node, WSL, or Linux
   shell required), Linux single-executable archive, Stable-default channels,
-  verified artifact cache, secret-free plan export, and `my-apiarylens` CI handoff
+  verified artifact cache, Windows-client lifecycle adapter, secret-free plan
+  export, and `my-apiarylens` CI handoff
 
 ### Next release outcome — Windows standalone and connected family
 

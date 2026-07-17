@@ -17,6 +17,21 @@ assistive-technology, and final owner acceptance gates remain visible in the
 See the [Preview 1 release notes](0.1.0-preview.1.md) for scope, safety guidance,
 verification, and feedback instructions.
 
+### 2026-07-17 Preview updates
+
+- Added the standalone/connected Electron Windows host, secret-free deployment
+  profile import, verified `.albackup` backup, atomic restore/rollback, and real
+  Squirrel current-user Setup/update artifacts. Exact Windows run `29601638394`
+  passed package hashes, packaged-host smoke, clean install, installed-host smoke,
+  and keep-data uninstall. Production Authenticode signing and physical UAT remain
+  release gates.
+- Fixed installed-PWA cached launch so local navigation and records render before a
+  stalled initial network session refresh. Automatic sync/media and physical
+  iPhone/iPad relaunch gates remain visible.
+- Published the independent Scout Bee repository, Windows connection handoff, and
+  complete public Scout installation and operations guide. Signed Scout packages
+  and exact released-target lifecycle evidence remain open.
+
 ## 0.1.0-rc.7 — 2026-07-16
 
 Corrective safe-target-removal candidate. Exact GCP cleanup proved a normal
