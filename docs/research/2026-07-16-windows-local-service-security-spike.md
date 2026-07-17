@@ -217,6 +217,20 @@ retained the committed marker, rolled back the interrupted marker, and rejected 
 separate corrupt database before readiness. Disk-full, read-only directory, startup
 timeout/crash-loop policy, and broader Windows lifecycle behavior remain open.
 
+Database-capacity and ACL-denial run
+[`29560309984`](https://github.com/ApiaryLens/apiarylens/actions/runs/29560309984)
+subsequently exercised both exact forms again. A deterministic `SQLITE_FULL`
+simulation capped `PRAGMA max_page_count` at the current database page count, rejected
+a 1 MiB transactional insert, retained the prior row count, and passed
+`PRAGMA integrity_check`. Separately, the Windows runner applied an actual
+current-user deny-write ACE to a disposable data directory; the packaged and
+clean-installed hosts both rejected that directory before readiness. The exact setup
+SHA-256 was
+`0755D1E87DE681CC0C25AF2ABA79578062DABB90BD5DCBD15B1614E38208B294`.
+This closes deterministic database-full and ACL-denied-startup mechanics, but not a
+physical-volume-full replay, startup-timeout/crash-loop policy, Job Object policy, or
+the broader retail Windows lifecycle.
+
 ## Windows path-security evidence
 
 GitHub Actions run
@@ -257,7 +271,7 @@ preserve the intended behavior. Those are integration and lifecycle gates.
 | Compromised packaged renderer steals full authority | Local-only content, strict CSP, sandbox/isolation, narrow host bridge, no token in ordinary page JavaScript | Not yet proven; highest remaining design risk |
 | Two hosts write one SQLite database | Per-user operating-system ownership guard | Duplicate prototype rejected |
 | Child outlives host | Parent liveness watch plus host job/process ownership where available | Packaged and installed Electron service exited after forced host death; Job Object policy remains to document |
-| Crash corrupts or loses data | WAL, transactions, backup-before-update, integrity/health checks | Packaged and installed host retained committed state, rolled back an open transaction, passed integrity, and rejected corruption before readiness; disk-full/read-only remain |
+| Crash corrupts or loses data | WAL, transactions, backup-before-update, integrity/health checks | Packaged and installed host retained committed state, rolled back an open transaction, passed integrity, rejected corruption before readiness, rejected deterministic `SQLITE_FULL` without partial state, and rejected an ACL-denied directory before readiness; physical-volume-full remains |
 | Local non-loopback exposure | Explicit IPv4/IPv6 loopback bind and listener assertion | Disposable wrapper passed IPv4; exact portable server failed with `::` wildcard |
 | Another Windows account or hostile filesystem redirect reaches local data | Protected current-user/SYSTEM ACL plus canonical child paths that reject traversal and reparse points | Hosted probe denied a second account and rejected traversal/junction paths; retail-host integration remains |
 | Same-user malicious native process | Windows user boundary, protected credentials, least privilege | Such a process may inspect another same-user process; not solved by bearer token alone |
@@ -317,9 +331,10 @@ preserve the intended behavior. Those are integration and lifecycle gates.
    and health-triggered rollback. Actual Electron parent death, stale-readiness
    rejection, same-directory restart, and clean shutdown now pass; the remaining
    storage-fault cases still require real-host replay. Forced termination during a
-   real database write, WAL rollback, integrity, committed-state retention, and
-   corrupt startup now pass in packaged and installed Electron artifacts; disk-full,
-   read-only, startup-timeout, and crash-loop policy remain.
+   real database write, WAL rollback, integrity, committed-state retention, corrupt
+   startup, deterministic `SQLITE_FULL`, and ACL-denied startup now pass in packaged
+   and installed Electron artifacts. Physical-volume-full behavior, startup timeout,
+   and crash-loop policy remain.
 4. Integrating the proven current-user/SYSTEM directory ACL and traversal/reparse
    rejection into each finalist, then measuring Windows Job Object versus parent
    polling, sleep/resume, sign-out, shutdown, roaming profiles, Remote Desktop, and

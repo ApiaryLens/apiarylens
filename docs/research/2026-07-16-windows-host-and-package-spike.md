@@ -548,6 +548,32 @@ integrity, committed-state retention, and corrupt-startup subgates. Disk-full,
 read-only directory, startup timeout/crash-loop policy, sleep/sign-out/shutdown,
 and retail-device behavior remain open.
 
+Database-capacity and read-only follow-on run
+[`29560309984`](https://github.com/ApiaryLens/apiarylens/actions/runs/29560309984)
+at commit `eb128acbbe4c2809a6d179bcf8828dc9a81115e8` repeated the packaged
+and clean-installed lifecycle. The exact setup SHA-256 was
+`0755D1E87DE681CC0C25AF2ABA79578062DABB90BD5DCBD15B1614E38208B294`.
+
+| Additional storage check | Packaged | Clean installed |
+|---|---:|---:|
+| SQLite capacity limit rejected a 1 MiB transaction | Passed | Passed |
+| Capacity-failed transaction left row count unchanged | Passed | Passed |
+| `PRAGMA integrity_check` after capacity failure | Passed | Passed |
+| Actual Windows ACL denied writes to the selected directory | Exercised | Exercised |
+| Host rejected the ACL-denied directory before readiness | Passed | Passed |
+| Existing API, credential, recovery, retention, restore, and uninstall suites | Passed | Passed |
+
+The database-capacity case is a deterministic `SQLITE_FULL` simulation created by
+temporarily setting `PRAGMA max_page_count` to the database's current page count; it
+is not a claim that a physical Windows volume was filled. The read-only case is an
+actual Windows filesystem boundary: the runner applied an explicit deny-write ACE
+for the current user to a disposable directory, launched the exact host against it,
+confirmed failure before readiness, restored the original security descriptor, and
+removed the lab. This closes the deterministic database-full and ACL-denied startup
+subgates. A physical-volume-full replay, startup timeout/crash-loop policy,
+sleep/resume, sign-out/shutdown, Job Object policy, and retail-device behavior remain
+open.
+
 ### Electron package-transition evidence
 
 Exact-artifact replay
@@ -920,8 +946,10 @@ implementations in parallel.
 2. Exercise local-service startup, crash, restart, duplicate-instance prevention,
    clean shutdown, data lock, and orphan cleanup. Packaged and clean-installed
    single-instance, forced-parent-death, stale-readiness recovery, restart
-   persistence, and clean shutdown now pass. Forced-write/data-lock faults and the
-   broader Windows lifecycle matrix remain open in the actual host.
+   persistence, clean shutdown, forced-write/WAL recovery, deterministic
+   `SQLITE_FULL`, and ACL-denied startup now pass. Physical-volume-full behavior,
+   startup timeout/crash-loop policy, Job Object policy, and the broader Windows
+   lifecycle matrix remain open in the actual host.
 3. Verify Windows 11 and the chosen Windows 10 baseline in clean user profiles with
    no developer tools. Include a profile where WebView2 is absent or its updater is
    policy-disabled.

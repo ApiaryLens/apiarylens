@@ -135,6 +135,16 @@ state, and rejected a separate corrupt database before readiness. This materiall
 advances condition 3; disk-full, read-only, startup-timeout/crash-loop policy, and
 the broader Windows lifecycle matrix remain open.
 
+Run
+[`29560309984`](https://github.com/ApiaryLens/apiarylens/actions/runs/29560309984)
+then proved a deterministic `SQLITE_FULL` transaction is rejected without partial
+state and with integrity preserved, and that an actual Windows ACL-denied data
+directory is rejected before readiness, in both packaged and clean-installed forms.
+The database-full case uses SQLite's page-count limit rather than filling a physical
+volume. This further advances condition 3; physical-volume-full behavior, startup
+timeout/crash-loop policy, Job Object policy, and the broader Windows lifecycle
+matrix remain open.
+
 ## Proposed Decision
 
 Use **Electron** as the initial Windows Preview host. Use a **signed per-user
@@ -281,8 +291,9 @@ must replace it.
    broader Windows lifecycle evaluation. Single-instance, parent-death,
    stale-readiness recovery, clean shutdown, forced-write/WAL rollback, integrity,
    committed-state retention, and corrupt-startup rejection now pass in packaged
-   and installed artifacts. Disk-full, read-only, startup timeout/crash loops, Job
-   Object policy, and broader Windows lifecycle behavior remain.
+   and installed artifacts. Deterministic `SQLITE_FULL` rejection and actual Windows
+   ACL-denied startup also pass. Physical-volume-full behavior, startup timeout/crash
+   loops, Job Object policy, and broader Windows lifecycle behavior remain.
 4. Integrate and replay the `WIN-005` DPAPI, rotation/crash, revocation, restore,
    sign-out, keep-data, and remove-all behavior through the actual main-process
    adapter. The proposed adapter is Electron `safeStorage`; Credential Manager is a
