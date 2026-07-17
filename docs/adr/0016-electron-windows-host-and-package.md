@@ -140,6 +140,18 @@ local-to-Microsoft-account transitions, retail profiles, and production signing
 remain open.
 
 Run
+[`29566771213`](https://github.com/ApiaryLens/apiarylens/actions/runs/29566771213)
+then used a disposable local Windows account to create a `safeStorage` fixture with
+the exact clean-installed host, changed that account's password through the normal
+`NetUserChangePassword` API, and decrypted the fixture under the same SID with the
+new password. The same temporary account remained unable to decrypt the runner
+account's fixture, and account/profile/lab cleanup passed. Setup SHA-256 was
+`0A632B130B05A1DB4003892C6DF97D59302BD7AC112A8ED38FE5E3CFAF6C8E85`.
+This closes the hosted normal local-password-change experiment. Windows Hello PIN,
+administrator reset, local-to-Microsoft-account, domain/Entra, retail-profile,
+guided recovery, and production-signing evidence remain open.
+
+Run
 [`29563619105`](https://github.com/ApiaryLens/apiarylens/actions/runs/29563619105)
 then forced `@electron/rebuild` 4.2.0 through an integrity-pinned npm registry lock
 entry and failed the release path for any `git+ssh` or `git+https` reference. The

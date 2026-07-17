@@ -322,6 +322,30 @@ adapter's installed different-user denial mechanics. It does not yet supply the 
 guided recovery screen, test Windows password/PIN/local-to-Microsoft-account changes,
 or replace the existing separate-computer DPAPI denial with retail-device UAT.
 
+Installed password-transition follow-on run
+[`29566771213`](https://github.com/ApiaryLens/apiarylens/actions/runs/29566771213)
+at commit `b96deb5a29a4eaa58974d8edfd5fbc3d0789ded0` used a disposable
+local Windows account and the exact clean-installed host. The account created a
+`safeStorage` fixture, changed its password through the normal
+`NetUserChangePassword` API, and then decrypted the same fixture under the same SID
+using the new password. The setup SHA-256 was
+`0A632B130B05A1DB4003892C6DF97D59302BD7AC112A8ED38FE5E3CFAF6C8E85`.
+
+| Installed password-transition check | Result |
+|---|---:|
+| Fixture created before password change | Passed |
+| Ciphertext excluded the generated plaintext | Passed |
+| Normal Windows password-change API succeeded | Passed |
+| Same SID decrypted the fixture after password change | Passed |
+| Same temporary account was denied the runner account's fixture | Passed |
+| Account, profile, copied host, ciphertext lab, and logs removed | Passed |
+
+Only aggregate booleans entered lifecycle evidence. This closes the hosted normal
+local-password-change experiment. It does not prove Windows Hello PIN behavior,
+local-to-Microsoft-account conversion, administrator password reset, domain or
+Entra account transitions, roaming profiles, a new computer, guided recovery UX,
+retail-device UAT, or production signing.
+
 Primary source:
 
 - [Electron `safeStorage`](https://www.electronjs.org/docs/latest/api/safe-storage)
@@ -391,8 +415,9 @@ Primary sources:
    account-change, and final installer-choice UX evidence remain. Exact default
    keep-data, same-user reinstall/decrypt, protected backup restore, installed
    different-user denial, explicit remove-all, and second-uninstall mechanics now
-   pass. Password/PIN and local-to-Microsoft-account transitions plus the guided
-   recovery UX remain open.
+   pass. A normal local password change under the same SID now passes. Windows Hello
+   PIN, administrator password reset, local-to-Microsoft-account transitions, and
+   the guided recovery UX remain open.
 5. Recording ACL, roaming-profile, Remote Desktop, multiple Windows session, and
    locked-workstation behavior on supported retail Windows profiles.
 6. Completing the supported Electron API, protected-file, dependency, license, and
