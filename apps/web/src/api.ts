@@ -13,6 +13,15 @@ type DesktopBootstrapBridge = {
   createStandaloneBackup?(): Promise<
     { status: 'canceled' } | { status: 'saved'; path: string; createdAt: string; files: number }
   >;
+  restoreStandaloneBackup?(): Promise<
+    | { status: 'canceled' }
+    | {
+        status: 'restored';
+        sourceCreatedAt: string;
+        files: number;
+        recoveryBackupPath: string;
+      }
+  >;
 };
 
 function desktopBridge(): DesktopBootstrapBridge | undefined {
@@ -45,6 +54,11 @@ export const api = {
     const create = desktopBridge()?.createStandaloneBackup;
     if (!create) throw new Error('Standalone backup is available only in ApiaryLens for Windows');
     return create();
+  },
+  restoreStandaloneBackup: async () => {
+    const restore = desktopBridge()?.restoreStandaloneBackup;
+    if (!restore) throw new Error('Standalone restore is available only in ApiaryLens for Windows');
+    return restore();
   },
   bootstrapStatus: async () => {
     const status = await json<{ available: boolean; requiresToken?: boolean }>(

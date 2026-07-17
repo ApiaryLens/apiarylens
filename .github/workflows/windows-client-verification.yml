@@ -110,7 +110,12 @@ jobs:
           if ($evidence.controlTokenExposedInRenderer -ne $false) {
             throw 'The local service control token was exposed to renderer JavaScript.'
           }
-          $expectedBridge = @('runtimeStatus', 'bootstrapOwner', 'createStandaloneBackup')
+          $expectedBridge = @(
+            'runtimeStatus',
+            'bootstrapOwner',
+            'createStandaloneBackup',
+            'restoreStandaloneBackup'
+          )
           if (Compare-Object $expectedBridge @($evidence.bridgeKeys)) {
             throw 'The preload bridge differs from the approved minimal surface.'
           }

@@ -126,8 +126,12 @@ backup**. Select a destination for the `.albackup` file and keep it somewhere ot
 than the computer running ApiaryLens. The application briefly restarts its private
 local service so the SQLite database and original photos form one consistent,
 checksum-verified archive. Windows-protected application credentials are excluded.
-Restore remains a deliberate recovery operation because it replaces current data
-and signs existing sessions out.
+Choose **Restore Windows backup** to select a compatible archive. ApiaryLens verifies
+every checksum before showing the destructive confirmation, creates a separate
+pre-restore recovery backup, replaces the current database and photos, revokes
+restored sessions, and verifies the restarted service. If startup or health checks
+fail, the prior data is restored automatically. A successful restore requires a
+fresh sign-in.
 
 ## Photos
 

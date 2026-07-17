@@ -172,3 +172,23 @@ export function restoreStandaloneBackupToStaging(
     throw new Error('Restored database is missing');
   return manifest;
 }
+
+export function activateStagedStandaloneData(
+  currentData: string,
+  stagedData: string,
+  rollbackData: string,
+): void {
+  rmSync(rollbackData, { recursive: true, force: true });
+  renameSync(currentData, rollbackData);
+  try {
+    renameSync(stagedData, currentData);
+  } catch (error) {
+    renameSync(rollbackData, currentData);
+    throw error;
+  }
+}
+
+export function rollbackStandaloneData(currentData: string, rollbackData: string): void {
+  rmSync(currentData, { recursive: true, force: true });
+  renameSync(rollbackData, currentData);
+}

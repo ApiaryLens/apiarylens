@@ -1,6 +1,6 @@
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import {
   app,
   BrowserWindow,
@@ -11,10 +11,12 @@ import {
   type OnBeforeSendHeadersListenerDetails,
 } from 'electron';
 import { bootstrapRequestSchema, createBuildIdentity } from '@apiarylens/contracts';
+import { SqliteStore } from '@apiarylens/database';
 import {
   desktopBridgeVersion,
   type DesktopBackupResult,
   type DesktopBootstrapSession,
+  type DesktopRestoreResult,
   type DesktopRuntimeStatus,
 } from './contracts.js';
 import { createWindowsDataPaths } from './paths.js';
@@ -33,7 +35,13 @@ import {
   saveConnectionProfile,
   verifyConnectedBackend,
 } from './connected-profile.js';
-import { createStandaloneBackup } from './standalone-backup.js';
+import {
+  activateStagedStandaloneData,
+  createStandaloneBackup,
+  readStandaloneBackup,
+  rollbackStandaloneData,
+  restoreStandaloneBackupToStaging,
+} from './standalone-backup.js';
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
 const preloadPath = join(currentDirectory, 'preload.cjs');
@@ -43,6 +51,7 @@ const trustedWebContents = new Set<number>();
 let primaryWindow: BrowserWindow | undefined;
 let supervisor: ServiceSupervisor | undefined;
 let shutdownStarted = false;
+let desktopMaintenanceRunning = false;
 
 const userDataArgument = process.argv.find((argument) =>
   argument.startsWith('--desktop-user-data='),
@@ -174,6 +183,27 @@ async function start(): Promise<void> {
       throw new Error('Untrusted renderer requested a desktop operation');
     }
   };
+  const assertOwnerSession = async (event: Electron.IpcMainInvokeEvent): Promise<void> => {
+    assertTrustedSender(event);
+    const active = supervisor?.running;
+    if (!active) throw new Error('Standalone service is unavailable');
+    const response = await desktopSession.fetch(`${active.endpoint}/api/v1/session`, {
+      headers: {
+        [desktopControlHeader]: active.controlToken,
+        origin: active.endpoint,
+      },
+    });
+    const body = (await response.json().catch(() => undefined)) as
+      { membership?: { role?: unknown } } | undefined;
+    if (!response.ok || body?.membership?.role !== 'owner') {
+      throw new Error('A signed-in family owner is required for this recovery operation');
+    }
+  };
+  const reloadAfterMaintenance = async (): Promise<void> => {
+    if (!supervisor) throw new Error('Standalone host is unavailable');
+    const restarted = await supervisor.start();
+    setTimeout(() => void primaryWindow?.loadURL(restarted.endpoint), 250);
+  };
   ipcMain.handle('apiarylens:runtime-status', async (event): Promise<DesktopRuntimeStatus> => {
     assertTrustedSender(event);
     const active = supervisor?.running;
@@ -216,8 +246,10 @@ async function start(): Promise<void> {
   ipcMain.handle(
     'apiarylens:create-standalone-backup',
     async (event): Promise<DesktopBackupResult> => {
-      assertTrustedSender(event);
+      await assertOwnerSession(event);
       if (!primaryWindow || !supervisor) throw new Error('Standalone host is unavailable');
+      if (desktopMaintenanceRunning)
+        throw new Error('Another recovery operation is already running');
       const selected = await dialog.showSaveDialog(primaryWindow, {
         title: 'Save verified ApiaryLens backup',
         defaultPath: join(
@@ -228,25 +260,139 @@ async function start(): Promise<void> {
         properties: ['createDirectory', 'showOverwriteConfirmation'],
       });
       if (selected.canceled || !selected.filePath) return { status: 'canceled' };
-      await supervisor.stop();
-      let result: DesktopBackupResult;
+      desktopMaintenanceRunning = true;
       try {
+        await supervisor.stop();
         const identity = createBuildIdentity({ deploymentProfile: 'development' });
-        const manifest = createStandaloneBackup(paths, selected.filePath, {
+        try {
+          const manifest = createStandaloneBackup(paths, selected.filePath, {
+            productVersion: identity.productVersion,
+            databaseMigration: identity.databaseMigration,
+          });
+          await reloadAfterMaintenance();
+          await dialog.showMessageBox(primaryWindow, {
+            type: 'info',
+            title: 'ApiaryLens backup complete',
+            message: 'Your verified Windows backup was saved.',
+            detail: `${manifest.files.length} database and media files were verified. Keep the backup on another device or protected storage.`,
+          });
+          return {
+            status: 'saved',
+            path: selected.filePath,
+            createdAt: manifest.createdAt,
+            files: manifest.files.length,
+          };
+        } catch (error) {
+          await reloadAfterMaintenance();
+          throw error;
+        }
+      } finally {
+        desktopMaintenanceRunning = false;
+      }
+    },
+  );
+  ipcMain.handle(
+    'apiarylens:restore-standalone-backup',
+    async (event): Promise<DesktopRestoreResult> => {
+      await assertOwnerSession(event);
+      if (!primaryWindow || !supervisor) throw new Error('Standalone host is unavailable');
+      if (desktopMaintenanceRunning)
+        throw new Error('Another recovery operation is already running');
+      const selected = await dialog.showOpenDialog(primaryWindow, {
+        title: 'Select a verified ApiaryLens backup to restore',
+        filters: [{ name: 'ApiaryLens backup', extensions: ['albackup'] }],
+        properties: ['openFile'],
+      });
+      const archivePath = selected.filePaths[0];
+      if (selected.canceled || !archivePath) return { status: 'canceled' };
+      const verified = readStandaloneBackup(archivePath);
+      const identity = createBuildIdentity({ deploymentProfile: 'development' });
+      if (
+        verified.manifest.productVersion !== identity.productVersion ||
+        verified.manifest.databaseMigration !== identity.databaseMigration
+      ) {
+        throw new Error(
+          `Backup compatibility ${verified.manifest.productVersion}/migration ${verified.manifest.databaseMigration} does not match this application`,
+        );
+      }
+      const confirmation = await dialog.showMessageBox(primaryWindow, {
+        type: 'warning',
+        title: 'Replace current ApiaryLens data?',
+        message: 'Restore replaces the current Windows database and original photos.',
+        detail: `Backup created ${new Date(verified.manifest.createdAt).toLocaleString()} with ${verified.manifest.files.length} verified files. ApiaryLens will first create a recovery backup. All restored sessions will be revoked.`,
+        buttons: ['Cancel', 'Create recovery backup and restore'],
+        defaultId: 0,
+        cancelId: 0,
+        noLink: true,
+      });
+      if (confirmation.response !== 1) return { status: 'canceled' };
+
+      desktopMaintenanceRunning = true;
+      const stamp = new Date().toISOString().replaceAll(':', '-').replaceAll('.', '-');
+      const recoveryBackupPath = join(paths.backups, `apiarylens-pre-restore-${stamp}.albackup`);
+      const stagingRoot = join(paths.root, 'restore-staging');
+      const rollbackData = join(paths.root, 'restore-rollback-data');
+      const currentData = dirname(paths.database);
+      let cutoverStarted = false;
+      try {
+        await supervisor.stop();
+        createStandaloneBackup(paths, recoveryBackupPath, {
           productVersion: identity.productVersion,
           databaseMigration: identity.databaseMigration,
         });
-        result = {
-          status: 'saved',
-          path: selected.filePath,
-          createdAt: manifest.createdAt,
-          files: manifest.files.length,
-        };
-      } finally {
+        restoreStandaloneBackupToStaging(archivePath, stagingRoot);
+        const stagedStore = new SqliteStore(join(stagingRoot, 'data', 'apiarylens.sqlite'), {
+          authRootSecret: secrets.authRootSecret,
+        });
+        try {
+          const integrity = stagedStore.database.prepare('PRAGMA integrity_check').get() as
+            { integrity_check?: unknown } | undefined;
+          if (integrity?.integrity_check !== 'ok') {
+            throw new Error('Restored SQLite integrity verification failed');
+          }
+          stagedStore.database
+            .prepare('UPDATE sessions SET revoked_at = ?')
+            .run(new Date().toISOString());
+        } finally {
+          stagedStore.close();
+        }
+        activateStagedStandaloneData(currentData, join(stagingRoot, 'data'), rollbackData);
+        cutoverStarted = true;
         const restarted = await supervisor.start();
+        const health = await fetch(`${restarted.endpoint}/health`, {
+          headers: { [desktopControlHeader]: restarted.controlToken },
+          cache: 'no-store',
+          signal: AbortSignal.timeout(5_000),
+        });
+        if (!health.ok) throw new Error(`Restored service health failed (${health.status})`);
+        rmSync(rollbackData, { recursive: true, force: true });
+        rmSync(stagingRoot, { recursive: true, force: true });
         setTimeout(() => void primaryWindow?.loadURL(restarted.endpoint), 250);
+        await dialog.showMessageBox(primaryWindow, {
+          type: 'info',
+          title: 'ApiaryLens restore complete',
+          message: 'The verified backup was restored successfully.',
+          detail: `A recovery backup of the replaced data was saved at ${recoveryBackupPath}. Sign in again to continue.`,
+        });
+        return {
+          status: 'restored',
+          sourceCreatedAt: verified.manifest.createdAt,
+          files: verified.manifest.files.length,
+          recoveryBackupPath,
+        };
+      } catch (error) {
+        await supervisor.stop().catch(() => undefined);
+        if (cutoverStarted) {
+          rollbackStandaloneData(currentData, rollbackData);
+        }
+        rmSync(stagingRoot, { recursive: true, force: true });
+        await reloadAfterMaintenance();
+        throw new Error(
+          `Restore stopped and the prior Windows data was recovered: ${error instanceof Error ? error.message : 'unknown restore error'}`,
+        );
+      } finally {
+        desktopMaintenanceRunning = false;
       }
-      return result;
     },
   );
 

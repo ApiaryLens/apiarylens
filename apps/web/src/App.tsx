@@ -2880,31 +2880,60 @@ function VersionView({
           </dl>
           <div className="button-row">
             {standaloneBackup && (
-              <button
-                className="button primary"
-                disabled={backupWorking}
-                onClick={() => {
-                  setBackupWorking(true);
-                  setBackupMessage('');
-                  void api
-                    .createStandaloneBackup()
-                    .then((result) => {
-                      if (result.status === 'saved') {
+              <>
+                <button
+                  className="button primary"
+                  disabled={backupWorking}
+                  onClick={() => {
+                    setBackupWorking(true);
+                    setBackupMessage('');
+                    void api
+                      .createStandaloneBackup()
+                      .then((result) => {
+                        if (result.status === 'saved') {
+                          setBackupMessage(
+                            `Verified ${result.files} files and saved the backup at ${new Date(result.createdAt).toLocaleString()}.`,
+                          );
+                        }
+                      })
+                      .catch((caught: unknown) =>
                         setBackupMessage(
-                          `Verified ${result.files} files and saved the backup at ${new Date(result.createdAt).toLocaleString()}.`,
-                        );
-                      }
-                    })
-                    .catch((caught: unknown) =>
-                      setBackupMessage(
-                        caught instanceof Error ? caught.message : 'Backup could not be created.',
-                      ),
-                    )
-                    .finally(() => setBackupWorking(false));
-                }}
-              >
-                {backupWorking ? 'Creating verified backup…' : 'Create Windows backup'}
-              </button>
+                          caught instanceof Error ? caught.message : 'Backup could not be created.',
+                        ),
+                      )
+                      .finally(() => setBackupWorking(false));
+                  }}
+                >
+                  {backupWorking ? 'Recovery operation running…' : 'Create Windows backup'}
+                </button>
+                <button
+                  className="button secondary"
+                  disabled={backupWorking}
+                  onClick={() => {
+                    setBackupWorking(true);
+                    setBackupMessage('');
+                    void api
+                      .restoreStandaloneBackup()
+                      .then((result) => {
+                        if (result.status === 'restored') {
+                          setBackupMessage(
+                            `Restored ${result.files} verified files. Sign in again to continue.`,
+                          );
+                        }
+                      })
+                      .catch((caught: unknown) =>
+                        setBackupMessage(
+                          caught instanceof Error
+                            ? caught.message
+                            : 'Restore could not be completed.',
+                        ),
+                      )
+                      .finally(() => setBackupWorking(false));
+                  }}
+                >
+                  Restore Windows backup
+                </button>
+              </>
             )}
             <a className="button primary link-button" href="/api/v1/export/full">
               Download full export

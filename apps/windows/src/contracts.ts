@@ -22,10 +22,20 @@ export type DesktopRuntimeStatus = {
 export type DesktopBackupResult =
   { status: 'canceled' } | { status: 'saved'; path: string; createdAt: string; files: number };
 
+export type DesktopRestoreResult =
+  | { status: 'canceled' }
+  | {
+      status: 'restored';
+      sourceCreatedAt: string;
+      files: number;
+      recoveryBackupPath: string;
+    };
+
 export type DesktopBridge = {
   runtimeStatus(): Promise<DesktopRuntimeStatus>;
   bootstrapOwner(input: DesktopBootstrapInput): Promise<DesktopBootstrapSession>;
   createStandaloneBackup(): Promise<DesktopBackupResult>;
+  restoreStandaloneBackup(): Promise<DesktopRestoreResult>;
 };
 
 declare global {

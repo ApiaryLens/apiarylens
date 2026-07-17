@@ -3,10 +3,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { afterEach, describe, expect, it } from 'vitest';
+import { SqliteStore } from '@apiarylens/database';
 import { createWindowsDataPaths } from './paths.js';
 import {
+  activateStagedStandaloneData,
   createStandaloneBackup,
   readStandaloneBackup,
+  rollbackStandaloneData,
   restoreStandaloneBackupToStaging,
 } from './standalone-backup.js';
 
@@ -20,10 +23,7 @@ describe('standalone backup archive', () => {
     const root = join(tmpdir(), `apiarylens-backup-${crypto.randomUUID()}`);
     roots.push(root);
     const paths = createWindowsDataPaths(root);
-    writeFileSync(
-      paths.database,
-      Buffer.concat([Buffer.from('SQLite format 3\0'), Buffer.alloc(64)]),
-    );
+    new SqliteStore(paths.database).close();
     mkdirSync(join(paths.media, 'hive'), { recursive: true });
     writeFileSync(join(paths.media, 'hive', 'photo.jpg'), 'photo-bytes');
     writeFileSync(paths.protectedSecrets, 'must-not-be-exported');
@@ -55,10 +55,7 @@ describe('standalone backup archive', () => {
     const root = join(tmpdir(), `apiarylens-backup-${crypto.randomUUID()}`);
     roots.push(root);
     const paths = createWindowsDataPaths(root);
-    writeFileSync(
-      paths.database,
-      Buffer.concat([Buffer.from('SQLite format 3\0'), Buffer.alloc(64)]),
-    );
+    new SqliteStore(paths.database).close();
     const archive = join(paths.backups, 'family.albackup');
     createStandaloneBackup(paths, archive, {
       productVersion: '0.1.0-preview.1',
@@ -68,5 +65,24 @@ describe('standalone backup archive', () => {
     raw[raw.length - 1] = (raw.at(-1) ?? 0) ^ 0xff;
     writeFileSync(archive, gzipSync(raw));
     expect(() => readStandaloneBackup(archive)).toThrow(/checksum/);
+  });
+
+  it('atomically activates staged data and can roll back a failed health gate', () => {
+    const root = join(tmpdir(), `apiarylens-cutover-${crypto.randomUUID()}`);
+    roots.push(root);
+    const current = join(root, 'data');
+    const staged = join(root, 'staged-data');
+    const rollback = join(root, 'rollback-data');
+    mkdirSync(current, { recursive: true });
+    mkdirSync(staged, { recursive: true });
+    writeFileSync(join(current, 'identity.txt'), 'before');
+    writeFileSync(join(staged, 'identity.txt'), 'restored');
+
+    activateStagedStandaloneData(current, staged, rollback);
+    expect(readFileSync(join(current, 'identity.txt'), 'utf8')).toBe('restored');
+    expect(readFileSync(join(rollback, 'identity.txt'), 'utf8')).toBe('before');
+
+    rollbackStandaloneData(current, rollback);
+    expect(readFileSync(join(current, 'identity.txt'), 'utf8')).toBe('before');
   });
 });
