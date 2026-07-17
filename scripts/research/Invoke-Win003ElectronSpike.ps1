@@ -1046,8 +1046,8 @@ try {
     if ($exoticGitDependencyCount -ne 0) {
         throw "Electron research lock retained $exoticGitDependencyCount exotic Git dependency reference(s)"
     }
-    $researchLock = $researchLockRaw | ConvertFrom-Json -Depth 100
-    $electronRebuildLock = $researchLock.packages.'node_modules/@electron/rebuild'
+    $researchLock = $researchLockRaw | ConvertFrom-Json -AsHashtable -Depth 100
+    $electronRebuildLock = $researchLock['packages']['node_modules/@electron/rebuild']
     if ($electronRebuildLock.version -ne '4.2.0' -or
         $electronRebuildLock.resolved -ne 'https://registry.npmjs.org/@electron/rebuild/-/rebuild-4.2.0.tgz' -or
         -not $electronRebuildLock.integrity) {
