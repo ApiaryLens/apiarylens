@@ -220,6 +220,18 @@ async function createJournal(root, identities) {
       }
     }
   }
+  const backupMediaStore = new FilesystemMediaStore(join(root, 'backup-media'));
+  const backupMedia = [];
+  for (const item of media) {
+    const bytes = await backupMediaStore.get(identities.sourceOrg, item.entityId, item.variant);
+    assert.ok(bytes);
+    backupMedia.push({
+      entityId: item.entityId,
+      variant: item.variant,
+      sha256: hash(bytes),
+      byteSize: bytes.byteLength,
+    });
+  }
   const journal = {
     schemaVersion: 1,
     migrationId: randomUUID(),
@@ -232,6 +244,10 @@ async function createJournal(root, identities) {
     duplicateMediaWrites: 0,
     conflicts: [],
     cutoverCursor: null,
+    backup: {
+      databaseSha256: hash(await readFile(join(root, 'backup.sqlite'))),
+      media: backupMedia,
+    },
   };
   await atomicJson(join(root, 'migration-journal.json'), journal);
   return journal;
@@ -249,6 +265,11 @@ async function migrate(root, options = {}) {
     journal = await createJournal(root, identities);
   }
   const target = new SqliteStore(join(root, 'target.sqlite'));
+  let injectedBlocker;
+  if (options.injectTargetDatabaseBusy) {
+    injectedBlocker = new SqliteStore(join(root, 'target.sqlite'));
+    injectedBlocker.database.exec('BEGIN EXCLUSIVE');
+  }
   const sourceMedia = new FilesystemMediaStore(join(root, 'source-media'));
   const targetMedia = new FilesystemMediaStore(join(root, 'target-media'));
   let applied = 0;
@@ -348,6 +369,10 @@ async function migrate(root, options = {}) {
     });
     return journal;
   } finally {
+    if (injectedBlocker) {
+      injectedBlocker.database.exec('ROLLBACK');
+      injectedBlocker.close();
+    }
     target.close();
   }
 }
@@ -369,11 +394,23 @@ async function rollback(root) {
 }
 
 async function restoreBackup(root) {
+  const journal = await readJson(join(root, 'migration-journal.json'));
+  const backupDatabase = await readFile(join(root, 'backup.sqlite'));
+  if (hash(backupDatabase) !== journal.backup.databaseSha256) {
+    throw new Error('backup_database_hash_mismatch');
+  }
+  const identities = await readJson(join(root, 'identities.json'));
+  const backupMedia = new FilesystemMediaStore(join(root, 'backup-media'));
+  for (const expected of journal.backup.media) {
+    const bytes = await backupMedia.get(identities.sourceOrg, expected.entityId, expected.variant);
+    if (!bytes || hash(bytes) !== expected.sha256 || bytes.byteLength !== expected.byteSize) {
+      throw new Error('backup_media_hash_mismatch');
+    }
+  }
   await rm(join(root, 'restored.sqlite'), { force: true });
   await rm(join(root, 'restored-media'), { recursive: true, force: true });
   await cp(join(root, 'backup.sqlite'), join(root, 'restored.sqlite'));
   await cp(join(root, 'backup-media'), join(root, 'restored-media'), { recursive: true });
-  const identities = await readJson(join(root, 'identities.json'));
   const restored = new SqliteStore(join(root, 'restored.sqlite'));
   const count = inventory(restored, identities.sourceOrg).length;
   restored.close();
@@ -536,7 +573,7 @@ function exerciseAnnualReferenceWorkload(recordCount) {
 
 async function run(output) {
   const workspace = resolve(output, 'work');
-  await rm(workspace, { recursive: true, force: true });
+  await rm(workspace, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
   await mkdir(workspace, { recursive: true });
   const results = [];
 
@@ -628,20 +665,43 @@ async function run(output) {
   assert.equal((await readJson(join(remote, 'client-config.json'))).mode, 'connected');
   results.push('post-cutover-remote-write-blocks-destructive-rollback');
 
+  const busy = join(workspace, 'database-busy');
+  await seedScenario(busy);
+  await assert.rejects(migrate(busy, { injectTargetDatabaseBusy: true }), /busy|locked/i);
+  assert.equal((await readJson(join(busy, 'client-config.json'))).mode, 'standalone');
+  assert.equal((await migrate(busy)).status, 'complete');
+  results.push('locked-target-database-blocks-cutover-and-resumes-after-release');
+
+  const corruptBackup = join(workspace, 'corrupt-backup');
+  await seedScenario(corruptBackup);
+  await migrate(corruptBackup);
+  await writeFile(join(corruptBackup, 'backup.sqlite'), new Uint8Array([0x00]), { flag: 'a' });
+  await assert.rejects(restoreBackup(corruptBackup), /backup_database_hash_mismatch/);
+  results.push('corrupt-backup-is-rejected-before-restore');
+
   const evidenceText = await Promise.all(
-    [happy, scale, pending, tombstone, conflict, mismatch, incompatible, remote].map(
-      async (root) => {
-        let text = '';
-        for (const file of ['migration-journal.json', 'client-config.json']) {
-          try {
-            text += await readFile(join(root, file), 'utf8');
-          } catch (error) {
-            if (error.code !== 'ENOENT') throw error;
-          }
+    [
+      happy,
+      scale,
+      pending,
+      tombstone,
+      conflict,
+      mismatch,
+      incompatible,
+      remote,
+      busy,
+      corruptBackup,
+    ].map(async (root) => {
+      let text = '';
+      for (const file of ['migration-journal.json', 'client-config.json']) {
+        try {
+          text += await readFile(join(root, file), 'utf8');
+        } catch (error) {
+          if (error.code !== 'ENOENT') throw error;
         }
-        return text;
-      },
-    ),
+      }
+      return text;
+    }),
   );
   assert.ok(!evidenceText.join('').includes(SECRET_SENTINEL));
   results.push('journal-config-and-evidence-contain-no-secret-values');
@@ -660,6 +720,8 @@ async function run(output) {
       annualReferenceRecords: 20_000,
       annualReferenceBatches: 200,
       durableAnnualReferenceMigrationProven: false,
+      databaseBusyResume: true,
+      corruptBackupRejected: true,
       interruptionBoundaries: 5,
       identitiesMigrated: false,
       atomicCutoverAfterReconciliation: true,
@@ -669,7 +731,7 @@ async function run(output) {
   };
   await mkdir(output, { recursive: true });
   await atomicJson(join(output, 'win006-migration-evidence.json'), report);
-  await rm(workspace, { recursive: true, force: true });
+  await rm(workspace, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
   console.log(JSON.stringify(report, null, 2));
 }
 

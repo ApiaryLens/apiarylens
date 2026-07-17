@@ -92,6 +92,10 @@ The local run passed these scenarios:
 - target media corruption detected before cutover;
 - incompatible sync-contract version rejected before transfer;
 - remote-only write after cutover prevents destructive rollback; and
+- an exclusive target-database lock blocks cutover and the same journal resumes after
+  the lock is released;
+- a modified backup database is rejected against its recorded SHA-256 before restore;
+  and
 - journal, client configuration, and sanitized evidence contain no seeded secret.
 
 The workflow
@@ -119,6 +123,13 @@ server-side import transactions with per-item receipts. The current evidence pro
 the record model, batching, idempotency, and reconciliation at the annual reference
 count; it does **not** prove a durable 20,000-record packaged migration. The latter
 remains an exact-artifact acceptance gate after the bulk-import contract exists.
+
+The database-busy injection also showed that a store should be opened and validated
+before the operation boundary is locked. Constructing a new store while another
+connection holds an exclusive lock can fail during schema initialization; process
+exit releases the handle, but an in-process orchestrator must not rely on that. The
+native host must treat store-open failure as a startup/preflight failure and keep the
+standalone profile authoritative.
 
 GitHub Actions run
 [`29550672120`](https://github.com/ApiaryLens/apiarylens/actions/runs/29550672120)
@@ -254,8 +265,9 @@ installation ID, accepted hashes, and outcome.
 - Durable packaged migration at the 20,000-record annual family reference workload
   after the SQLite journal and bounded bulk-import contract exist. The record model
   and reconciliation pass at that count in memory; this is not yet packaged evidence.
-- Inject process termination, disk-full, access-denied, database-busy, corrupt backup,
-  target timeout, expired auth, and partial media failures at each state boundary.
+- Inject real process termination, disk-full, access-denied, target timeout, expired
+  auth, and partial media failures at each state boundary. Database-busy resume and
+  corrupt-backup rejection are now covered at the package-adapter level.
 - Prove restored backup equivalence for the packaged Windows runtime, not only the
   package-level SQLite and filesystem adapters.
 - Define and test D1/R2 target behavior as well as Node SQLite/filesystem behavior.
