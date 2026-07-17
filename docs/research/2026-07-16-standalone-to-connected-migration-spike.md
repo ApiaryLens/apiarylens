@@ -163,6 +163,11 @@ Follow-up run
 passed target-database lock recovery, corrupt-backup rejection, and the accumulated
 suite on the Windows hosted runner in 47 seconds.
 
+Follow-up run
+[`29552021861`](https://github.com/ApiaryLens/apiarylens/actions/runs/29552021861)
+passed real child-process termination after a target write, exact-once resume, and the
+accumulated suite on the Windows hosted runner in 49 seconds.
+
 ## Proposed migration protocol
 
 ### Durable objects
