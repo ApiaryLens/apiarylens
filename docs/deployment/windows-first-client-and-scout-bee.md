@@ -210,6 +210,10 @@ manifests.
 
 ## Authentication and security
 
+The detailed actors, trust boundaries, controls, measured evidence, and residual
+release risks are maintained in the
+[Windows client threat review](../security/windows-client-threat-model.md).
+
 - Standalone binds only to loopback and stores data under a protected per-user data
   directory.
 - Connected profiles require publicly trusted HTTPS.

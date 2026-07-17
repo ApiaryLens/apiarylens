@@ -20,9 +20,10 @@ policy now leaves that bridge operational, prior proxy state is restored, and th
 installed host creates no Windows Firewall application rule. Managed PAC,
 restrictive firewall/VPN/filter-driver and IPv6-only policies, retail lifecycle
 behavior, physical-volume-full behavior, the remaining failure matrix, and final
-threat review remain before the research gate can close. A disposable wrapper around
-the real API proves the generic loopback, authentication, ownership, and
-parent-supervision shape.
+independent/manual security review remain before the research gate can close. The
+engineering threat review now defines the accepted local adversary boundary and
+residual risks. A disposable wrapper around the real API proves the generic
+loopback, authentication, ownership, and parent-supervision shape.
 
 ## Decision question
 
@@ -447,7 +448,11 @@ release gate.
    profiles remain; the operating-system-assigned port design avoids selecting a
    colliding fixed port.
 6. Threat-reviewing the selected host bridge and documenting the accepted local
-   adversary boundary in the Windows security design and follow-on ADR.
+   adversary boundary in the Windows security design and follow-on ADR. The
+   [engineering threat review](../security/windows-client-threat-model.md) now
+   defines the actors, boundaries, controls, risk register, same-user/administrator
+   boundary, and residual gates. Production-host integration and independent/manual
+   release review remain.
 
 ## Scale and revisit conditions
 
