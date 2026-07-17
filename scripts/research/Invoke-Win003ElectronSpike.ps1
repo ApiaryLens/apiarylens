@@ -457,9 +457,10 @@ if (!hasSingleInstanceLock) {
 } else if (serviceDirectoryInputIndex >= 0 && serviceDirectoryOutputIndex >= 0) {
   app.whenReady().then(async () => {
     const requestedLab = path.resolve(process.argv[serviceDirectoryInputIndex + 1]);
-    const tempRoot = path.resolve(os.tmpdir()) + path.sep;
+    const requestedParent = fs.realpathSync.native(path.dirname(requestedLab)).toLowerCase();
+    const tempRoot = fs.realpathSync.native(os.tmpdir()).toLowerCase();
     if (
-      !requestedLab.startsWith(tempRoot) ||
+      requestedParent !== tempRoot ||
       !path.basename(requestedLab).startsWith("apiarylens-win003-readonly-")
     ) {
       throw new Error("service-directory-probe-outside-electron-temp");
