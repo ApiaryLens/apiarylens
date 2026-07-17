@@ -226,20 +226,20 @@ jobs:
           if (-not (Test-Path -LiteralPath $installedHost)) { throw 'Installed ApiaryLens host was not found.' }
           $profile = "${{ runner.temp }}/apiarylens-installed-profile"
           $evidence = "${{ runner.temp }}/apiarylens-installed-evidence.json"
-          $host = Start-Process -FilePath $installedHost -ArgumentList @(
+          $installedProcess = Start-Process -FilePath $installedHost -ArgumentList @(
             "--desktop-user-data=$profile",
             "--desktop-smoke=$evidence"
           ) -PassThru -WindowStyle Hidden
           try {
             $deadline = (Get-Date).AddSeconds(40)
             while (-not (Test-Path -LiteralPath $evidence)) {
-              if ($host.HasExited) { throw "Installed host exited early ($($host.ExitCode))." }
+              if ($installedProcess.HasExited) { throw "Installed host exited early ($($installedProcess.ExitCode))." }
               if ((Get-Date) -ge $deadline) { throw 'Installed host smoke timed out.' }
               Start-Sleep -Milliseconds 200
             }
           }
           finally {
-            Stop-Process -Id $host.Id -Force -ErrorAction SilentlyContinue
+            Stop-Process -Id $installedProcess.Id -Force -ErrorAction SilentlyContinue
           }
 
           $update = Join-Path $installRoot 'Update.exe'
