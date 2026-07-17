@@ -60,6 +60,9 @@ $packageJson = @'
     "@electron-forge/cli": "7.11.2",
     "@electron-forge/maker-squirrel": "7.11.2",
     "electron": "43.1.1"
+  },
+  "overrides": {
+    "@electron/rebuild": "4.2.0"
   }
 }
 '@
@@ -1037,6 +1040,19 @@ Push-Location $labPath
 try {
     npm install --no-audit --no-fund
     if ($LASTEXITCODE -ne 0) { throw "Electron lab dependency install failed with exit code $LASTEXITCODE" }
+    $researchLockPath = Join-Path $labPath 'package-lock.json'
+    $researchLockRaw = Get-Content -Raw -LiteralPath $researchLockPath
+    $exoticGitDependencyCount = [regex]::Matches($researchLockRaw, 'git\+(?:ssh|https?)://', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count
+    if ($exoticGitDependencyCount -ne 0) {
+        throw "Electron research lock retained $exoticGitDependencyCount exotic Git dependency reference(s)"
+    }
+    $researchLock = $researchLockRaw | ConvertFrom-Json -Depth 100
+    $electronRebuildLock = $researchLock.packages.'node_modules/@electron/rebuild'
+    if ($electronRebuildLock.version -ne '4.2.0' -or
+        $electronRebuildLock.resolved -ne 'https://registry.npmjs.org/@electron/rebuild/-/rebuild-4.2.0.tgz' -or
+        -not $electronRebuildLock.integrity) {
+        throw 'Electron rebuild override did not resolve to the expected integrity-pinned registry artifact'
+    }
     $env:WIN003_SERVER_DEPLOY = $serverDeployPath
     npx --no-install electron-forge make --arch=x64
     if ($LASTEXITCODE -ne 0) { throw "Electron Forge make failed with exit code $LASTEXITCODE" }
@@ -1341,6 +1357,9 @@ $measurement = [ordered]@{
     electronVersion = $probeResult.electron
     bundledNodeVersion = $probeResult.node
     electronForgeVersion = (Get-Content -Raw -LiteralPath (Join-Path $labPath 'node_modules/@electron-forge/cli/package.json') | ConvertFrom-Json).version
+    electronRebuildVersion = $electronRebuildLock.version
+    electronRebuildRegistryIntegrityPresent = [bool] $electronRebuildLock.integrity
+    exoticGitDependencyCount = $exoticGitDependencyCount
     webBundleBytes = (Get-ChildItem -LiteralPath (Join-Path $labPath 'web') -Recurse -File | Measure-Object Length -Sum).Sum
     packageDirectoryBytes = ($packageFiles | Measure-Object Length -Sum).Sum
     packageFileCount = $packageFiles.Count
