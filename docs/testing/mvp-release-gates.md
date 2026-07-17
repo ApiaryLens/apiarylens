@@ -70,6 +70,10 @@ requires the explicitly listed owner/device and manual-review gates.
       install, protected first-owner claim, invalid-code rejection, keep-data
       uninstall, public-route removal, and reinstall while preserving the original
       session, password sign-in, retained apiary, and durable authentication root.
+- [x] Product Preview 2 and Scout Bee Preview 3 exact released bytes pass the complete
+      populated Cloudflare lifecycle: 14-phase fresh install, all 11 protected
+      product groups, backup, update, repair, restore, rollback, keep-data uninstall,
+      reinstall, runtime-secret cleanup, and full disposable Worker/D1/R2 cleanup.
 - [x] The approved Generation 2 Hyper-V Ubuntu target passes the exact released
       Scout Bee preflight, clean install, product, recovery, retention, keep-data
       reinstall, interrupted-update/resume, and clean-application restore journeys.
@@ -83,6 +87,11 @@ requires the explicitly listed owner/device and manual-review gates.
       media, sync/conflict/idempotency, viewer denial, complete export, backup/restore
       with session revocation, 14-backup retention, keep-data reinstall, and a seeded
       migration-0003 interrupted update resumed with the same plan.
+- [x] Product Preview 2 and Scout Bee Preview 3 exact released bytes pass the
+      Windows-to-clean-Ubuntu lifecycle without user-typed Linux deployment commands:
+      pinned SSH install, all 11 protected product groups, populated backup, update,
+      repair, restore, rollback, keep-data reinstall, full uninstall, and deletion of
+      the disposable Azure VM and every supporting resource.
 - [x] Exact rc.7 production downloads match all manifest hashes and sizes; signing run
       `29513476765` verifies all six subjects. The exact public Scout passes the
       recorded Cloudflare, Compose, Hyper-V, and GCP acceptance runs, with migration
@@ -139,9 +148,13 @@ full restore are recorded in
 [`scout-bee-cloudflare-lifecycle-2026-07-15.json`](scout-bee-cloudflare-lifecycle-2026-07-15.json).
 Fresh install and keep-data uninstall/reinstall are recorded in
 [`scout-bee-cloudflare-install-reinstall-2026-07-15.json`](scout-bee-cloudflare-install-reinstall-2026-07-15.json).
-That completes the Cloudflare half of both lifecycle gates; the combined checkboxes
-stay open for the required Compose runs. The two earlier
-dry-run preflights and first guarded update remain historical evidence. Release-signing
+Those historical runs are superseded for current released-byte acceptance by the
+Product Preview 2 / Scout Bee Preview 3 Cloudflare and Windows-to-Linux records:
+[`preview2-cloudflare-released-lifecycle-2026-07-17.json`](preview2-cloudflare-released-lifecycle-2026-07-17.json)
+and
+[`preview2-windows-to-linux-released-lifecycle-2026-07-17.json`](preview2-windows-to-linux-released-lifecycle-2026-07-17.json).
+Both current target lifecycles are complete. The two earlier dry-run preflights and
+first guarded update remain historical evidence. Release-signing
 evidence for verification revision `b3094bc1ae944db48aad8d6555581194acbb3a0b` is recorded in
 [`release-signing-evidence-2026-07-15.json`](release-signing-evidence-2026-07-15.json).
 The production observation and provider-allowance baseline is recorded in

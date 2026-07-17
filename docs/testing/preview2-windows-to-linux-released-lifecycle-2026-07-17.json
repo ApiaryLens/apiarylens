@@ -1,0 +1,100 @@
+{
+  "product": "ApiaryLens",
+  "release": "0.1.0-preview.2",
+  "profile": "compose-on-disposable-azure-linux",
+  "target": "disposable target removed after verification",
+  "startedAt": "2026-07-17T21:06:00.000Z",
+  "sourceCommit": "2fbcb9fb2287231b2f217321d9539dfd4530d460",
+  "scoutRelease": "0.1.0-preview.3",
+  "scoutWindowsSha256": "95f1c11324d59dc7244e93f04207a37c517d13b2d5c86092a59b39d23b5985e0",
+  "databaseMigration": "0004",
+  "host": {
+    "operatorComputer": "Windows",
+    "targetOs": "Ubuntu 24.04 LTS",
+    "targetVmSize": "Standard_B2s",
+    "dockerCompose": "2.40.3",
+    "sshHostKeyPinned": true,
+    "sshAuthentication": "runtime-only private key",
+    "publicHttps": true,
+    "userTypedLinuxDeploymentCommands": false
+  },
+  "checks": [
+    {
+      "name": "released-scout-install",
+      "result": "pass",
+      "detail": "Exact released Windows Scout verified SSH identity and prerequisites, transferred the immutable Compose bundle and runtime-only secrets, and completed 14 install phases with zero failures"
+    },
+    {
+      "name": "health-and-headers",
+      "result": "pass",
+      "detail": "Public HTTPS health identified ApiaryLens@0.1.0-preview.2+2fbcb9f at migration 0004"
+    },
+    {
+      "name": "protected-bootstrap",
+      "result": "pass",
+      "detail": "Rejected an invalid deployment code, then created the first owner and family; eight recovery codes issued"
+    },
+    {
+      "name": "session-rotation",
+      "result": "pass",
+      "detail": "Session refresh issued a new opaque cookie and immediately rejected the prior identifier"
+    },
+    {
+      "name": "family-roles",
+      "result": "pass",
+      "detail": "Invited and activated separate beekeeper and viewer sessions"
+    },
+    {
+      "name": "p0-records",
+      "result": "pass",
+      "detail": "Created 13 records across all MVP resource types"
+    },
+    {
+      "name": "private-media",
+      "result": "pass",
+      "detail": "Original and thumbnail round-tripped exactly; anonymous access was denied"
+    },
+    {
+      "name": "second-client-sync",
+      "result": "pass",
+      "detail": "Beekeeper pulled the complete change set and completed a follow-up"
+    },
+    {
+      "name": "conflict-and-idempotency",
+      "result": "pass",
+      "detail": "Duplicate replay was idempotent and stale edit returned the current server value as a conflict"
+    },
+    {
+      "name": "viewer-negative-authorization",
+      "result": "pass",
+      "detail": "Server denied viewer write, export, and invitation-management requests"
+    },
+    {
+      "name": "portable-export",
+      "result": "pass",
+      "detail": "Validated manifest, JSON, three CSV files, and original media in the portable export"
+    },
+    {
+      "name": "released-scout-lifecycle",
+      "result": "pass",
+      "detail": "Backup 9/0, update 12/0, repair 12/0, restore 9/0, rollback 12/0, keep-data uninstall 9/0, reinstall 14/0, and full uninstall 9/0"
+    },
+    {
+      "name": "populated-backups",
+      "result": "pass",
+      "detail": "Four verified lifecycle backups totaling 51,562 bytes were retained before the full uninstall"
+    },
+    {
+      "name": "secret-handling",
+      "result": "pass",
+      "detail": "Bootstrap and SSH credentials stayed in protected runtime inputs and did not enter the plan, process arguments, evidence, repository, diagnostics, or Scout history"
+    },
+    {
+      "name": "target-cleanup",
+      "result": "pass",
+      "detail": "Scout completed a full data-removing uninstall, then the disposable Azure VM, disk, IP, NIC, NSG, and network resource group were deleted"
+    }
+  ],
+  "completedAt": "2026-07-17T21:21:49.443Z",
+  "result": "pass"
+}
