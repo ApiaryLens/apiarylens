@@ -36,10 +36,11 @@ packages only the Node executable; it has not yet packaged and supervised the ex
 ApiaryLens server and dependency graph.
 
 Neither finalist is release-ready. Electron's measured Squirrel package leaves a
-small updater/cache directory and its Forge build reaches an exotic Git dependency
-that conflicts with repository supply-chain policy. Neither candidate installed a
-complete third-party notice bundle. Host-specific token isolation, Credential
-Manager integration, retail Windows accessibility, and physical lifecycle tests
+small updater/cache directory. The initial Forge build reached an exotic Git
+dependency, but exact follow-up packaging removed it with an integrity-pinned npm
+registry override and a release-failing zero-Git-reference assertion. Neither
+candidate installed a complete third-party notice bundle. Retail Windows
+accessibility, physical lifecycle tests, production signing, and signed provenance
 also remain open.
 
 Subsequent research run
@@ -137,6 +138,18 @@ local-to-Microsoft-account transitions, retail profiles, and production signing
 remain open.
 
 Run
+[`29563619105`](https://github.com/ApiaryLens/apiarylens/actions/runs/29563619105)
+then forced `@electron/rebuild` 4.2.0 through an integrity-pinned npm registry lock
+entry and failed the release path for any `git+ssh` or `git+https` reference. The
+retained exact lock contained zero exotic Git references. Electron Forge 7.11.2
+still built the Squirrel artifact, and setup SHA-256
+`1FB5341345263200BD690ACE373306DF83751901D570B225455D60DD868EABCC` passed the
+complete clean-profile installed lifecycle, including different-user credential
+denial and cleanup. This closes the exotic-dependency mechanism gate without
+weakening repository policy. Full notice/SBOM reconciliation, signed provenance,
+and production signing remain open.
+
+Run
 [`29559517037`](https://github.com/ApiaryLens/apiarylens/actions/runs/29559517037)
 then forced the embedded service to terminate with an open real-database transaction
 in both packaged and clean-installed forms. The same data directory restarted,
@@ -230,7 +243,7 @@ evidence does not satisfy production trust.
 | Security | Acceptable only with sandbox, context isolation, narrow preload, sender validation, and host-owned credentials |
 | Footprint | Weakest measured finalist: approximately 133.8 MiB setup and 467 MiB installed research footprint |
 | Lifecycle | Exact install, upgrade, downgrade, repair, and uninstall mechanics measured; product gates still required |
-| Supply chain | Unresolved Forge/Squirrel exotic dependency and notice reconciliation block acceptance |
+| Supply chain | Registry-only exact lock now measured; notice/SBOM reconciliation, signed provenance, and production signing still block acceptance |
 
 ### Tauri 2 with packaged Node sidecar
 
@@ -278,10 +291,11 @@ Electron security and supply-chain conditions close without weakening policy.
 
 Squirrel is proposed because it is the only Electron current-user mechanism with
 exact signed lifecycle evidence in this research. It is not trusted to decide
-schema compatibility, rollback, or data deletion. If its exotic dependency cannot
-be resolved under repository policy or its residue cannot meet explicit uninstall
-behavior, this ADR returns to Proposed and a separately measured package mechanism
-must replace it.
+schema compatibility, rollback, or data deletion. The exotic dependency is now
+removed by the measured exact override and lock assertion. If that invariant cannot
+be preserved in the product lock, or if Squirrel residue cannot meet explicit
+uninstall behavior, this ADR returns to Proposed and a separately measured package
+mechanism must replace it.
 
 ## Consequences
 
@@ -335,9 +349,9 @@ must replace it.
    restore, installed different-user denial, explicit remove-all, and second-uninstall
    mechanics now pass. Password/PIN and local-to-Microsoft-account transitions plus
    guided recovery UX remain open.
-5. Resolve or reject the Forge/Squirrel exotic dependency under the repository
-   supply-chain policy; reconcile every runtime/build component to an allowlisted
-   license and install complete Apache-2.0 and third-party notices.
+5. Preserve the measured registry-only Electron rebuild lock and release-failing
+   zero-Git-reference assertion; reconcile every runtime/build component to an
+   allowlisted license and install complete Apache-2.0 and third-party notices.
 6. Prove complete current-user uninstall and both explicit data-retention choices,
    including the measured updater/cache residue. Default keep-data,
    same-user reinstall/decrypt, explicit remove-all, and a second uninstall now

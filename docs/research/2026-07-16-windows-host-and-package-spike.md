@@ -247,14 +247,27 @@ on a clean profile. Compression format, locale pruning, symbols, installer forma
 code signing, antivirus scanning, the local Node service, SQLite, media, and real
 data will change the final numbers.
 
-The equivalent installer run
+The initial equivalent installer run
 [`29542856476`](https://github.com/ApiaryLens/apiarylens/actions/runs/29542856476)
 used Electron Forge 7.11.2 with Squirrel.Windows and retained its generated npm lock
 file in the disposable runner lab. Forge currently reaches `@electron/node-gyp`
 through a Git dependency; the repository's pnpm supply-chain policy correctly
 rejected that exotic transitive dependency. The research workflow did not weaken
-the product repository policy. This packaging dependency and its provenance must be
-resolved or explicitly accepted before Electron can be selected.
+the product repository policy.
+
+Follow-up run
+[`29563619105`](https://github.com/ApiaryLens/apiarylens/actions/runs/29563619105)
+resolved that narrow conflict without permitting Git dependencies. The disposable
+Electron package pins `@electron/rebuild` 4.2.0, whose generated lock entry resolves
+to the integrity-pinned npm registry tarball, and the release-path assertion fails
+if any `git+ssh` or `git+https` reference remains. The retained exact lock contained
+zero such references. The same run built setup SHA-256
+`1FB5341345263200BD690ACE373306DF83751901D570B225455D60DD868EABCC`, then passed
+the complete clean-profile install, packaged API/security/credential lifecycle,
+keep-data uninstall, reinstall/restore, remove-all, and second-uninstall workflow.
+This closes the exotic-dependency mechanism gate; the eventual product repository
+must retain the exact override and lock assertions. Complete license/notice/SBOM
+reconciliation and signed provenance remain open.
 
 | Installer metric | Result |
 |---|---:|
@@ -919,10 +932,11 @@ research recommendation, not the host/package ADR.
 
 Both finalists score `2` for supply-chain closure because neither installed a
 complete notice bundle, runtime binary scanning inferred no dependable license
-metadata, and signed/attested SBOM reconciliation is not complete. Electron also
-has the Forge/Squirrel exotic Git dependency conflict with the repository policy;
-Tauri has a materially larger Rust/npm build graph and an unproven exact-product
-Node application sidecar. The score must rise before either can ship.
+metadata, and signed/attested SBOM reconciliation is not complete. Electron's
+Forge/Squirrel exotic Git dependency conflict is now removed in the exact measured
+lock without weakening policy. Tauri has a materially larger Rust/npm build graph
+and an unproven exact-product Node application sidecar. The score must rise before
+either can ship.
 
 ## Evidence-based recommendation for the ADR
 
@@ -950,8 +964,10 @@ The recommendation is based on delivery risk, not framework preference:
   and host-owned service/credential access are mandatory. A bridge that exposes raw
   tokens or general filesystem/process access overturns the recommendation.
 - Squirrel is the measured package mechanism, not yet the selected release package.
-  Its residual cache and exotic build dependency must be resolved or a separately
-  measured current-user package must replace it before ADR acceptance.
+  The exotic Git dependency is removed by an exact registry override and a
+  release-failing lock assertion. Residual cache policy, complete notice/SBOM
+  reconciliation, signed provenance, and retail evidence remain before ADR
+  acceptance.
 - Do not introduce a native Windows Job Object binding or bootstrap launcher solely
   for child cleanup in the initial Preview. The exact packaged and installed host
   already proves non-detached parent polling, forced-parent-death convergence,
