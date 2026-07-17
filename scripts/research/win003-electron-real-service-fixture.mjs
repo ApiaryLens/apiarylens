@@ -216,6 +216,43 @@ instanceGuard.listen(pipeName, () => {
         interruptedMarkerRolledBack: count('win003-interrupted-storage-marker') === 0,
       });
     }
+    if (
+      request.method === 'POST' &&
+      new URL(request.url).pathname === '/__desktop/research/simulate-database-full'
+    ) {
+      const before = store.database
+        .prepare('SELECT COUNT(*) AS count FROM organizations')
+        .get().count;
+      const pageCount = store.database.prepare('PRAGMA page_count').get().page_count;
+      store.database.exec(`PRAGMA max_page_count=${pageCount}`);
+      let databaseFullRejected = false;
+      try {
+        store.database.exec('BEGIN IMMEDIATE');
+        store.database
+          .prepare(
+            `INSERT INTO organizations(id, name, timezone, created_at, updated_at)
+             VALUES ('win003-database-full-marker', ?, 'UTC', ?, ?)`,
+          )
+          .run('x'.repeat(1024 * 1024), new Date().toISOString(), new Date().toISOString());
+        store.database.exec('COMMIT');
+      } catch {
+        databaseFullRejected = true;
+        try {
+          store.database.exec('ROLLBACK');
+        } catch {}
+      } finally {
+        store.database.exec('PRAGMA max_page_count=2147483646');
+      }
+      const after = store.database
+        .prepare('SELECT COUNT(*) AS count FROM organizations')
+        .get().count;
+      const integrityRows = store.database.prepare('PRAGMA integrity_check').all();
+      return Response.json({
+        databaseFullRejected,
+        transactionRolledBack: before === after,
+        integrityPassed: integrityRows.length === 1 && integrityRows[0].integrity_check === 'ok',
+      });
+    }
     return app.fetch(request);
   };
 

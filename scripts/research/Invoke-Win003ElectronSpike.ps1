@@ -247,12 +247,21 @@ async function forcedWriteRecoveryProbe() {
   });
   if (recovery.status !== 200) throw new Error("storage-recovery-check-failed");
   const recoveryState = await recovery.json();
+  const databaseFull = await fetch(`${serviceEndpoint}/__desktop/research/simulate-database-full`, {
+    method: "POST",
+    headers: controlHeaders
+  });
+  if (databaseFull.status !== 200) throw new Error("database-full-check-failed");
+  const databaseFullState = await databaseFull.json();
   return Object.freeze({
     forcedExitWasNonZero,
     integrityPassed: recoveryState.integrityPassed,
     committedMarkerRetained: recoveryState.committedMarkerRetained,
     interruptedMarkerRolledBack: recoveryState.interruptedMarkerRolledBack,
-    restartedSameDataDirectory: true
+    restartedSameDataDirectory: true,
+    databaseFullRejected: databaseFullState.databaseFullRejected,
+    databaseFullTransactionRolledBack: databaseFullState.transactionRolledBack,
+    integrityAfterDatabaseFull: databaseFullState.integrityPassed
   });
 }
 
@@ -441,8 +450,39 @@ const retentionVerifyInputIndex = process.argv.indexOf("--win003-retention-verif
 const retentionVerifyOutputIndex = process.argv.indexOf("--win003-retention-verify-output");
 const retentionRemoveInputIndex = process.argv.indexOf("--win003-retention-remove-input");
 const retentionRemoveOutputIndex = process.argv.indexOf("--win003-retention-remove-output");
+const serviceDirectoryInputIndex = process.argv.indexOf("--win003-service-directory-input");
+const serviceDirectoryOutputIndex = process.argv.indexOf("--win003-service-directory-output");
 if (!hasSingleInstanceLock) {
   // The primary instance owns all application and embedded-service work.
+} else if (serviceDirectoryInputIndex >= 0 && serviceDirectoryOutputIndex >= 0) {
+  app.whenReady().then(async () => {
+    const requestedLab = path.resolve(process.argv[serviceDirectoryInputIndex + 1]);
+    const tempRoot = path.resolve(os.tmpdir()) + path.sep;
+    if (
+      !requestedLab.startsWith(tempRoot) ||
+      !path.basename(requestedLab).startsWith("apiarylens-win003-readonly-")
+    ) {
+      throw new Error("service-directory-probe-outside-electron-temp");
+    }
+    let rejectedBeforeReadiness = false;
+    try {
+      await startRealService(false, requestedLab);
+    } catch {
+      rejectedBeforeReadiness =
+        serviceProcess?.exitCode !== null &&
+        !fs.existsSync(path.join(requestedLab, "ready.json"));
+    }
+    if (serviceProcess?.exitCode === null) await stopRealService();
+    fs.writeFileSync(
+      process.argv[serviceDirectoryOutputIndex + 1],
+      JSON.stringify({ rejectedBeforeReadiness })
+    );
+    app.quit();
+  }).catch((error) => {
+    console.error(`service-directory-probe-failed:${error.message}`);
+    if (serviceProcess?.exitCode === null) serviceProcess.kill("SIGKILL");
+    app.exit(82);
+  });
 } else if (retentionRemoveInputIndex >= 0 && retentionRemoveOutputIndex >= 0) {
   app.whenReady().then(() => {
     const retentionRoot = retentionRootFromState(process.argv[retentionRemoveInputIndex + 1]);
@@ -960,6 +1000,9 @@ $bridgePassed =
     $bridgeResult.forcedWriteRecovery.committedMarkerRetained -and
     $bridgeResult.forcedWriteRecovery.interruptedMarkerRolledBack -and
     $bridgeResult.forcedWriteRecovery.restartedSameDataDirectory -and
+    $bridgeResult.forcedWriteRecovery.databaseFullRejected -and
+    $bridgeResult.forcedWriteRecovery.databaseFullTransactionRolledBack -and
+    $bridgeResult.forcedWriteRecovery.integrityAfterDatabaseFull -and
     $bridgeResult.corruptDatabaseStartup.rejectedBeforeReadiness -and
     $bridgeResult.nativeCredentialProtection.encryptionAvailable -and
     $bridgeResult.nativeCredentialProtection.initialRoundTrip -and
@@ -973,6 +1016,47 @@ $bridgePassed =
     $bridgeResult.localStorageEntryCount -eq 0 -and
     $bridgeResult.sessionStorageEntryCount -eq 0
 if (-not $bridgePassed) { throw 'Packaged Electron bridge isolation acceptance checks failed' }
+
+$readOnlyLab = Join-Path ([IO.Path]::GetTempPath()) "apiarylens-win003-readonly-$([guid]::NewGuid().ToString('N'))"
+$readOnlyProbePath = Join-Path $runnerTemp 'win003-electron-package-readonly-probe.json'
+New-Item -ItemType Directory -Force -Path $readOnlyLab | Out-Null
+$originalReadOnlySddl = (Get-Acl -LiteralPath $readOnlyLab).Sddl
+$readOnlyDirectoryRejectedBeforeReadiness = $false
+try {
+    $readOnlyAcl = Get-Acl -LiteralPath $readOnlyLab
+    $denyWrite = [Security.AccessControl.FileSystemAccessRule]::new(
+        [Security.Principal.WindowsIdentity]::GetCurrent().User,
+        [Security.AccessControl.FileSystemRights]::Write,
+        [Security.AccessControl.InheritanceFlags]'ContainerInherit, ObjectInherit',
+        [Security.AccessControl.PropagationFlags]::None,
+        [Security.AccessControl.AccessControlType]::Deny
+    )
+    [void] $readOnlyAcl.AddAccessRule($denyWrite)
+    Set-Acl -LiteralPath $readOnlyLab -AclObject $readOnlyAcl
+    $readOnlyProbe = Start-Process -FilePath $hostExecutable.FullName -ArgumentList @('--win003-service-directory-input', "`"$readOnlyLab`"", '--win003-service-directory-output', "`"$readOnlyProbePath`"") -PassThru -WindowStyle Hidden
+    if (-not $readOnlyProbe.WaitForExit(20000)) {
+        Stop-Process -Id $readOnlyProbe.Id -Force -ErrorAction SilentlyContinue
+        throw 'Packaged Electron read-only directory probe exceeded 20 seconds'
+    }
+    if ($readOnlyProbe.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $readOnlyProbePath)) {
+        throw 'Packaged Electron read-only directory probe failed'
+    }
+    $readOnlyState = Get-Content -Raw -LiteralPath $readOnlyProbePath | ConvertFrom-Json
+    $readOnlyDirectoryRejectedBeforeReadiness = $readOnlyState.rejectedBeforeReadiness
+} finally {
+    $restoreAcl = [Security.AccessControl.DirectorySecurity]::new()
+    $restoreAcl.SetSecurityDescriptorSddlForm($originalReadOnlySddl)
+    Set-Acl -LiteralPath $readOnlyLab -AclObject $restoreAcl
+    $resolvedReadOnlyLab = [IO.Path]::GetFullPath($readOnlyLab)
+    $windowsTemp = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+    if ($resolvedReadOnlyLab.StartsWith($windowsTemp, [StringComparison]::OrdinalIgnoreCase) -and
+        (Split-Path -Leaf $resolvedReadOnlyLab) -like 'apiarylens-win003-readonly-*') {
+        Remove-Item -LiteralPath $resolvedReadOnlyLab -Recurse -Force
+    }
+}
+if (-not $readOnlyDirectoryRejectedBeforeReadiness) {
+    throw 'Packaged Electron did not reject a read-only data directory before readiness'
+}
 
 $credentialCrashPath = Join-Path $runnerTemp 'win003-electron-package-credential-crash.json'
 $credentialRecoveryPath = Join-Path $runnerTemp 'win003-electron-package-credential-recovery.json'
@@ -1138,8 +1222,12 @@ $measurement = [ordered]@{
         $bridgeResult.forcedWriteRecovery.integrityPassed -and
         $bridgeResult.forcedWriteRecovery.committedMarkerRetained -and
         $bridgeResult.forcedWriteRecovery.interruptedMarkerRolledBack -and
-        $bridgeResult.forcedWriteRecovery.restartedSameDataDirectory
+        $bridgeResult.forcedWriteRecovery.restartedSameDataDirectory -and
+        $bridgeResult.forcedWriteRecovery.databaseFullRejected -and
+        $bridgeResult.forcedWriteRecovery.databaseFullTransactionRolledBack -and
+        $bridgeResult.forcedWriteRecovery.integrityAfterDatabaseFull
     packagedCorruptDatabaseRejectedBeforeReadiness = $bridgeResult.corruptDatabaseStartup.rejectedBeforeReadiness
+    packagedReadOnlyDirectoryRejectedBeforeReadiness = $readOnlyDirectoryRejectedBeforeReadiness
     packagedNativeCredentialProtectionPassed =
         $bridgeResult.nativeCredentialProtection.encryptionAvailable -and
         $bridgeResult.nativeCredentialProtection.initialRoundTrip -and

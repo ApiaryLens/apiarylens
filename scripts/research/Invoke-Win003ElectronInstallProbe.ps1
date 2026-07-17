@@ -184,6 +184,9 @@ $installedRealServiceBridgeProbePassed =
     $bridgeProbeResult.forcedWriteRecovery.committedMarkerRetained -and
     $bridgeProbeResult.forcedWriteRecovery.interruptedMarkerRolledBack -and
     $bridgeProbeResult.forcedWriteRecovery.restartedSameDataDirectory -and
+    $bridgeProbeResult.forcedWriteRecovery.databaseFullRejected -and
+    $bridgeProbeResult.forcedWriteRecovery.databaseFullTransactionRolledBack -and
+    $bridgeProbeResult.forcedWriteRecovery.integrityAfterDatabaseFull -and
     $bridgeProbeResult.corruptDatabaseStartup.rejectedBeforeReadiness -and
     $bridgeProbeResult.nativeCredentialProtection.encryptionAvailable -and
     $bridgeProbeResult.nativeCredentialProtection.initialRoundTrip -and
@@ -198,6 +201,48 @@ $installedRealServiceBridgeProbePassed =
     $bridgeProbeResult.sessionStorageEntryCount -eq 0
 if (-not $installedRealServiceBridgeProbePassed) {
     throw 'Installed Electron real-service bridge acceptance checks failed'
+}
+
+$readOnlyLab = Join-Path ([IO.Path]::GetTempPath()) "apiarylens-win003-readonly-$([guid]::NewGuid().ToString('N'))"
+$readOnlyProbePath = Join-Path $runnerTemp 'win003-electron-installed-readonly-probe.json'
+New-Item -ItemType Directory -Force -Path $readOnlyLab | Out-Null
+$originalReadOnlySddl = (Get-Acl -LiteralPath $readOnlyLab).Sddl
+$installedReadOnlyDirectoryRejectedBeforeReadiness = $false
+try {
+    $readOnlyAcl = Get-Acl -LiteralPath $readOnlyLab
+    $denyWrite = [Security.AccessControl.FileSystemAccessRule]::new(
+        [Security.Principal.WindowsIdentity]::GetCurrent().User,
+        [Security.AccessControl.FileSystemRights]::Write,
+        [Security.AccessControl.InheritanceFlags]'ContainerInherit, ObjectInherit',
+        [Security.AccessControl.PropagationFlags]::None,
+        [Security.AccessControl.AccessControlType]::Deny
+    )
+    [void] $readOnlyAcl.AddAccessRule($denyWrite)
+    Set-Acl -LiteralPath $readOnlyLab -AclObject $readOnlyAcl
+    $readOnlyArguments = "--win003-service-directory-input `"$readOnlyLab`" --win003-service-directory-output `"$readOnlyProbePath`""
+    $readOnlyProbe = Start-Process -FilePath $installedHost.FullName -ArgumentList $readOnlyArguments -WorkingDirectory $appDirectory.FullName -PassThru -WindowStyle Hidden
+    if (-not $readOnlyProbe.WaitForExit(20000)) {
+        Stop-Process -Id $readOnlyProbe.Id -Force -ErrorAction SilentlyContinue
+        throw 'Installed Electron read-only directory probe exceeded 20 seconds'
+    }
+    if ($readOnlyProbe.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $readOnlyProbePath)) {
+        throw 'Installed Electron read-only directory probe failed'
+    }
+    $readOnlyState = Get-Content -Raw -LiteralPath $readOnlyProbePath | ConvertFrom-Json
+    $installedReadOnlyDirectoryRejectedBeforeReadiness = $readOnlyState.rejectedBeforeReadiness
+} finally {
+    $restoreAcl = [Security.AccessControl.DirectorySecurity]::new()
+    $restoreAcl.SetSecurityDescriptorSddlForm($originalReadOnlySddl)
+    Set-Acl -LiteralPath $readOnlyLab -AclObject $restoreAcl
+    $resolvedReadOnlyLab = [IO.Path]::GetFullPath($readOnlyLab)
+    $windowsTemp = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+    if ($resolvedReadOnlyLab.StartsWith($windowsTemp, [StringComparison]::OrdinalIgnoreCase) -and
+        (Split-Path -Leaf $resolvedReadOnlyLab) -like 'apiarylens-win003-readonly-*') {
+        Remove-Item -LiteralPath $resolvedReadOnlyLab -Recurse -Force
+    }
+}
+if (-not $installedReadOnlyDirectoryRejectedBeforeReadiness) {
+    throw 'Installed Electron did not reject a read-only data directory before readiness'
 }
 
 $credentialCrashPath = Join-Path $runnerTemp 'win003-electron-installed-credential-crash.json'
@@ -545,8 +590,12 @@ $result = [ordered]@{
         $bridgeProbeResult.forcedWriteRecovery.integrityPassed -and
         $bridgeProbeResult.forcedWriteRecovery.committedMarkerRetained -and
         $bridgeProbeResult.forcedWriteRecovery.interruptedMarkerRolledBack -and
-        $bridgeProbeResult.forcedWriteRecovery.restartedSameDataDirectory
+        $bridgeProbeResult.forcedWriteRecovery.restartedSameDataDirectory -and
+        $bridgeProbeResult.forcedWriteRecovery.databaseFullRejected -and
+        $bridgeProbeResult.forcedWriteRecovery.databaseFullTransactionRolledBack -and
+        $bridgeProbeResult.forcedWriteRecovery.integrityAfterDatabaseFull
     installedCorruptDatabaseRejectedBeforeReadiness = $bridgeProbeResult.corruptDatabaseStartup.rejectedBeforeReadiness
+    installedReadOnlyDirectoryRejectedBeforeReadiness = $installedReadOnlyDirectoryRejectedBeforeReadiness
     installedNativeCredentialProtectionPassed =
         $bridgeProbeResult.nativeCredentialProtection.encryptionAvailable -and
         $bridgeProbeResult.nativeCredentialProtection.initialRoundTrip -and
