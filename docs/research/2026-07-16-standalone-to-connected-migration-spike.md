@@ -155,6 +155,11 @@ Follow-up run
 passed the 20,000-record annual reference workload, 200 bounded batches, and the full
 accumulated suite on the Windows hosted runner in 66 seconds.
 
+Follow-up run
+[`29551863590`](https://github.com/ApiaryLens/apiarylens/actions/runs/29551863590)
+passed target-database lock recovery, corrupt-backup rejection, and the accumulated
+suite on the Windows hosted runner in 47 seconds.
+
 ## Proposed migration protocol
 
 ### Durable objects
