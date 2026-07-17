@@ -1,0 +1,39 @@
+name: WIN-006 standalone-to-connected migration research
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migration-recovery:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build real contracts, database, and media packages
+        run: >-
+          pnpm --filter @apiarylens/contracts build &&
+          pnpm --filter @apiarylens/database build &&
+          pnpm --filter @apiarylens/media build
+      - name: Exercise migration, interruption, reconciliation, and rollback
+        shell: pwsh
+        run: >-
+          node scripts/research/win006-migration-spike.mjs
+          --output "$env:RUNNER_TEMP/win006-migration-evidence"
+      - name: Upload sanitized migration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: win006-migration-evidence
+          path: ${{ runner.temp }}/win006-migration-evidence
+          if-no-files-found: warn
+          retention-days: 14
