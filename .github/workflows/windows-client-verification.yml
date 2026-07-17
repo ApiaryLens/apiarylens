@@ -145,7 +145,8 @@ jobs:
         run: |
           $release = "${{ github.workspace }}/.artifacts/windows-release"
           $manifest = Get-Content -Raw "$release/windows-package.json" | ConvertFrom-Json
-          if ($manifest.productVersion -ne '0.1.0-preview.1') { throw 'Unexpected Windows package version.' }
+          $expectedVersion = (Get-Content -Raw "${{ github.workspace }}/package.json" | ConvertFrom-Json).version
+          if ($manifest.productVersion -ne $expectedVersion) { throw "Unexpected Windows package version: $($manifest.productVersion), expected $expectedVersion." }
           if ($manifest.packageKind -ne 'squirrel-current-user') { throw 'Unexpected package kind.' }
           if ($manifest.signed -ne $false) { throw 'Ordinary verification must not claim production signing.' }
           foreach ($artifact in $manifest.artifacts) {

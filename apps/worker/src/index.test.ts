@@ -108,7 +108,7 @@ describe('Cloudflare build identity', () => {
       MEDIA: {},
       APIARYLENS_SOURCE_COMMIT: '02386ef',
       APIARYLENS_BUILD_TIME: '2026-07-17T15:47:15.000Z',
-      APIARYLENS_ARTIFACT_IDENTITY: 'ApiaryLens@0.1.0-preview.1+02386ef',
+      APIARYLENS_ARTIFACT_IDENTITY: 'ApiaryLens@0.1.0-preview.2+02386ef',
     } as never);
     const body = (await response.json()) as { build: { sourceCommit: string } };
     expect(response.headers.get('cache-control')).toBe('no-store');

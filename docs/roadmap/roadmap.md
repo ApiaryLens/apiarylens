@@ -1,12 +1,12 @@
 # ApiaryLens Roadmap
 
-## Current release: Public Preview 1
+## Current release: Public Preview 2
 
-ApiaryLens is in Public Preview 1, not GA. The core MVP implementation is available
+ApiaryLens is in Public Preview 2, not GA. The core MVP implementation is available
 for real-world evaluation, while owner/device acceptance continues. Preview features
 and workflows may change, with updates sometimes arriving multiple times per day.
-Keep backups and exports current; Preview 1 must not be the sole copy of irreplaceable
-hive records or media. See the [Preview 1 release notes](../releases/0.1.0-preview.1.md)
+Keep backups and exports current; Preview 2 must not be the sole copy of irreplaceable
+hive records or media. See the [Preview 2 release notes](../releases/0.1.0-preview.2.md)
 and [MVP UAT record](../testing/mvp-uat.md).
 
 The independently versioned

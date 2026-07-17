@@ -152,7 +152,7 @@ instanceGuard.listen(`\\\\.\\pipe\\${instanceName}`, () => {
         address: address.address,
         port: address.port,
         serviceProtocolVersion: 1,
-        buildIdentityHash: createHash('sha256').update('0.1.0-preview.1').digest('hex'),
+        buildIdentityHash: createHash('sha256').update('0.1.0-preview.2').digest('hex'),
       }),
       { mode: 0o600 },
     );

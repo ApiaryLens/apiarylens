@@ -13,7 +13,11 @@ for (const artifact of manifest.artifacts) {
   const localPath =
     artifact.target === 'release'
       ? join(releaseDirectory, artifact.name)
-      : join(releaseDirectory, 'artifacts', artifact.name);
+      : artifact.kind === 'windows-package-manifest'
+        ? join(releaseDirectory, 'artifacts', 'windows', artifact.name)
+        : artifact.target === 'windows-x64'
+          ? join(releaseDirectory, 'artifacts', 'windows', 'artifacts', artifact.name)
+          : join(releaseDirectory, 'artifacts', artifact.name);
   const content = await readFile(localPath);
   const metadata = await stat(localPath);
   const digest = createHash('sha256').update(content).digest('hex');

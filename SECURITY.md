@@ -31,7 +31,7 @@ privately for triage.
 
 ## Supported versions
 
-The current `0.1.0-preview.1` public preview receives security fixes while it is
+The current `0.1.0-preview.2` public preview receives security fixes while it is
 the active pre-release. Superseded release candidates are retained for audit and
 recovery evidence but are not supported for deployment. Stable-version support
 windows will be published with the first stable release.

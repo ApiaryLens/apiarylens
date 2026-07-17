@@ -151,10 +151,15 @@ const records = artifactNames.sort().map((name) => {
     sha256: createHash('sha256').update(bytes).digest('hex'),
   };
 });
-const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], {
-  cwd: root,
-  encoding: 'utf8',
-}).trim();
+const sourceCommit =
+  process.env.APIARYLENS_SOURCE_COMMIT ??
+  execFileSync('git', ['rev-parse', 'HEAD'], {
+    cwd: root,
+    encoding: 'utf8',
+  }).trim();
+if (!/^[0-9a-f]{40}$/.test(sourceCommit)) {
+  throw new Error('The Windows package requires an exact 40-character source commit.');
+}
 const signature = certificateFile
   ? JSON.parse(
       execFileSync(

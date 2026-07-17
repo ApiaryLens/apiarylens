@@ -1,23 +1,137 @@
-name: Release signing
+name: Product release
 
 on:
-  workflow_dispatch:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      exact_tag:
+        description: "Existing exact product tag to release (for example v0.1.0-preview.2)"
+        required: true
+        type: string
+      allow_unsigned_preview:
+        description: "Explicitly allow an unsigned Windows Setup for this Preview run only"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
 jobs:
-  windows-package:
+  policy:
     if: github.repository == 'ApiaryLens/apiarylens'
-    runs-on: windows-latest
-    timeout-minutes: 30
-    env:
-      WINDOWS_CERTIFICATE_PFX_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 }}
-      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.policy.outputs.version }}
+      exact_tag: ${{ steps.policy.outputs.exact_tag }}
+      channel: ${{ steps.policy.outputs.channel }}
+      signing_mode: ${{ steps.policy.outputs.signing_mode }}
+      explicit_unsigned_preview_opt_in: ${{ steps.policy.outputs.explicit_unsigned_preview_opt_in }}
     steps:
-      - name: Check out immutable revision
+      - name: Check out exact revision and tags
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Validate exact immutable tag and fail-closed signing policy
+        id: policy
+        env:
+          APIARYLENS_EXACT_TAG: ${{ inputs.exact_tag || github.ref_name }}
+          APIARYLENS_ALLOW_UNSIGNED_PREVIEW: ${{ inputs.allow_unsigned_preview && 'true' || 'false' }}
+          APIARYLENS_WINDOWS_SIGNING_AVAILABLE: ${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 != '' && secrets.WINDOWS_CERTIFICATE_PASSWORD != '' }}
+        run: |
+          test "$(git rev-list -n 1 "$APIARYLENS_EXACT_TAG")" = "$GITHUB_SHA"
+          test "$GITHUB_REF" = "refs/tags/$APIARYLENS_EXACT_TAG"
+          test -z "$(git status --porcelain)"
+          node scripts/product-release-policy.mjs
+
+  product:
+    needs: policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out exact immutable revision
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Configure Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+
+      - name: Install, test, and verify source
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm security:secrets
+          pnpm verify
+          pnpm docs:check
+          pnpm audit --audit-level high
+          pnpm exec vitest run scripts/product-release-policy.test.mjs scripts/product-release-workflow.test.mjs
+
+      - name: Bind release inputs to the exact revision
+        env:
+          RELEASE_CHANNEL: ${{ needs.policy.outputs.channel }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const path = 'release/release-manifest.json';
+          const manifest = JSON.parse(readFileSync(path, 'utf8'));
+          const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
+          manifest.productVersion = version;
+          manifest.channel = process.env.RELEASE_CHANNEL;
+          manifest.buildTime = new Date().toISOString();
+          manifest.artifacts = [];
+          if (!/^[0-9a-f]{40}$/.test(manifest.sourceCommit)) throw new Error('Release manifest requires an exact source commit.');
+          writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`);
+          NODE
+          source_commit="$(node -p "require('./release/release-manifest.json').sourceCommit")"
+          git cat-file -e "$source_commit^{commit}"
+          git merge-base --is-ancestor "$source_commit" "$GITHUB_SHA"
+
+      - name: Build deployment bundles and supply-chain evidence
+        run: |
+          pnpm release:artifacts
+          pnpm release:supply-chain
+          pnpm release:verify
+
+      - name: Stage exact product subjects
+        run: |
+          node --input-type=module <<'NODE'
+          import { cpSync, mkdirSync, readFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const manifest = JSON.parse(readFileSync('release/release-manifest.json', 'utf8'));
+          const root = 'dist/product-release/release';
+          mkdirSync(join(root, 'artifacts'), { recursive: true });
+          cpSync('release/release-manifest.json', join(root, 'release-manifest.json'));
+          for (const artifact of manifest.artifacts) {
+            const source = artifact.target === 'release'
+              ? join('release', artifact.name)
+              : join('release', 'artifacts', artifact.name);
+            const destination = artifact.target === 'release'
+              ? join(root, artifact.name)
+              : join(root, 'artifacts', artifact.name);
+            cpSync(source, destination);
+          }
+          NODE
+
+      - name: Upload exact product subjects
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: apiarylens-product-release
+          path: dist/product-release/
+          if-no-files-found: error
+
+  windows:
+    needs: [policy, product]
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out exact immutable revision
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           persist-credentials: false
@@ -33,105 +147,173 @@ jobs:
           corepack enable
           pnpm install --frozen-lockfile
 
-      - name: Build fail-closed Authenticode Windows release
+      - name: Download exact product manifest and evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: apiarylens-product-release
+          path: dist/product-input
+
+      - name: Restore exact generated release inputs
         shell: pwsh
+        run: Copy-Item -LiteralPath dist/product-input/release/* -Destination release -Recurse -Force
+
+      - name: Build Windows package under resolved signing policy
+        shell: pwsh
+        env:
+          RELEASE_SIGNING_MODE: ${{ needs.policy.outputs.signing_mode }}
+          WINDOWS_CERTIFICATE_PFX_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PFX_BASE64)) {
-            throw 'WINDOWS_CERTIFICATE_PFX_BASE64 is required for a Windows release.'
-          }
-          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)) {
-            throw 'WINDOWS_CERTIFICATE_PASSWORD is required for a Windows release.'
-          }
-          $certificate = Join-Path $env:RUNNER_TEMP 'apiarylens-release-signing.pfx'
-          [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_PFX_BASE64))
-          try {
-            $env:WINDOWS_CERTIFICATE_FILE = $certificate
-            node scripts/build-windows-package.mjs release/artifacts/windows
-          }
-          finally {
-            Remove-Item -LiteralPath $certificate -Force -ErrorAction SilentlyContinue
+          if ($env:RELEASE_SIGNING_MODE -eq 'signed') {
+            $certificate = Join-Path $env:RUNNER_TEMP 'apiarylens-release-signing.pfx'
+            try {
+              [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_PFX_BASE64))
+              $env:WINDOWS_CERTIFICATE_FILE = $certificate
+              $env:APIARYLENS_SOURCE_COMMIT = (Get-Content -Raw release/release-manifest.json | ConvertFrom-Json).sourceCommit
+              pnpm release:windows
+            } finally {
+              Remove-Item -LiteralPath $certificate -Force -ErrorAction SilentlyContinue
+            }
+          } else {
+            Remove-Item Env:WINDOWS_CERTIFICATE_PFX_BASE64 -ErrorAction SilentlyContinue
+            Remove-Item Env:WINDOWS_CERTIFICATE_PASSWORD -ErrorAction SilentlyContinue
+            $env:APIARYLENS_SOURCE_COMMIT = (Get-Content -Raw release/release-manifest.json | ConvertFrom-Json).sourceCommit
+            pnpm release:windows
           }
 
-      - name: Verify signed package identity and hashes
+      - name: Finalize visible signing evidence and exact manifests
         shell: pwsh
+        env:
+          APIARYLENS_EXACT_TAG: ${{ needs.policy.outputs.exact_tag }}
+          APIARYLENS_WINDOWS_SIGNING_MODE: ${{ needs.policy.outputs.signing_mode }}
+          APIARYLENS_EXPLICIT_UNSIGNED_PREVIEW_OPT_IN: ${{ needs.policy.outputs.explicit_unsigned_preview_opt_in }}
+        run: node scripts/finalize-windows-release.mjs
+
+      - name: Verify Windows package signatures, hashes, and release identity
+        shell: pwsh
+        env:
+          RELEASE_SIGNING_MODE: ${{ needs.policy.outputs.signing_mode }}
         run: |
-          $release = '${{ github.workspace }}/release/artifacts/windows'
-          $manifest = Get-Content -Raw "$release/windows-package.json" | ConvertFrom-Json
-          if ($manifest.signed -ne $true) { throw 'Windows release manifest did not record signing.' }
-          if ($manifest.sourceCommit -ne '${{ github.sha }}') { throw 'Windows release source identity mismatch.' }
+          $root = 'release/artifacts/windows'
+          $manifest = Get-Content -Raw "$root/windows-package.json" | ConvertFrom-Json
+          $productManifest = Get-Content -Raw 'release/release-manifest.json' | ConvertFrom-Json
+          if ($manifest.productVersion -ne '${{ needs.policy.outputs.version }}') { throw 'Windows version mismatch.' }
+          if ($manifest.sourceCommit -ne $productManifest.sourceCommit) { throw 'Windows source revision mismatch.' }
           foreach ($artifact in $manifest.artifacts) {
-            $path = "$release/artifacts/$($artifact.name)"
-            if ((Get-Item -LiteralPath $path).Length -ne $artifact.bytes) { throw "Size mismatch for $($artifact.name)" }
-            if ((Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash.ToLowerInvariant() -ne $artifact.sha256) {
-              throw "SHA-256 mismatch for $($artifact.name)"
-            }
+            $path = "$root/artifacts/$($artifact.name)"
+            if ((Get-Item -LiteralPath $path).Length -ne $artifact.bytes) { throw "Size mismatch: $($artifact.name)" }
+            if ((Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash.ToLowerInvariant() -ne $artifact.sha256) { throw "SHA-256 mismatch: $($artifact.name)" }
           }
-          foreach ($executable in @(
-            "$release/artifacts/ApiaryLensSetup.exe",
-            "$release/packaged/ApiaryLens-win32-x64/ApiaryLens.exe"
-          )) {
-            $signature = Get-AuthenticodeSignature -LiteralPath $executable
-            if ($signature.Status -ne 'Valid') { throw "Invalid Authenticode signature on $executable: $($signature.Status)" }
-            if ($signature.SignerCertificate.Subject -ne $manifest.signature.publisher) {
-              throw "Publisher mismatch on $executable"
-            }
-            if ($signature.SignerCertificate.Thumbprint -ne $manifest.signature.thumbprint) {
-              throw "Certificate thumbprint mismatch on $executable"
-            }
+          $setup = Get-ChildItem "$root/artifacts/ApiaryLensSetup*.exe" -File -ErrorAction Stop
+          $signature = Get-AuthenticodeSignature -LiteralPath $setup.FullName
+          if ($env:RELEASE_SIGNING_MODE -eq 'signed') {
+            if ($signature.Status -ne 'Valid' -or $manifest.signed -ne $true) { throw 'Signed Windows package verification failed.' }
+          } else {
+            if ($setup.Name -notlike '*-UNSIGNED-PREVIEW.exe' -or $signature.Status -eq 'Valid' -or $manifest.signed -ne $false) { throw 'Unsigned Preview labeling verification failed.' }
           }
+          pnpm release:verify
 
-      - name: Upload signed Windows release subjects
+      - name: Stage exact Windows subjects
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist/windows-release/release/artifacts | Out-Null
+          Copy-Item release/release-manifest.json dist/windows-release/release/
+          Copy-Item release/apiarylens-windows-signing.json dist/windows-release/release/
+          Copy-Item release/artifacts/windows dist/windows-release/release/artifacts/ -Recurse
+
+      - name: Upload exact Windows subjects
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: apiarylens-windows-${{ github.ref_name }}
-          path: |
-            release/artifacts/windows/artifacts/
-            release/artifacts/windows/windows-package.json
-            release/release-manifest.json
+          name: apiarylens-windows-release
+          path: dist/windows-release/
           if-no-files-found: error
-          retention-days: 30
 
-  attest:
-    if: github.repository == 'ApiaryLens/apiarylens'
+  publish:
+    needs: [policy, product, windows]
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     permissions:
-      contents: read
+      contents: write
       id-token: write
       attestations: write
     steps:
-      - name: Check out immutable revision
+      - name: Check out exact immutable revision
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           persist-credentials: false
 
-      - name: Verify release identity and unsigned evidence
-        run: |
-          corepack enable
-          pnpm install --frozen-lockfile
-          pnpm release:verify
+      - name: Download product subjects
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: apiarylens-product-release
+          path: dist/merge
 
-      - name: Sign release artifacts and provenance with the repository identity
+      - name: Download Windows subjects and authoritative final manifest
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: apiarylens-windows-release
+          path: dist/merge
+
+      - name: Flatten and verify every immutable release subject
+        run: |
+          mkdir -p dist/publish
+          cp dist/merge/release/release-manifest.json dist/publish/
+          cp dist/merge/release/apiarylens-*.json dist/publish/
+          cp dist/merge/release/apiarylens-*.md dist/publish/
+          cp dist/merge/release/apiarylens-*.jsonl dist/publish/
+          cp dist/merge/release/artifacts/*.tar.gz dist/publish/
+          cp dist/merge/release/artifacts/windows/windows-package.json dist/publish/
+          cp dist/merge/release/artifacts/windows/artifacts/* dist/publish/
+          (cd dist/publish && sha256sum * > SHA256SUMS)
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { readFileSync, statSync } from 'node:fs';
+          const manifest = JSON.parse(readFileSync('dist/publish/release-manifest.json', 'utf8'));
+          const signing = JSON.parse(readFileSync('dist/publish/apiarylens-windows-signing.json', 'utf8'));
+          if (manifest.productVersion !== process.env.RELEASE_VERSION || signing.sourceCommit !== manifest.sourceCommit || signing.releaseCommit !== process.env.GITHUB_SHA || signing.exactTag !== process.env.EXACT_TAG) throw new Error('Final release identity mismatch.');
+          for (const artifact of manifest.artifacts) {
+            const path = `dist/publish/${artifact.name}`;
+            const hash = createHash('sha256').update(readFileSync(path)).digest('hex');
+            if (statSync(path).size !== artifact.bytes || hash !== artifact.sha256) throw new Error(`Final subject mismatch: ${artifact.name}`);
+          }
+          NODE
+        env:
+          RELEASE_VERSION: ${{ needs.policy.outputs.version }}
+          EXACT_TAG: ${{ needs.policy.outputs.exact_tag }}
+
+      - name: Attest every published subject
         uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4
         with:
-          subject-path: |
-            release/artifacts/*.tar.gz
-            release/artifacts/*.exe
-            release/apiarylens-sbom.cdx.json
-            release/apiarylens-license-report.md
-            release/apiarylens-provenance.intoto.jsonl
+          subject-path: dist/publish/*
 
-      - name: Verify every signed subject against this workflow
+      - name: Publish immutable GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+          EXACT_TAG: ${{ needs.policy.outputs.exact_tag }}
+          VERSION: ${{ needs.policy.outputs.version }}
+          SIGNING_MODE: ${{ needs.policy.outputs.signing_mode }}
         run: |
-          for artifact in \
-            release/artifacts/*.tar.gz \
-            release/artifacts/*.exe \
-            release/apiarylens-sbom.cdx.json \
-            release/apiarylens-license-report.md \
-            release/apiarylens-provenance.intoto.jsonl
-          do
+          if gh release view "$EXACT_TAG" >/dev/null 2>&1; then
+            echo "Release $EXACT_TAG already exists; immutable publication refuses replacement." >&2
+            exit 1
+          fi
+          warning=""
+          if [[ "$SIGNING_MODE" == "unsigned-preview" ]]; then
+            warning=$'## Unsigned Preview warning\n\n`ApiaryLensSetup-UNSIGNED-PREVIEW.exe` is intentionally not Authenticode signed. This exception was explicitly selected for this exact Preview run. Verify `SHA256SUMS` and the GitHub artifact attestation before testing. RC and Stable releases cannot use this exception.'
+          fi
+          gh release create "$EXACT_TAG" dist/publish/* \
+            --verify-tag --prerelease --latest=false --generate-notes \
+            --notes "$warning" --title "ApiaryLens $VERSION"
+
+      - name: Re-download and independently verify published bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXACT_TAG: ${{ needs.policy.outputs.exact_tag }}
+        run: |
+          mkdir -p dist/verified-download
+          gh release download "$EXACT_TAG" --dir dist/verified-download
+          (cd dist/verified-download && sha256sum --check SHA256SUMS)
+          for artifact in dist/verified-download/*; do
             gh attestation verify "$artifact" \
               --repo "$GITHUB_REPOSITORY" \
               --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release-signing.yml" \

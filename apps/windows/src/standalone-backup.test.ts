@@ -30,7 +30,7 @@ describe('standalone backup archive', () => {
     const archive = join(paths.backups, 'family.albackup');
 
     const manifest = createStandaloneBackup(paths, archive, {
-      productVersion: '0.1.0-preview.1',
+      productVersion: '0.1.0-preview.2',
       databaseMigration: '0004',
       createdAt: new Date('2026-07-17T16:00:00.000Z'),
     });
@@ -58,7 +58,7 @@ describe('standalone backup archive', () => {
     new SqliteStore(paths.database).close();
     const archive = join(paths.backups, 'family.albackup');
     createStandaloneBackup(paths, archive, {
-      productVersion: '0.1.0-preview.1',
+      productVersion: '0.1.0-preview.2',
       databaseMigration: '0004',
     });
     const raw = gunzipSync(readFileSync(archive));

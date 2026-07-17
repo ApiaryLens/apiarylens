@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.0-preview.2 — 2026-07-17
+
+Preview 2 publishes the standalone Windows product, automatic connected sync,
+offline relaunch and media reliability fixes, protected Windows backup/restore,
+family and field usability improvements, and the backend-only or backend-plus-web
+deployment choice. It also strengthens Windows-to-Linux SSH identity, secret, and
+exact-health verification while keeping Scout Bee independently versioned.
+
+This remains a Public Preview. Production signing, exact released-target replay,
+interrupted production migration, and remaining physical-device/accessibility gates
+remain visible rather than being represented as complete. See the
+[Preview 2 release notes](0.1.0-preview.2.md).
+
 ## 0.1.0-preview.1 — 2026-07-16
 
 ApiaryLens is now available as Public Preview 1. This is an early, usable product,

@@ -5,7 +5,7 @@ the same portable server profile shipped in each signed release bundle and used 
 Scout Bee on personally controlled hardware, Hyper-V, and ordinary Linux cloud VMs.
 
 For a released installation, use the signed bundle and Scout Bee from the
-[ApiaryLens Public Preview 1 release page](../docs/releases/0.1.0-preview.1.md). Scout Bee verifies the
+[ApiaryLens Public Preview 2 release page](../docs/releases/0.1.0-preview.2.md). Scout Bee verifies the
 manifest and bundle digest, pins the SSH host key, creates protected runtime secrets,
 runs migrations, waits for both containers, and verifies the exact public HTTPS
 release identity. The direct procedure below exists so Scout Bee is never required.
