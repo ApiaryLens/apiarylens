@@ -440,6 +440,42 @@ reputation, trusted timestamping, or the production certificate chain. The runne
 already had WebView2 and was a hosted Windows Server profile, so missing-runtime and
 retail Windows behavior remain open gates.
 
+### Tauri offline WebView2 remediation artifact
+
+Targeted run
+[`29548294126`](https://github.com/ApiaryLens/apiarylens/actions/runs/29548294126)
+built the same Tauri/Node challenger with Tauri's `offlineInstaller` WebView2 mode.
+It verified the exact test-signed NSIS artifact, installed it under a restricted
+`PATH`, launched the installed host and sidecar, observed a WebView2 descendant, and
+removed the installation and registration.
+
+| Offline-remediation artifact check | Result |
+|---|---:|
+| Offline NSIS installer | 221.1 MiB; SHA-256 recorded; exact ephemeral signer present |
+| Bootstrapper NSIS comparison | 24.3 MiB |
+| Offline package increase | 196.7 MiB |
+| Installed footprint | 96.7 MiB, 3 files |
+| Installed packaged Node sidecar | 88.2 MiB; `node:sqlite` passed |
+| Installed host smoke | Passed; WebView2 descendant observed |
+| Uninstall | Exit 0; install directory and registration absent |
+| Installed license/notice files | None |
+
+The larger WebView2 installer is acquisition/remediation payload, not an additional
+per-application installed runtime when a compatible Evergreen runtime already
+exists. This run therefore proves that ApiaryLens can build, sign, install, run, and
+uninstall the offline package shape; it does **not** prove first-run remediation on
+a machine where WebView2 is missing or its updater is policy-disabled.
+
+The proposed distribution policy is a small bootstrapper package for the normal
+online channel plus a separately identified offline-remediation package for offline
+or managed environments. Scout and the Windows download page must select or explain
+the correct artifact without asking a family user to diagnose WebView2. Final
+acceptance still requires a retail Windows profile with the runtime genuinely
+absent, a policy-disabled update profile, redistributable-license/notice closure,
+and a test that the installed Evergreen runtime subsequently receives security
+updates. Fixed Version remains rejected as the default because it would transfer
+the browser patching SLA to ApiaryLens.
+
 ### Tauri package-transition evidence
 
 Exact-artifact replay
