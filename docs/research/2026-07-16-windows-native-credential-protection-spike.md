@@ -251,6 +251,31 @@ server rotation transaction, same-user backup/restore, different-user/computer
 guided failure, Windows account changes, actual installer UI choices, and final
 ADR acceptance remain open.
 
+Real-session follow-on run
+[`29558246781`](https://github.com/ApiaryLens/apiarylens/actions/runs/29558246781)
+at commit `3f2d061841bb45723891cac2643d6baecbafb7c1` connected the
+protected adapter to the existing real API acceptance lifecycle. The exact setup
+SHA-256 was
+`5563D20B07B95C451F5AA8A1FC7FABFA18438BBE0E3D4F685D9C66469635C893`.
+
+| Real server-session transition | Packaged | Clean installed |
+|---|---:|---:|
+| Bootstrap HttpOnly session protected by main process | Passed | Passed |
+| Real `/api/v1/session` refresh replaced protected value | Passed | Passed |
+| Old server session rejected after replacement | Passed | Passed |
+| Account recovery revoked and deleted protected session | Passed | Passed |
+| Restart sign-in protected the new server session | Passed | Passed |
+| Local sign-out removed protected session state | Passed | Passed |
+| Raw session in renderer/storage/console/arguments/readiness/service output/evidence | No | No |
+| Existing API assertions | 50 / 50 | 50 / 50 |
+| Interrupted credential and host recovery suites | Passed | Passed |
+
+This closes the selected-host real server issue/refresh/revocation/restart/sign-out
+subgate. The cookie necessarily travels between the main-process HTTP client and the
+authenticated local service, but it never enters ordinary renderer JavaScript or
+sanitized evidence. Backup/restore UX, Windows-account changes, actual installer
+choices, supported retail profiles, production signing, and ADR acceptance remain.
+
 Primary source:
 
 - [Electron `safeStorage`](https://www.electronjs.org/docs/latest/api/safe-storage)
@@ -315,8 +340,9 @@ Primary sources:
    revoked sessions, Windows password/account changes, backup/restore on the same
    user, restore on another user/computer, and keep-data/remove-all uninstall. The
    packaged and installed synthetic rotation-crash, revocation, sign-out,
-   keep-data, and remove-all state machine now passes; server-integrated rotation,
-   restore, account-change, and actual installer-choice evidence remain.
+   keep-data, and remove-all state machine now passes. The real API
+   issue/refresh/revocation/restart/sign-out lifecycle also passes. Restore,
+   account-change, and actual installer-choice evidence remain.
 5. Recording ACL, roaming-profile, Remote Desktop, multiple Windows session, and
    locked-workstation behavior on supported retail Windows profiles.
 6. Completing the supported Electron API, protected-file, dependency, license, and

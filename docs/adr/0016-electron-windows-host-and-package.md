@@ -99,6 +99,16 @@ envelopes and an atomic journal; Credential Manager remains a fallback rather th
 a parallel store. Server-integrated rotation, backup/restore, Windows-account
 changes, actual installer choices, and owner acceptance remain open.
 
+Run
+[`29558246781`](https://github.com/ApiaryLens/apiarylens/actions/runs/29558246781)
+then connected the selected adapter to the real API lifecycle in both packaged and
+clean-installed artifacts. Bootstrap protected the issued HttpOnly session, the
+real refresh route replaced it, recovery revocation deleted it, restart sign-in
+protected the new session, and sign-out removed protected state. The raw session did
+not enter the tested renderer, storage, console, arguments, readiness, service
+output, or evidence surfaces. Backup/restore, Windows-account changes, actual
+installer choices, supported retail profiles, and owner acceptance remain open.
+
 ## Proposed Decision
 
 Use **Electron** as the initial Windows Preview host. Use a **signed per-user
@@ -252,8 +262,8 @@ must replace it.
    reopened. The packaged and installed `safeStorage`
    store/read/rotate/corruption/delete baseline and synthetic interrupted-rotation,
    revocation, sign-out, keep-data, and remove-all state machine now pass. Real
-   server rotation, restore/account-change behavior, installer choices, and the
-   owner acceptance stay open.
+   server issue/refresh/revocation/restart/sign-out now passes as well. Restore and
+   account-change behavior, installer choices, and owner acceptance stay open.
 5. Resolve or reject the Forge/Squirrel exotic dependency under the repository
    supply-chain policy; reconcile every runtime/build component to an allowlisted
    license and install complete Apache-2.0 and third-party notices.
