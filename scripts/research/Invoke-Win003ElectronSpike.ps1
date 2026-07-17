@@ -1419,12 +1419,52 @@ $probeResult = Get-Content -Raw -LiteralPath $probePath | ConvertFrom-Json
 if ($probeResult.sqlite -ne 'electron-node-sqlite-ok') { throw "Packaged Electron sqlite result was $($probeResult.sqlite)" }
 
 $bridgeProbePath = Join-Path $runnerTemp 'win003-electron-bridge-probe.json'
+$bridgeProbeStopwatch = [Diagnostics.Stopwatch]::StartNew()
 $bridgeProbe = Start-Process -FilePath $hostExecutable.FullName -ArgumentList @('--win003-bridge-output', "`"$bridgeProbePath`"") -PassThru -WindowStyle Hidden
 if (-not $bridgeProbe.WaitForExit(30000)) {
-    Stop-Process -Id $bridgeProbe.Id -Force -ErrorAction SilentlyContinue
+    $bridgeProbeStopwatch.Stop()
+    $bridgeDescendantIds = @(Get-DescendantProcessIds -RootId $bridgeProbe.Id)
+    $bridgeDescendantNames = @(
+        Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+            Where-Object { $bridgeDescendantIds -contains [int] $_.ProcessId } |
+            Select-Object -ExpandProperty Name -Unique |
+            Sort-Object
+    )
+    [ordered]@{
+        measuredAtUtc = [DateTimeOffset]::UtcNow.ToString('o')
+        sourceCommit = $env:GITHUB_SHA
+        phase = 'packaged-bridge-probe'
+        outcome = 'timeout'
+        timeoutMs = 30000
+        elapsedMs = $bridgeProbeStopwatch.ElapsedMilliseconds
+        resultFileExists = Test-Path -LiteralPath $bridgeProbePath
+        resultFileBytes = if (Test-Path -LiteralPath $bridgeProbePath) { (Get-Item -LiteralPath $bridgeProbePath).Length } else { 0 }
+        descendantProcessCount = $bridgeDescendantIds.Count
+        descendantProcessNames = $bridgeDescendantNames
+        commandLineArgumentsRecorded = $false
+        environmentRecorded = $false
+        credentialsOrSecretValuesRecorded = $false
+    } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $outputPath 'packaged-bridge-timeout.json') -Encoding utf8NoBOM
+    foreach ($processId in @($bridgeDescendantIds | Sort-Object -Descending)) {
+        Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+    }
     throw 'Packaged Electron bridge probe exceeded 30 seconds'
 }
+$bridgeProbeStopwatch.Stop()
 if ($bridgeProbe.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $bridgeProbePath)) {
+    [ordered]@{
+        measuredAtUtc = [DateTimeOffset]::UtcNow.ToString('o')
+        sourceCommit = $env:GITHUB_SHA
+        phase = 'packaged-bridge-probe'
+        outcome = 'failed'
+        elapsedMs = $bridgeProbeStopwatch.ElapsedMilliseconds
+        exitCode = $bridgeProbe.ExitCode
+        resultFileExists = Test-Path -LiteralPath $bridgeProbePath
+        resultFileBytes = if (Test-Path -LiteralPath $bridgeProbePath) { (Get-Item -LiteralPath $bridgeProbePath).Length } else { 0 }
+        commandLineArgumentsRecorded = $false
+        environmentRecorded = $false
+        credentialsOrSecretValuesRecorded = $false
+    } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $outputPath 'packaged-bridge-failure.json') -Encoding utf8NoBOM
     throw 'Packaged Electron bridge probe failed'
 }
 $bridgeResult = Get-Content -Raw -LiteralPath $bridgeProbePath | ConvertFrom-Json
