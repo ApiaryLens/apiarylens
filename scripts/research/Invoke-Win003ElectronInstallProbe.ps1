@@ -217,8 +217,9 @@ foreach ($attempt in 1..100) {
 }
 $installedReadyFileRemovedAfterHostCrash = -not (Test-Path -LiteralPath ([string] $crashState.serviceReadyFile))
 $crashLab = [IO.Path]::GetFullPath((Split-Path -Parent ([string] $crashState.serviceReadyFile)))
-if (-not $crashLab.StartsWith($runnerTemp, [StringComparison]::OrdinalIgnoreCase)) {
-    throw 'Installed Electron crash probe escaped the runner temporary directory'
+$windowsTemp = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+if (-not $crashLab.StartsWith($windowsTemp, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Installed Electron crash probe escaped the Windows temporary directory'
 }
 if (-not $installedSingleInstancePassed -or -not $installedServiceExitedAfterHostCrash) {
     Stop-Process -Id ([int] $crashState.serviceProcessId) -Force -ErrorAction SilentlyContinue
