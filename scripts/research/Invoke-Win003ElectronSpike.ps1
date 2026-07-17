@@ -58,7 +58,8 @@ $forgeConfig = @'
 module.exports = {
   packagerConfig: {
     asar: true,
-    executableName: "ApiaryLensElectronResearch"
+    executableName: "ApiaryLensElectronResearch",
+    windowsSign: process.env.WINDOWS_CERTIFICATE_FILE ? true : false
   },
   makers: [
     {
@@ -147,6 +148,22 @@ if (-not $packageDirectory -or -not $hostExecutable -or -not $installer -or -not
     throw 'Electron Forge did not produce the expected package and Squirrel artifacts'
 }
 
+if ($env:WINDOWS_CERTIFICATE_FILE) {
+    $signTool = Get-ChildItem -LiteralPath "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter 'signtool.exe' |
+        Where-Object FullName -Match '\\x64\\signtool\.exe$' |
+        Sort-Object FullName -Descending |
+        Select-Object -First 1
+    if (-not $signTool) { throw 'Windows SDK SignTool was not found for outer installer test signing' }
+    & $signTool.FullName sign /fd SHA256 /sha1 $env:WIN003_CERT_THUMBPRINT $installer.FullName
+    if ($LASTEXITCODE -ne 0) { throw "Electron outer setup test signing failed with exit code $LASTEXITCODE" }
+}
+
+$hostSignature = Get-AuthenticodeSignature -LiteralPath $hostExecutable.FullName
+$setupSignature = Get-AuthenticodeSignature -LiteralPath $installer.FullName
+if ($env:WINDOWS_CERTIFICATE_FILE -and ($hostSignature.Status -ne 'Valid' -or $setupSignature.Status -ne 'Valid')) {
+    throw "Electron test signatures were not valid (host $($hostSignature.Status), setup $($setupSignature.Status))"
+}
+
 function Get-DescendantProcessIds {
     param([int] $RootId)
     $all = @(Get-CimInstance Win32_Process)
@@ -219,6 +236,11 @@ $measurement = [ordered]@{
     setupSha256 = (Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash
     fullNupkgBytes = $nupkg.Length
     fullNupkgSha256 = (Get-FileHash -LiteralPath $nupkg.FullName -Algorithm SHA256).Hash
+    signingMode = if ($env:WINDOWS_CERTIFICATE_FILE) { 'ephemeral-test-signing' } else { 'unsigned' }
+    hostSignatureStatus = [string] $hostSignature.Status
+    hostSignatureSubject = if ($hostSignature.SignerCertificate) { $hostSignature.SignerCertificate.Subject } else { $null }
+    setupSignatureStatus = [string] $setupSignature.Status
+    setupSignatureSubject = if ($setupSignature.SignerCertificate) { $setupSignature.SignerCertificate.Subject } else { $null }
     packagedNodeSqliteProbe = $probeResult.sqlite
     runs = $runs
     meanRendererReadyMs = [math]::Round(($runs.rendererReadyMs | Measure-Object -Average).Average, 1)

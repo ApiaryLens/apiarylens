@@ -1,0 +1,77 @@
+name: WIN-003 test-signed installers research
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  electron-test-signed:
+    name: Electron ephemeral test-signed package
+    runs-on: windows-latest
+    timeout-minutes: 35
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Enable pnpm and build current client
+        shell: pwsh
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm --filter @apiarylens/web... build
+      - name: Create runner-only trusted test certificate
+        shell: pwsh
+        run: ./scripts/research/New-Win003TestCertificate.ps1
+      - name: Build signed Electron research package
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003ElectronSpike.ps1
+          -WebDist ./apps/web/dist
+          -OutputDirectory "$env:RUNNER_TEMP/win003-electron-signed-evidence"
+      - name: Upload sanitized Electron signing evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: win003-electron-test-signed-evidence
+          path: ${{ runner.temp }}/win003-electron-signed-evidence/measurement.json
+          if-no-files-found: error
+          retention-days: 14
+
+  tauri-test-signed:
+    name: Tauri ephemeral test-signed package
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Enable pnpm and build current client
+        shell: pwsh
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm --filter @apiarylens/web... build
+      - name: Create runner-only trusted test certificate
+        shell: pwsh
+        run: ./scripts/research/New-Win003TestCertificate.ps1
+      - name: Build signed Tauri research package
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003TauriSpike.ps1
+          -WebDist ./apps/web/dist
+          -IconPath ./apps/web/public/icons/apiarylens-512.png
+          -OutputDirectory "$env:RUNNER_TEMP/win003-tauri-signed-evidence"
+      - name: Upload sanitized Tauri signing evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: win003-tauri-test-signed-evidence
+          path: ${{ runner.temp }}/win003-tauri-signed-evidence/measurement.json
+          if-no-files-found: error
+          retention-days: 14

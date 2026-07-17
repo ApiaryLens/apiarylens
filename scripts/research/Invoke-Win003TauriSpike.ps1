@@ -127,6 +127,13 @@ $tauriConfig = @'
 }
 '@
 
+if ($env:WIN003_CERT_THUMBPRINT) {
+    $configObject = $tauriConfig | ConvertFrom-Json
+    $configObject.bundle.windows | Add-Member -NotePropertyName certificateThumbprint -NotePropertyValue $env:WIN003_CERT_THUMBPRINT
+    $configObject.bundle.windows | Add-Member -NotePropertyName digestAlgorithm -NotePropertyValue 'sha256'
+    $tauriConfig = $configObject | ConvertTo-Json -Depth 12
+}
+
 Set-Content -LiteralPath (Join-Path $labPath 'package.json') -Value $packageJson -Encoding utf8NoBOM
 Set-Content -LiteralPath (Join-Path $labPath 'src-tauri/Cargo.toml') -Value $cargoToml -Encoding utf8NoBOM
 Set-Content -LiteralPath (Join-Path $labPath 'src-tauri/build.rs') -Value $buildRs -Encoding utf8NoBOM
@@ -152,6 +159,12 @@ $hostExecutable = Join-Path $releasePath 'apiarylens_win003_tauri.exe'
 $installer = Get-ChildItem -LiteralPath (Join-Path $releasePath 'bundle/nsis') -Filter '*setup.exe' | Select-Object -First 1
 if (-not (Test-Path -LiteralPath $hostExecutable)) { throw "Tauri host executable not found: $hostExecutable" }
 if (-not $installer) { throw 'Tauri NSIS installer was not generated' }
+
+$hostSignature = Get-AuthenticodeSignature -LiteralPath $hostExecutable
+$installerSignature = Get-AuthenticodeSignature -LiteralPath $installer.FullName
+if ($env:WIN003_CERT_THUMBPRINT -and ($hostSignature.Status -ne 'Valid' -or $installerSignature.Status -ne 'Valid')) {
+    throw "Tauri test signatures were not valid (host $($hostSignature.Status), setup $($installerSignature.Status))"
+}
 
 $sqliteProbe = & $sidecarPath -e "const { DatabaseSync } = require('node:sqlite'); const db = new DatabaseSync(':memory:'); db.exec('create table probe(value text)'); db.close(); process.stdout.write('node-sqlite-ok')"
 if ($LASTEXITCODE -ne 0 -or $sqliteProbe -ne 'node-sqlite-ok') {
@@ -236,6 +249,11 @@ $measurement = [ordered]@{
     hostExecutableBytes = (Get-Item -LiteralPath $hostExecutable).Length
     nsisInstallerBytes = $installer.Length
     nsisInstallerSha256 = (Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash
+    signingMode = if ($env:WIN003_CERT_THUMBPRINT) { 'ephemeral-test-signing' } else { 'unsigned' }
+    hostSignatureStatus = [string] $hostSignature.Status
+    hostSignatureSubject = if ($hostSignature.SignerCertificate) { $hostSignature.SignerCertificate.Subject } else { $null }
+    installerSignatureStatus = [string] $installerSignature.Status
+    installerSignatureSubject = if ($installerSignature.SignerCertificate) { $installerSignature.SignerCertificate.Subject } else { $null }
     releaseLooseFileBytes = ($releaseFiles | Measure-Object Length -Sum).Sum
     releaseLooseFileCount = $releaseFiles.Count
     runs = $runs
