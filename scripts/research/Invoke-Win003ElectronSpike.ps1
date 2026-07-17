@@ -1161,6 +1161,9 @@ if (!hasSingleInstanceLock) {
         sandbox: true
       }
     });
+    // BrowserWindow dimensions include native frame chrome. Set the content area
+    // explicitly so zoom factors 2 and 4 exercise exactly 640 and 320 CSS pixels.
+    trustedWindow.setContentSize(1280, 800);
     trustedWindow.webContents.on("console-message", (...args) => consoleMessages.push(args.map(String).join(" ")));
     trustedWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
     trustedWindow.webContents.on("will-navigate", (event) => event.preventDefault());
@@ -1190,6 +1193,7 @@ if (!hasSingleInstanceLock) {
       await delay(100);
       hostZoomProfiles.push(await trustedWindow.webContents.executeJavaScript(`(() => ({
         factor: ${factor},
+        expectedInnerWidth: ${1280 / factor},
         innerWidth: window.innerWidth,
         mainCount: document.querySelectorAll("main").length,
         h1Count: document.querySelectorAll("h1").length,
@@ -1199,7 +1203,10 @@ if (!hasSingleInstanceLock) {
     }
     trustedWindow.webContents.setZoomFactor(1);
     const hostZoomReflowPassed = hostZoomProfiles.every((profile) =>
-      !profile.horizontalOverflow && profile.mainCount === 1 && profile.h1Count === 1
+      Math.abs(profile.innerWidth - profile.expectedInnerWidth) <= 1 &&
+      !profile.horizontalOverflow &&
+      profile.mainCount === 1 &&
+      profile.h1Count === 1
     );
 
     const servicePidBeforeSecondWindow = serviceProcess.pid;
