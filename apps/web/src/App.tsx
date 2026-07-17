@@ -34,6 +34,7 @@ import {
   type EquipmentPurpose,
   type EquipmentType,
 } from './equipment-stack.js';
+import { formatWeatherSummary } from './weather-fields.js';
 
 type Page = 'dashboard' | 'apiaries' | 'hives' | 'inspections' | 'care' | 'version';
 type ActiveSession = Omit<SessionView, 'csrfToken'> & { csrfToken: string | undefined };
@@ -1269,7 +1270,11 @@ function InspectionForm({
       temperature: values.get('temperature') ? Number(values.get('temperature')) : null,
       temperatureUnit: String(values.get('temperatureUnit')),
       conditions: String(values.get('conditions') ?? ''),
-      wind: String(values.get('wind') ?? ''),
+      humidity: values.get('humidity') ? Number(values.get('humidity')) : null,
+      windSpeed: values.get('windSpeed') ? Number(values.get('windSpeed')) : null,
+      windSpeedUnit: String(values.get('windSpeedUnit')),
+      windDirection: values.get('windDirection') || null,
+      source: 'manual',
     };
     const payload = {
       hiveId: String(values.get('hiveId')),
@@ -1408,6 +1413,9 @@ function InspectionForm({
       </label>
       <fieldset>
         <legend>Optional manual weather snapshot</legend>
+        <p className="field-hint">
+          Works without a connection and does not share your location with a weather provider.
+        </p>
         <div className="form-grid">
           <label>
             Temperature
@@ -1440,23 +1448,89 @@ function InspectionForm({
             Conditions
             <input
               name="conditions"
+              list="weather-condition-options"
               defaultValue={
                 data?.weather && typeof data.weather === 'object'
                   ? String((data.weather as Record<string, unknown>).conditions ?? '')
                   : ''
               }
             />
+            <datalist id="weather-condition-options">
+              <option value="Clear" />
+              <option value="Partly cloudy" />
+              <option value="Overcast" />
+              <option value="Light rain" />
+              <option value="Rain" />
+              <option value="Thunderstorms" />
+              <option value="Fog" />
+              <option value="Smoke or haze" />
+            </datalist>
           </label>
           <label>
-            Wind
+            Relative humidity (%)
             <input
-              name="wind"
+              name="humidity"
+              type="number"
+              min="0"
+              max="100"
               defaultValue={
                 data?.weather && typeof data.weather === 'object'
-                  ? String((data.weather as Record<string, unknown>).wind ?? '')
+                  ? String((data.weather as Record<string, unknown>).humidity ?? '')
                   : ''
               }
             />
+          </label>
+          <label>
+            Wind speed
+            <input
+              name="windSpeed"
+              type="number"
+              min="0"
+              max="300"
+              step="any"
+              defaultValue={
+                data?.weather && typeof data.weather === 'object'
+                  ? String((data.weather as Record<string, unknown>).windSpeed ?? '')
+                  : ''
+              }
+            />
+          </label>
+          <label>
+            Wind unit
+            <select
+              name="windSpeedUnit"
+              defaultValue={
+                data?.weather && typeof data.weather === 'object'
+                  ? String((data.weather as Record<string, unknown>).windSpeedUnit ?? 'mph')
+                  : 'mph'
+              }
+            >
+              <option value="mph">mph</option>
+              <option value="kph">km/h</option>
+            </select>
+          </label>
+          <label>
+            Wind direction
+            <select
+              name="windDirection"
+              defaultValue={
+                data?.weather && typeof data.weather === 'object'
+                  ? String((data.weather as Record<string, unknown>).windDirection ?? '')
+                  : ''
+              }
+            >
+              <option value="">Not recorded</option>
+              <option value="calm">Calm</option>
+              <option value="n">North</option>
+              <option value="ne">Northeast</option>
+              <option value="e">East</option>
+              <option value="se">Southeast</option>
+              <option value="s">South</option>
+              <option value="sw">Southwest</option>
+              <option value="w">West</option>
+              <option value="nw">Northwest</option>
+              <option value="variable">Variable</option>
+            </select>
           </label>
         </div>
       </fieldset>
@@ -1541,6 +1615,8 @@ function InspectionHistory({
               <dd>{String(record.data.broodCondition || 'Not recorded')}</dd>
               <dt>Stores</dt>
               <dd>{String(record.data.stores || 'Not recorded')}</dd>
+              <dt>Weather</dt>
+              <dd>{formatWeatherSummary(record.data.weather)}</dd>
               <dt>Notes</dt>
               <dd>{String(record.data.notes || 'None')}</dd>
             </dl>

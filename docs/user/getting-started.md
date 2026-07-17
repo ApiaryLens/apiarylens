@@ -39,6 +39,13 @@ media remain pending.
 - **Care** records mite counts, feeding, treatments, harvests, and tasks. The mite
   trend includes an accessible table as well as a chart.
 
+Inspection weather is always optional and can be entered manually without a signal.
+The snapshot supports temperature and units, common or custom conditions, relative
+humidity, and wind speed, units, and direction. Saved weather appears in inspection
+history. ApiaryLens does not currently contact a weather provider or share your
+location; any future automatic current or historical enrichment will require an
+explicit consent step and will preserve manual offline entry.
+
 ### Queen identity and marking
 
 When adding a queen, choose a numbered disc/tag, breeder code, queen name, or an

@@ -70,7 +70,15 @@ export const weatherSnapshotSchema = z.object({
   temperature: z.number().min(-100).max(150).optional().nullable(),
   temperatureUnit: z.enum(['f', 'c']).default('f'),
   conditions: z.string().trim().max(120).optional().nullable(),
+  humidity: z.number().min(0).max(100).optional().nullable(),
+  windSpeed: z.number().min(0).max(300).optional().nullable(),
+  windSpeedUnit: z.enum(['mph', 'kph']).default('mph'),
+  windDirection: z
+    .enum(['calm', 'n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw', 'variable'])
+    .optional()
+    .nullable(),
   wind: z.string().trim().max(120).optional().nullable(),
+  source: z.enum(['manual', 'provider']).default('manual'),
 });
 
 export const inspectionFieldsSchema = z.object({
