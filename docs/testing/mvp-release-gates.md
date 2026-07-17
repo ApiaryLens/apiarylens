@@ -118,16 +118,18 @@ requires the explicitly listed owner/device and manual-review gates.
 
 ## Isolated Cloudflare Evidence
 
-The current automated Cloudflare journey is recorded in
-[`cloudflare-uat-evidence-2026-07-15-v2.json`](cloudflare-uat-evidence-2026-07-15-v2.json),
-with the earlier migration-0003 run retained as historical evidence. After the passing
+The current exact released-byte Cloudflare journey is recorded in
+[`preview2-cloudflare-released-lifecycle-2026-07-17.json`](preview2-cloudflare-released-lifecycle-2026-07-17.json),
+with the earlier migration-0003 and migration-0004 runs retained as historical evidence. After the passing
 restore, the target remained healthy at migration `0004`, bootstrap was closed, both
 temporary deployment secrets were removed, and only the durable authentication-root
 secret remained configured. The restored database contained three users, one
 organization, three memberships, 13 P0 resources, one session, and one atomic
-bootstrap claim; private R2 held the recovered original and thumbnail. This evidence
-advances the Cloudflare data-path gate but does not satisfy the remaining combined
-Cloudflare-plus-Compose or physical-device gates.
+bootstrap claim; private R2 held the recovered original and thumbnail. Product Preview
+2 then passed released-Scout backup, update, repair, restore, rollback, keep-data
+uninstall, and reinstall over that populated state before every disposable Cloudflare
+resource was removed. This completes the current Cloudflare released-byte lifecycle
+gate; physical-device and assistive-technology acceptance remain separate.
 
 The current released Scout Bee guarded Cloudflare update is recorded in
 [`scout-bee-cloudflare-update-2026-07-15.json`](scout-bee-cloudflare-update-2026-07-15.json).

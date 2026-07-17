@@ -1,0 +1,90 @@
+{
+  "product": "ApiaryLens",
+  "release": "0.1.0-preview.2",
+  "profile": "cloudflare-uat",
+  "target": "disposable target removed after verification",
+  "startedAt": "2026-07-17T20:55:58.864Z",
+  "sourceCommit": "2fbcb9fb2287231b2f217321d9539dfd4530d460",
+  "scoutRelease": "0.1.0-preview.3",
+  "scoutWindowsSha256": "95f1c11324d59dc7244e93f04207a37c517d13b2d5c86092a59b39d23b5985e0",
+  "databaseMigration": "0004",
+  "checks": [
+    {
+      "name": "health-and-headers",
+      "result": "pass",
+      "detail": "HTTPS health identified ApiaryLens@0.1.0-preview.2+2fbcb9f at migration 0004"
+    },
+    {
+      "name": "protected-bootstrap",
+      "result": "pass",
+      "detail": "Rejected an invalid deployment code, then created the first owner and family; eight recovery codes issued"
+    },
+    {
+      "name": "session-rotation",
+      "result": "pass",
+      "detail": "Session refresh issued a new opaque cookie and immediately rejected the prior identifier"
+    },
+    {
+      "name": "family-roles",
+      "result": "pass",
+      "detail": "Invited and activated separate beekeeper and viewer sessions"
+    },
+    {
+      "name": "p0-records",
+      "result": "pass",
+      "detail": "Created 13 records across all MVP resource types"
+    },
+    {
+      "name": "private-media",
+      "result": "pass",
+      "detail": "Original and thumbnail round-tripped exactly; anonymous access was denied"
+    },
+    {
+      "name": "second-client-sync",
+      "result": "pass",
+      "detail": "Beekeeper pulled the complete change set and completed a follow-up"
+    },
+    {
+      "name": "conflict-and-idempotency",
+      "result": "pass",
+      "detail": "Duplicate replay was idempotent and stale edit returned the current server value as a conflict"
+    },
+    {
+      "name": "viewer-negative-authorization",
+      "result": "pass",
+      "detail": "Server denied viewer write, export, and invitation-management requests"
+    },
+    {
+      "name": "portable-export",
+      "result": "pass",
+      "detail": "Validated manifest, JSON, three CSV files, and original media in the portable export"
+    },
+    {
+      "name": "backup-and-restore",
+      "result": "pass",
+      "detail": "Validated protected populated backup, destructive restore, session revocation, record rollback, and media recovery"
+    },
+    {
+      "name": "released-scout-lifecycle",
+      "result": "pass",
+      "detail": "Exact released Windows Scout completed fresh install 14/0, backup 9/0, update 17/0, repair 17/0, restore 9/0, rollback 17/0, keep-data uninstall 6/0, and reinstall 14/0"
+    },
+    {
+      "name": "populated-state-preservation",
+      "result": "pass",
+      "detail": "Five independently verified lifecycle archives remained approximately 11.4 KB and retained records plus private media through restore, rollback, uninstall, and reinstall"
+    },
+    {
+      "name": "secret-cleanup",
+      "result": "pass",
+      "detail": "Runtime bootstrap and operator secrets were removed; no credential value entered the plan, evidence, repository, or Scout history"
+    },
+    {
+      "name": "disposable-resource-cleanup",
+      "result": "pass",
+      "detail": "Disposable Worker, D1 database, and R2 bucket were deleted after verification"
+    }
+  ],
+  "completedAt": "2026-07-17T21:00:00.000Z",
+  "result": "pass"
+}
