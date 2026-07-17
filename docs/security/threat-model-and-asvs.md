@@ -1,6 +1,6 @@
 # MVP Threat Model and ASVS Verification Map
 
-**Release scope:** ApiaryLens Public Preview 1 (verified against 0.1.0-rc.7)
+**Release scope:** ApiaryLens Public Preview 2
 
 **Review date:** 2026-07-16
 
@@ -29,7 +29,8 @@ The important boundaries are:
 4. Scout Bee accepts secrets only at execution time. Plans, diagnostics, and logs
    are untrusted for secret storage.
 5. Release downloads cross the public distribution boundary and therefore require
-   immutable names, digests, provenance, and an approved signature before release.
+   immutable names, digests, provenance, and attestations. Preview Windows packages
+   may be explicitly unsigned; RC and Stable require an approved signature.
 
 ## Threat Assessment
 

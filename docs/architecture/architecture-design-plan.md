@@ -4,7 +4,7 @@
 
 **Status:** Living master plan
 
-**Last updated:** 2026-07-16
+**Last updated:** 2026-07-17
 
 This is the authoritative entry point for ApiaryLens product architecture and
 design. It records the current system shape, accepted decisions, active direction,
@@ -80,10 +80,10 @@ the current plan.
 
 ## Current Project State
 
-The product architecture and MVP contract are accepted. ApiaryLens Public Preview 1
-carries forward the published `0.1.0-rc.7` acceptance candidate: the PWA, both
-backends, shared contracts and schema, Compose profile, Scout Bee, public properties,
-signed artifacts, and documentation are implemented. Preview 1 is not GA or a stable
+The product architecture and MVP contract are accepted. ApiaryLens Public Preview 2
+publishes the PWA, Windows client, both backends, shared contracts and schema,
+Compose profile, separately versioned Scout Bee Preview 3, public properties,
+attested release artifacts, and documentation. Preview 2 is not GA or a stable
 release; features and workflows may change and updates may arrive frequently. Stable
 promotion remains gated by the open physical-device, manual accessibility,
 pending-work update, and project-owner UAT evidence. Preview users must keep backups

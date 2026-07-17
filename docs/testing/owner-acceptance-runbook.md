@@ -3,7 +3,7 @@
 ## Purpose
 
 Use this short runbook to close the remaining human-operated MVP gates for Public
-Preview 1 (verified against the `0.1.0-rc.7` baseline). The automated release, Cloudflare, Compose, Hyper-V, Azure/GCP
+Preview 2. The automated release, Cloudflare, Compose, Hyper-V, Azure/GCP
 reference, security, backup/restore, and desktop-browser evidence is already
 recorded in [`mvp-uat.md`](mvp-uat.md). This runbook covers only evidence that
 cannot be established from the build server.

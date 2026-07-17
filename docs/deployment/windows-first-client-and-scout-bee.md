@@ -2,7 +2,7 @@
 
 ## Status and intent
 
-**Status:** Production implementation authorized; Windows release gates remain open.
+**Status:** Public Preview implementation published; remaining physical and GA gates remain open.
 
 This is the detailed post-Preview design for making the packaged Windows client the
 default family starting point while preserving the existing portable backend and web
@@ -10,10 +10,11 @@ frontend. It implements the product direction accepted in
 [ADR 0015](../adr/0015-windows-first-client-portfolio.md) and the Scout repository
 boundary accepted in [ADR 0014](../adr/0014-scout-bee-separate-repository-and-release.md).
 
-Public Preview 1 remains the current testable web/PWA release. Preview 2 is expected
-to contain major architectural and experience changes; no document may imply that
-the Windows package, new Scout repository, or standalone-to-connected migration is
-already complete.
+Public Preview 2 is the current testable product release. It includes the Windows
+package, and Scout Bee Preview 3 is independently published for Windows and Linux
+with exact Product Preview 2 compatibility. Both Windows executables are explicitly
+unsigned Preview artifacts; signing and remaining physical-target acceptance are
+not complete.
 
 The first production tranche now exists in [`apps/windows`](../../apps/windows/README.md).
 It composes the real React UI and portable API in a single-instance Electron host,

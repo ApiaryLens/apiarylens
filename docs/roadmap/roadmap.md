@@ -10,7 +10,7 @@ hive records or media. See the [Preview 2 release notes](../releases/0.1.0-previ
 and [MVP UAT record](../testing/mvp-uat.md).
 
 The independently versioned
-[Scout Bee 0.1.0 Preview 2](https://github.com/ApiaryLens/scout-bee/releases/tag/v0.1.0-preview.2)
+[Scout Bee 0.1.0 Preview 3](https://github.com/ApiaryLens/scout-bee/releases/tag/v0.1.0-preview.3)
 is now available for Windows and Linux. It manages verified product lifecycle
 operations while production signing and physical-target acceptance continue.
 

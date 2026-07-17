@@ -9,19 +9,18 @@ not satisfy it.
 
 ## Build Under Test
 
-Public Preview 1 is the current audience-facing channel. It is not GA or a stable
+Public Preview 2 is the current audience-facing channel. It is not GA or a stable
 release: features and workflows may change, updates may arrive frequently (sometimes
 multiple times per day), and testers must keep current backups and exports. Preview
 must not be the sole copy of irreplaceable hive records or media.
 
-- Preview channel baseline: ApiaryLens 0.1.0-preview.1 (verified artifact baseline
-  0.1.0-rc.7)
+- Preview channel baseline: ApiaryLens 0.1.0-preview.2
 - Superseded candidate: ApiaryLens 0.1.0-rc.3 (rejected by clean-Ubuntu default-target
   installation smoke test)
 - Superseded candidate: ApiaryLens 0.1.0-rc.2 (rejected by exact-artifact runtime
   identity smoke test)
 - Lifecycle predecessor evidence: ApiaryLens 0.1.0-rc.1
-- Release channel: public-preview (artifact baseline channel: release-candidate)
+- Release channel: public-preview
 - API: 1.0
 - Sync: 1
 - Database migration: 0004

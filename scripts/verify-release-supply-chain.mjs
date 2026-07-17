@@ -8,6 +8,7 @@ const manifest = JSON.parse(
   await readFile(join(releaseDirectory, 'release-manifest.json'), 'utf8'),
 );
 const releaseKinds = new Set(['sbom', 'license-report', 'provenance']);
+let remotelyPinnedWindowsArtifacts = 0;
 
 for (const artifact of manifest.artifacts) {
   const localPath =
@@ -18,11 +19,46 @@ for (const artifact of manifest.artifacts) {
         : artifact.target === 'windows-x64'
           ? join(releaseDirectory, 'artifacts', 'windows', 'artifacts', artifact.name)
           : join(releaseDirectory, 'artifacts', artifact.name);
-  const content = await readFile(localPath);
-  const metadata = await stat(localPath);
+  let content;
+  let metadata;
+  try {
+    content = await readFile(localPath);
+    metadata = await stat(localPath);
+  } catch (error) {
+    if (
+      error?.code === 'ENOENT' &&
+      artifact.target === 'windows-x64' &&
+      artifact.kind === 'windows-package-artifact' &&
+      artifact.url ===
+        `https://apiarylens.org/releases/${manifest.productVersion}/artifacts/windows/${artifact.name}`
+    ) {
+      remotelyPinnedWindowsArtifacts += 1;
+      continue;
+    }
+    throw error;
+  }
   const digest = createHash('sha256').update(content).digest('hex');
   if (metadata.size !== artifact.bytes || digest !== artifact.sha256)
     throw new Error(`Release artifact identity mismatch: ${artifact.name}`);
+}
+
+const productWindowsArtifacts = manifest.artifacts
+  .filter((artifact) => artifact.kind === 'windows-package-artifact')
+  .map(({ name, bytes, sha256 }) => ({ name, bytes, sha256 }))
+  .sort((left, right) => left.name.localeCompare(right.name));
+if (productWindowsArtifacts.length > 0) {
+  const windowsPackage = JSON.parse(
+    await readFile(join(releaseDirectory, 'artifacts', 'windows', 'windows-package.json'), 'utf8'),
+  );
+  const packageWindowsArtifacts = windowsPackage.artifacts
+    .map(({ name, bytes, sha256 }) => ({ name, bytes, sha256 }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+  if (
+    windowsPackage.productVersion !== manifest.productVersion ||
+    windowsPackage.sourceCommit !== manifest.sourceCommit ||
+    JSON.stringify(productWindowsArtifacts) !== JSON.stringify(packageWindowsArtifacts)
+  )
+    throw new Error('Windows package manifest does not match the product release manifest');
 }
 
 for (const kind of releaseKinds) {
@@ -68,5 +104,5 @@ if (
   throw new Error('A stable release cannot come from a dirty worktree');
 
 console.log(
-  `Supply-chain evidence valid: ${manifest.artifacts.length} artifacts, ${sbom.components.length} components, unsigned provenance structurally verified.`,
+  `Supply-chain evidence valid: ${manifest.artifacts.length} artifacts (${remotelyPinnedWindowsArtifacts} remote Windows subjects), ${sbom.components.length} components, unsigned provenance structurally verified.`,
 );

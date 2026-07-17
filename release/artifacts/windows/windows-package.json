@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "product": "ApiaryLens for Windows",
+  "productVersion": "0.1.0-preview.2",
+  "architecture": "x64",
+  "packageKind": "squirrel-current-user",
+  "sourceCommit": "2fbcb9fb2287231b2f217321d9539dfd4530d460",
+  "signed": false,
+  "createdAt": "2026-07-17T20:23:44.474Z",
+  "artifacts": [
+    {
+      "name": "ApiaryLens-0.1.0-preview2-full.nupkg",
+      "bytes": 140714849,
+      "sha256": "743d2c5e6677c293a384c258a76371f8e5e5ce554c7146342f7c9af3bab3a24e"
+    },
+    {
+      "name": "ApiaryLensSetup-UNSIGNED-PREVIEW.exe",
+      "bytes": 141472256,
+      "sha256": "696276fdd0c4c537b34ea757f2d17a40383cb385d8c72ac0de2779af404c0b1e"
+    },
+    {
+      "name": "RELEASES",
+      "bytes": 90,
+      "sha256": "2c938c7aa0ffa7653f4eaa6113edbeea02d832d12c99b37c71a7cffb3ab099e1"
+    }
+  ]
+}

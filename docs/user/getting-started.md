@@ -121,14 +121,14 @@ SSH key, deployment secret, or recovery code. Authentication happens in the Wind
 client after import. Returning to standalone mode preserves the prior standalone
 data; it does not silently copy newer remote-only records back into that database.
 
-ApiaryLens for Windows Preview 1 is available as a current-user
-[`ApiaryLensSetup.exe`](https://github.com/ApiaryLens/apiarylens/releases/download/v0.1.0-preview.1/ApiaryLensSetup.exe).
+ApiaryLens for Windows Preview 2 is available as a current-user
+[`ApiaryLensSetup-UNSIGNED-PREVIEW.exe`](https://github.com/ApiaryLens/apiarylens/releases/download/v0.1.0-preview.2/ApiaryLensSetup-UNSIGNED-PREVIEW.exe).
 It installs without administrator rights and does not require Node, Go, WSL, Docker,
 or a Linux shell. Review the
-[official versioned release](https://github.com/ApiaryLens/apiarylens/releases/tag/v0.1.0-preview.1)
+[official versioned release](https://github.com/ApiaryLens/apiarylens/releases/tag/v0.1.0-preview.2)
 before running Setup. The current Preview installer is **not Authenticode-signed**;
 its SHA-256 is
-`6347167ce6d17dce5503412ff7d1edd45a60379c386f662eeac33558a4234753`.
+`696276fdd0c4c537b34ea757f2d17a40383cb385d8c72ac0de2779af404c0b1e`.
 Windows may show **Windows protected your PC**. Choose **More info → Run anyway**
 only after the downloaded file matches that exact hash. A future signed release
 must show the publisher documented on its own release page; this unsigned Preview
@@ -157,7 +157,7 @@ fresh sign-in.
 1. Create and verify a current `.albackup` before changing versions.
 2. Open the versioned ApiaryLens release page and confirm the target version,
    compatibility notes, package size, and SHA-256.
-3. Download and run that release's `ApiaryLensSetup.exe`. Setup updates the
+3. Download and run that release's explicitly named Preview Setup executable. Setup updates the
    current-user installation; it does not replace the private application-data
    directory.
 4. Reopen ApiaryLens and confirm **Account and build** shows the expected version.

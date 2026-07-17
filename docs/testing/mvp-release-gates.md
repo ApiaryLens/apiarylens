@@ -1,15 +1,16 @@
 # MVP Release Gate Checklist
 
-**Release:** 0.1.0-preview.1 (based on 0.1.0-rc.7)
+**Release:** 0.1.0-preview.2
 
-**Date:** 2026-07-16
+**Date:** 2026-07-17
 
 **Status:** Public Preview; owner/device and final acceptance gates remain open
 
-Public Preview 1 carries forward rc.7 as the current corrective acceptance candidate. It includes the safe target
-creation and uninstall fixes validated after the rc.4/rc.6 history, and is verified,
-signed, published, independently attested, and proven through exact-public-byte
-Cloudflare, Compose, Hyper-V, and GCP evidence. Preview is not GA or a stable
+Public Preview 2 is the current corrective acceptance release. It includes the
+Windows standalone client, automatic synchronization, PWA/media reliability fixes,
+backend-only deployment choice, and Scout Bee Preview 3 compatibility. It is
+published with exact checksums and independent attestations. The Windows Preview
+executables are explicitly unsigned; signing remains a later gate. Preview is not GA or a stable
 release: features and workflows may change, updates may arrive frequently (sometimes
 multiple times per day), and users must keep backups rather than relying on this
 product as the sole copy of irreplaceable data. Final stable acceptance still
@@ -111,7 +112,7 @@ requires the explicitly listed owner/device and manual-review gates.
 - [x] Verify production release identity after a 15-minute observation window.
 - [x] Record the dated Cloudflare quota/cost baseline and planning assumptions.
 - [ ] Record install time, device matrix, and all remaining evidence links.
-- [x] Publish Preview 1 release notes, changelog, support window, known limitations,
+- [x] Publish Preview 2 release notes, changelog, support window, known limitations,
       and recovery guidance; stable-release notes remain gated on owner acceptance.
 - [ ] Obtain project-owner acceptance.
 
