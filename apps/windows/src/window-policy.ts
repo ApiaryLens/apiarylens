@@ -7,6 +7,18 @@ export function isTrustedRendererUrl(candidate: string, endpoint: string): boole
   }
 }
 
+export function isTrustedConnectedRendererUrl(candidate: string, endpoint: string): boolean {
+  try {
+    const url = new URL(candidate);
+    const expected = new URL(endpoint);
+    return (
+      url.origin === expected.origin && url.protocol === 'https:' && !url.username && !url.password
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function shouldInjectControlHeader(
   candidate: string,
   endpoint: string,

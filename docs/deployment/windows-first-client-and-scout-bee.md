@@ -150,6 +150,23 @@ It never stores a user password, session, provider token, SSH private key, deplo
 secret, or recovery code in that profile. Authentication happens through the client
 after import.
 
+The version 1 contract is published as
+[`release/windows-connection-profile.schema.json`](../../release/windows-connection-profile.schema.json).
+The Windows host imports it with `ApiaryLens.exe --desktop-profile=<absolute-json-path>`.
+Import requires a reachable backend whose `/health` product, deployment profile,
+API, sync, database-migration, and product-version identity exactly matches the
+profile. The profile is then atomically stored under the Windows user's ApiaryLens
+data directory. The connected renderer uses a separate persistent browser partition
+and receives no Electron preload or privileged IPC bridge. Its secure remote cookie,
+service worker, IndexedDB records/media, and outbox remain scoped to the imported
+HTTPS origin.
+
+An existing verified profile may launch without a health preflight so its cached PWA
+continues to open without a network connection. Reconnect validation and automatic
+sync use the shared client behavior. Launching with `--desktop-standalone` removes
+only the connection profile and returns to the untouched local standalone service;
+it does not claim that remote-only data was migrated back.
+
 ### Later Scout mobile direction
 
 A later Scout companion on iPhone or Android may select a target, invoke a remote

@@ -112,6 +112,15 @@ using account recovery also revokes that person's sessions. Signing out locally 
 removes the cached account context even when the device is offline, while leaving
 family records in place until **Clear local data** is explicitly selected.
 
+The Windows application starts in standalone mode unless Scout Bee imports a
+verified, secret-free connection profile. Connected mode keeps the same offline
+records, media staging, outbox, reconnect, and session behavior as the PWA, in an
+isolated Windows application storage partition. The imported profile contains the
+HTTPS backend and compatibility identity but no password, session, provider token,
+SSH key, deployment secret, or recovery code. Authentication happens in the Windows
+client after import. Returning to standalone mode preserves the prior standalone
+data; it does not silently copy newer remote-only records back into that database.
+
 ## Photos
 
 Selected photos and thumbnails are staged locally first. ApiaryLens uploads them

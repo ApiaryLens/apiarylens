@@ -1,6 +1,6 @@
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import {
   app,
   BrowserWindow,
@@ -19,7 +19,18 @@ import { createWindowsDataPaths } from './paths.js';
 import { loadOrCreateStandaloneSecrets } from './protected-secrets.js';
 import { desktopControlHeader } from './service-contract.js';
 import { ServiceSupervisor } from './service-supervisor.js';
-import { isTrustedRendererUrl, shouldInjectControlHeader } from './window-policy.js';
+import {
+  isTrustedConnectedRendererUrl,
+  isTrustedRendererUrl,
+  shouldInjectControlHeader,
+} from './window-policy.js';
+import {
+  loadSavedConnectionProfile,
+  readConnectionProfile,
+  removeConnectionProfile,
+  saveConnectionProfile,
+  verifyConnectedBackend,
+} from './connected-profile.js';
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
 const preloadPath = join(currentDirectory, 'preload.cjs');
@@ -39,8 +50,14 @@ if (userDataArgument) {
 
 if (!app.requestSingleInstanceLock()) app.quit();
 
-function secureWindow(endpoint: string, showWhenReady = true): BrowserWindow {
-  const desktopSession = session.fromPartition('persist:apiarylens-windows');
+function secureWindow(
+  endpoint: string,
+  showWhenReady = true,
+  mode: 'standalone' | 'connected' = 'standalone',
+): BrowserWindow {
+  const partition =
+    mode === 'standalone' ? 'persist:apiarylens-windows' : 'persist:apiarylens-windows-connected';
+  const desktopSession = session.fromPartition(partition);
   const window = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -49,8 +66,8 @@ function secureWindow(endpoint: string, showWhenReady = true): BrowserWindow {
     show: false,
     backgroundColor: '#fffaf0',
     webPreferences: {
-      preload: preloadPath,
-      partition: 'persist:apiarylens-windows',
+      ...(mode === 'standalone' ? { preload: preloadPath } : {}),
+      partition,
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
@@ -59,11 +76,15 @@ function secureWindow(endpoint: string, showWhenReady = true): BrowserWindow {
       spellcheck: true,
     },
   });
-  trustedWebContents.add(window.webContents.id);
+  if (mode === 'standalone') trustedWebContents.add(window.webContents.id);
   window.on('closed', () => trustedWebContents.delete(window.webContents.id));
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', (event, navigationUrl) => {
-    if (!isTrustedRendererUrl(navigationUrl, endpoint)) event.preventDefault();
+    const trusted =
+      mode === 'standalone'
+        ? isTrustedRendererUrl(navigationUrl, endpoint)
+        : isTrustedConnectedRendererUrl(navigationUrl, endpoint);
+    if (!trusted) event.preventDefault();
   });
   window.webContents.on('will-attach-webview', (event) => event.preventDefault());
   if (showWhenReady) window.once('ready-to-show', () => window.show());
@@ -76,6 +97,28 @@ function secureWindow(endpoint: string, showWhenReady = true): BrowserWindow {
 async function start(): Promise<void> {
   app.setName('ApiaryLens');
   app.setAccessibilitySupportEnabled(true);
+  const userData = app.getPath('userData');
+  mkdirSync(userData, { recursive: true, mode: 0o700 });
+  const profilePath = resolve(userData, 'connection-profile.v1.json');
+  if (process.argv.includes('--desktop-standalone')) removeConnectionProfile(profilePath);
+  const profileArgument = process.argv.find((argument) =>
+    argument.startsWith('--desktop-profile='),
+  );
+  if (profileArgument && process.argv.includes('--desktop-standalone'))
+    throw new Error('Choose either connected profile import or standalone mode, not both');
+  if (profileArgument) {
+    const imported = readConnectionProfile(profileArgument.slice('--desktop-profile='.length));
+    await verifyConnectedBackend(imported);
+    saveConnectionProfile(profilePath, imported);
+  }
+  const connection = loadSavedConnectionProfile(profilePath);
+  if (connection) {
+    // Remote content receives no preload or IPC bridge. Authentication cookies,
+    // IndexedDB, service workers, and the offline outbox stay in this isolated partition.
+    primaryWindow = secureWindow(connection.backendUrl, true, 'connected');
+    await primaryWindow.loadURL(connection.backendUrl);
+    return;
+  }
   const paths = createWindowsDataPaths(app.getPath('userData'));
   const secrets = loadOrCreateStandaloneSecrets(paths.protectedSecrets, safeStorage);
   supervisor = new ServiceSupervisor({

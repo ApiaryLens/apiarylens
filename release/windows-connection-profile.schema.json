@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://apiarylens.org/contracts/windows-connection-profile.v1.schema.json",
+  "title": "ApiaryLens Windows connection profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "profileId",
+    "displayName",
+    "mode",
+    "clientKind",
+    "backendUrl",
+    "deploymentProfile",
+    "provisioningSource",
+    "createdAt",
+    "compatibility"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "profileId": { "type": "string", "format": "uuid" },
+    "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "mode": { "const": "connected" },
+    "clientKind": { "const": "windows" },
+    "backendUrl": { "type": "string", "format": "uri", "pattern": "^https://" },
+    "deploymentProfile": { "enum": ["cloudflare", "compose"] },
+    "provisioningSource": { "enum": ["scout", "manual", "ci"] },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["productVersion", "apiContract", "syncContract", "databaseMigration"],
+      "properties": {
+        "productVersion": { "type": "string", "minLength": 1 },
+        "apiContract": { "type": "string", "minLength": 1 },
+        "syncContract": { "type": "integer", "minimum": 1 },
+        "databaseMigration": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
