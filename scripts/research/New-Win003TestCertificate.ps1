@@ -29,15 +29,11 @@ $certificate = $request.CreateSelfSigned([DateTimeOffset]::UtcNow.AddMinutes(-5)
 [System.IO.File]::WriteAllBytes($cerPath, $certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert))
 
 $myStore = [System.Security.Cryptography.X509Certificates.X509Store]::new('My', [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser)
-$rootStore = [System.Security.Cryptography.X509Certificates.X509Store]::new('Root', [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser)
 try {
     $myStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
     $myStore.Add($certificate)
-    $rootStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
-    $rootStore.Add([System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)))
 } finally {
     $myStore.Close()
-    $rootStore.Close()
 }
 
 Write-Output "::add-mask::$passwordText"

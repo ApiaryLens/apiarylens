@@ -160,8 +160,13 @@ if ($env:WINDOWS_CERTIFICATE_FILE) {
 
 $hostSignature = Get-AuthenticodeSignature -LiteralPath $hostExecutable.FullName
 $setupSignature = Get-AuthenticodeSignature -LiteralPath $installer.FullName
-if ($env:WINDOWS_CERTIFICATE_FILE -and ($hostSignature.Status -ne 'Valid' -or $setupSignature.Status -ne 'Valid')) {
-    throw "Electron test signatures were not valid (host $($hostSignature.Status), setup $($setupSignature.Status))"
+if ($env:WINDOWS_CERTIFICATE_FILE -and (
+    -not $hostSignature.SignerCertificate -or
+    -not $setupSignature.SignerCertificate -or
+    $hostSignature.SignerCertificate.Thumbprint -ne $env:WIN003_CERT_THUMBPRINT -or
+    $setupSignature.SignerCertificate.Thumbprint -ne $env:WIN003_CERT_THUMBPRINT
+)) {
+    throw 'Electron test signatures did not match the ephemeral signing certificate'
 }
 
 function Get-DescendantProcessIds {
