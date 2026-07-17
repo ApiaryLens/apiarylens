@@ -169,6 +169,20 @@ p {
   color: var(--muted);
   font-weight: 650;
 }
+.metric-link {
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.metric-link:hover {
+  border-color: var(--green);
+  transform: translateY(-2px);
+}
+.metric-link:focus-visible {
+  outline: 3px solid var(--green);
+  outline-offset: 3px;
+}
 .metric.pending {
   background: #fff4d5;
   border-color: #e9c76b;

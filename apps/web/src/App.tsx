@@ -267,7 +267,9 @@ export function App() {
       )}
 
       <main className="content">
-        {page === 'dashboard' && <Dashboard organizationId={session.organization.id} />}
+        {page === 'dashboard' && (
+          <Dashboard organizationId={session.organization.id} onNavigate={setPage} />
+        )}
         {page === 'apiaries' && (
           <Apiaries
             organizationId={session.organization.id}
@@ -526,7 +528,13 @@ function useResources(organizationId: string, entityType: LocalResource['entityT
   );
 }
 
-function Dashboard({ organizationId }: { organizationId: string }) {
+function Dashboard({
+  organizationId,
+  onNavigate,
+}: {
+  organizationId: string;
+  onNavigate: (page: Page) => void;
+}) {
   const apiaries = useResources(organizationId, 'apiary');
   const hives = useResources(organizationId, 'hive');
   const inspections = useResources(organizationId, 'inspection');
@@ -549,18 +557,33 @@ function Dashboard({ organizationId }: { organizationId: string }) {
         </div>
       </div>
       <section className="metric-grid" aria-label="Apiary summary">
-        <article className="metric">
+        <button
+          className="metric metric-link"
+          type="button"
+          onClick={() => onNavigate('hives')}
+          aria-label="View active hives"
+        >
           <strong>{hives.filter((hive) => hive.data.status === 'active').length}</strong>
           <span>Active hives</span>
-        </article>
-        <article className="metric">
+        </button>
+        <button
+          className="metric metric-link"
+          type="button"
+          onClick={() => onNavigate('apiaries')}
+          aria-label="View apiaries"
+        >
           <strong>{apiaries.length}</strong>
           <span>Apiaries</span>
-        </article>
-        <article className="metric">
+        </button>
+        <button
+          className="metric metric-link"
+          type="button"
+          onClick={() => onNavigate('care')}
+          aria-label="View open follow-ups"
+        >
           <strong>{openFollowUps.length}</strong>
           <span>Open follow-ups</span>
-        </article>
+        </button>
         <article className="metric pending">
           <strong>{pending}</strong>
           <span>Pending sync</span>

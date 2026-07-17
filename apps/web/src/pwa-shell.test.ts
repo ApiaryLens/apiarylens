@@ -30,4 +30,11 @@ describe('installed PWA shell', () => {
     );
     expect(appSource).toContain('if (!navigator.onLine)');
   });
+
+  it('makes destination overview metrics keyboard-native navigation controls', () => {
+    expect(appSource).toContain("onClick={() => onNavigate('hives')}");
+    expect(appSource).toContain("onClick={() => onNavigate('apiaries')}");
+    expect(appSource).toContain("onClick={() => onNavigate('care')}");
+    expect(appSource).toContain('className="metric metric-link"');
+  });
 });
