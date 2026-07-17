@@ -298,6 +298,18 @@ function readCredentialEnvelope(target) {
   return JSON.parse(safeStorage.decryptString(fs.readFileSync(target)));
 }
 
+function retentionRootFromState(statePath) {
+  const localAppData = process.env.LOCALAPPDATA;
+  if (!localAppData) throw new Error("missing-localappdata");
+  const expected = path.resolve(localAppData, "ApiaryLens", "WIN003-Retention-Research");
+  const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
+  const presented = path.resolve(state.retentionRoot);
+  if (presented.toLowerCase() !== expected.toLowerCase()) {
+    throw new Error("retention-root-mismatch");
+  }
+  return expected;
+}
+
 function createServerSessionCredentialLifecycle() {
   const directory = path.join(serviceLab, "server-session-credential");
   const currentFile = path.join(directory, "connected-session.bin");
@@ -358,8 +370,80 @@ const recoveryProbeOutputIndex = process.argv.indexOf("--win003-recovery-probe-o
 const credentialCrashOutputIndex = process.argv.indexOf("--win003-credential-crash-output");
 const credentialRecoveryInputIndex = process.argv.indexOf("--win003-credential-recovery-input");
 const credentialRecoveryOutputIndex = process.argv.indexOf("--win003-credential-recovery-output");
+const retentionPrepareOutputIndex = process.argv.indexOf("--win003-retention-prepare-output");
+const retentionVerifyInputIndex = process.argv.indexOf("--win003-retention-verify-input");
+const retentionVerifyOutputIndex = process.argv.indexOf("--win003-retention-verify-output");
+const retentionRemoveInputIndex = process.argv.indexOf("--win003-retention-remove-input");
+const retentionRemoveOutputIndex = process.argv.indexOf("--win003-retention-remove-output");
 if (!hasSingleInstanceLock) {
   // The primary instance owns all application and embedded-service work.
+} else if (retentionRemoveInputIndex >= 0 && retentionRemoveOutputIndex >= 0) {
+  app.whenReady().then(() => {
+    const retentionRoot = retentionRootFromState(process.argv[retentionRemoveInputIndex + 1]);
+    fs.rmSync(retentionRoot, { recursive: true, force: true });
+    fs.writeFileSync(
+      process.argv[retentionRemoveOutputIndex + 1],
+      JSON.stringify({ removeAllDeletedCredentialAndHiveData: !fs.existsSync(retentionRoot) })
+    );
+    app.quit();
+  }).catch((error) => {
+    console.error(`retention-remove-probe-failed:${error.message}`);
+    app.exit(81);
+  });
+} else if (retentionVerifyInputIndex >= 0 && retentionVerifyOutputIndex >= 0) {
+  app.whenReady().then(() => {
+    if (!safeStorage.isEncryptionAvailable()) throw new Error("safe-storage-unavailable");
+    const retentionRoot = retentionRootFromState(process.argv[retentionVerifyInputIndex + 1]);
+    const protectedRoot = readCredentialEnvelope(path.join(retentionRoot, "standalone-root.bin"));
+    const hiveData = fs.readFileSync(path.join(retentionRoot, "apiarylens.sqlite.fixture"), "utf8");
+    fs.writeFileSync(
+      process.argv[retentionVerifyOutputIndex + 1],
+      JSON.stringify({
+        protectedRootReadableAfterReinstall:
+          protectedRoot.schemaVersion === 1 &&
+          protectedRoot.version === 1 &&
+          protectedRoot.purpose === "standalone-auth-root" &&
+          typeof protectedRoot.value === "string" &&
+          protectedRoot.value.length === 64,
+        hiveDataReadableAfterReinstall: hiveData === "non-secret-hive-data"
+      })
+    );
+    app.quit();
+  }).catch((error) => {
+    console.error(`retention-verify-probe-failed:${error.message}`);
+    app.exit(80);
+  });
+} else if (retentionPrepareOutputIndex >= 0) {
+  app.whenReady().then(() => {
+    if (!safeStorage.isEncryptionAvailable()) throw new Error("safe-storage-unavailable");
+    const localAppData = process.env.LOCALAPPDATA;
+    if (!localAppData) throw new Error("missing-localappdata");
+    const retentionRoot = path.resolve(
+      localAppData,
+      "ApiaryLens",
+      "WIN003-Retention-Research"
+    );
+    fs.rmSync(retentionRoot, { recursive: true, force: true });
+    fs.mkdirSync(retentionRoot, { recursive: true });
+    protectCredentialEnvelope(
+      path.join(retentionRoot, "standalone-root.bin"),
+      1,
+      "standalone-auth-root"
+    );
+    fs.writeFileSync(
+      path.join(retentionRoot, "apiarylens.sqlite.fixture"),
+      "non-secret-hive-data",
+      { encoding: "utf8", mode: 0o600 }
+    );
+    fs.writeFileSync(
+      process.argv[retentionPrepareOutputIndex + 1],
+      JSON.stringify({ retentionRoot })
+    );
+    app.quit();
+  }).catch((error) => {
+    console.error(`retention-prepare-probe-failed:${error.message}`);
+    app.exit(79);
+  });
 } else if (credentialRecoveryInputIndex >= 0 && credentialRecoveryOutputIndex >= 0) {
   app.whenReady().then(() => {
     if (!safeStorage.isEncryptionAvailable()) throw new Error("safe-storage-unavailable");

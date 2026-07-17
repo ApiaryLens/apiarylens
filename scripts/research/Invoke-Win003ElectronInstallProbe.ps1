@@ -309,6 +309,23 @@ Get-Process -Id (@($ids) | Sort-Object -Descending) -ErrorAction SilentlyContinu
 $process.WaitForExit(5000) | Out-Null
 if (-not $hostStayedRunning) { throw 'Installed Electron host exited during smoke test' }
 
+$retentionStatePath = Join-Path $runnerTemp 'win003-electron-installed-retention-state.json'
+$retentionPrepareArguments = "--win003-retention-prepare-output `"$retentionStatePath`""
+$retentionPrepare = Start-Process -FilePath $installedHost.FullName -ArgumentList $retentionPrepareArguments -WorkingDirectory $appDirectory.FullName -PassThru -WindowStyle Hidden
+if (-not $retentionPrepare.WaitForExit(15000)) {
+    Stop-Process -Id $retentionPrepare.Id -Force -ErrorAction SilentlyContinue
+    throw 'Installed Electron retention preparation exceeded 15 seconds'
+}
+if ($retentionPrepare.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $retentionStatePath)) {
+    throw 'Installed Electron retention preparation failed'
+}
+$retentionState = Get-Content -Raw -LiteralPath $retentionStatePath | ConvertFrom-Json
+$retentionRoot = [IO.Path]::GetFullPath([string] $retentionState.retentionRoot)
+$expectedRetentionRoot = [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'ApiaryLens\WIN003-Retention-Research'))
+if (-not $retentionRoot.Equals($expectedRetentionRoot, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Installed Electron retention root was outside the exact research location'
+}
+
 # Electron/Squirrel can re-parent a process outside the launcher's original process
 # tree. Quiesce every executable whose resolved image remains inside this exact
 # installation root before asking Squirrel to remove files.
@@ -385,6 +402,103 @@ $residualBytes = if ($directoryRemains) {
     (Get-ChildItem -LiteralPath $installDirectory -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
 } else { 0 }
 
+$defaultUninstallKeptProtectedCredentialAndHiveData =
+    (Test-Path -LiteralPath (Join-Path $retentionRoot 'standalone-root.bin')) -and
+    (Test-Path -LiteralPath (Join-Path $retentionRoot 'apiarylens.sqlite.fixture'))
+if (-not $defaultUninstallKeptProtectedCredentialAndHiveData) {
+    throw 'Default uninstall did not retain the protected credential and hive data'
+}
+
+$reinstall = Start-Process -FilePath $installerPath -ArgumentList '--silent' -PassThru -WindowStyle Hidden
+if (-not $reinstall.WaitForExit(60000)) {
+    Stop-Process -Id $reinstall.Id -Force -ErrorAction SilentlyContinue
+    throw 'Electron reinstall exceeded 60 seconds'
+}
+if ($reinstall.ExitCode -ne 0) { throw "Electron reinstall failed with exit code $($reinstall.ExitCode)" }
+foreach ($attempt in 1..40) {
+    if ((Get-UninstallEntry) -and (Test-Path -LiteralPath $installDirectory)) { break }
+    Start-Sleep -Milliseconds 250
+}
+Get-Process -Name 'ApiaryLensElectronResearch' -ErrorAction SilentlyContinue |
+    Where-Object { $_.Path -and $_.Path.StartsWith($installDirectory, [StringComparison]::OrdinalIgnoreCase) } |
+    Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 500
+$reinstalledAppDirectory = Get-ChildItem -LiteralPath $installDirectory -Directory -Filter 'app-*' |
+    Sort-Object Name -Descending |
+    Select-Object -First 1
+$reinstalledHost = if ($reinstalledAppDirectory) {
+    Get-ChildItem -LiteralPath $reinstalledAppDirectory.FullName -Filter 'ApiaryLensElectronResearch.exe' |
+        Select-Object -First 1
+} else { $null }
+$reinstalledUpdate = Join-Path $installDirectory 'Update.exe'
+if (-not $reinstalledHost -or -not (Test-Path -LiteralPath $reinstalledUpdate)) {
+    throw 'Electron reinstalled host or updater was not found'
+}
+
+$retentionVerifyPath = Join-Path $runnerTemp 'win003-electron-installed-retention-verify.json'
+$retentionVerifyArguments = "--win003-retention-verify-input `"$retentionStatePath`" --win003-retention-verify-output `"$retentionVerifyPath`""
+$retentionVerify = Start-Process -FilePath $reinstalledHost.FullName -ArgumentList $retentionVerifyArguments -WorkingDirectory $reinstalledAppDirectory.FullName -PassThru -WindowStyle Hidden
+if (-not $retentionVerify.WaitForExit(15000)) {
+    Stop-Process -Id $retentionVerify.Id -Force -ErrorAction SilentlyContinue
+    throw 'Installed Electron retention verification exceeded 15 seconds'
+}
+if ($retentionVerify.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $retentionVerifyPath)) {
+    throw 'Installed Electron retention verification failed'
+}
+$retentionVerifyState = Get-Content -Raw -LiteralPath $retentionVerifyPath | ConvertFrom-Json
+$reinstallReadProtectedCredentialAndHiveData =
+    $retentionVerifyState.protectedRootReadableAfterReinstall -and
+    $retentionVerifyState.hiveDataReadableAfterReinstall
+if (-not $reinstallReadProtectedCredentialAndHiveData) {
+    throw 'Reinstalled Electron host could not read retained protected state'
+}
+
+$retentionRemovePath = Join-Path $runnerTemp 'win003-electron-installed-retention-remove.json'
+$retentionRemoveArguments = "--win003-retention-remove-input `"$retentionStatePath`" --win003-retention-remove-output `"$retentionRemovePath`""
+$retentionRemove = Start-Process -FilePath $reinstalledHost.FullName -ArgumentList $retentionRemoveArguments -WorkingDirectory $reinstalledAppDirectory.FullName -PassThru -WindowStyle Hidden
+if (-not $retentionRemove.WaitForExit(15000)) {
+    Stop-Process -Id $retentionRemove.Id -Force -ErrorAction SilentlyContinue
+    throw 'Installed Electron remove-all verification exceeded 15 seconds'
+}
+if ($retentionRemove.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $retentionRemovePath)) {
+    throw 'Installed Electron remove-all verification failed'
+}
+$retentionRemoveState = Get-Content -Raw -LiteralPath $retentionRemovePath | ConvertFrom-Json
+$explicitRemoveAllDeletedCredentialAndHiveData =
+    $retentionRemoveState.removeAllDeletedCredentialAndHiveData -and
+    -not (Test-Path -LiteralPath $retentionRoot)
+if (-not $explicitRemoveAllDeletedCredentialAndHiveData) {
+    throw 'Installed Electron remove-all left protected credential or hive data'
+}
+
+foreach ($attempt in 1..20) {
+    $reinstalledProcesses = @(
+        Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.ExecutablePath -and
+                [IO.Path]::GetFullPath($_.ExecutablePath).StartsWith($installPrefix, [StringComparison]::OrdinalIgnoreCase)
+            }
+    )
+    if ($reinstalledProcesses.Count -eq 0) { break }
+    Get-Process -Id @($reinstalledProcesses.ProcessId) -ErrorAction SilentlyContinue |
+        Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 250
+}
+$secondUninstall = Start-Process -FilePath $reinstalledUpdate -ArgumentList @('--uninstall', '-s') -PassThru -WindowStyle Hidden
+if (-not $secondUninstall.WaitForExit(60000)) {
+    Stop-Process -Id $secondUninstall.Id -Force -ErrorAction SilentlyContinue
+    throw 'Electron second uninstall exceeded 60 seconds'
+}
+if ($secondUninstall.ExitCode -ne 0) { throw "Electron second uninstall failed with exit code $($secondUninstall.ExitCode)" }
+foreach ($attempt in 1..60) {
+    $secondEntryRemains = $null -ne (Get-UninstallEntry)
+    $secondHostRemains = $null -ne (Get-ChildItem -LiteralPath $installDirectory -Recurse -Filter 'ApiaryLensElectronResearch.exe' -ErrorAction SilentlyContinue | Select-Object -First 1)
+    if (-not $secondEntryRemains -and -not $secondHostRemains) { break }
+    Start-Sleep -Milliseconds 500
+}
+$secondEntryRemains = $null -ne (Get-UninstallEntry)
+$secondHostRemains = $null -ne (Get-ChildItem -LiteralPath $installDirectory -Recurse -Filter 'ApiaryLensElectronResearch.exe' -ErrorAction SilentlyContinue | Select-Object -First 1)
+
 $result = [ordered]@{
     measuredAtUtc = [DateTimeOffset]::UtcNow.ToString('o')
     sourceCommit = $env:GITHUB_SHA
@@ -449,6 +563,13 @@ $result = [ordered]@{
     installedHostRemains = $hostRemains
     installDirectoryRemains = $directoryRemains
     residualBytes = $residualBytes
+    defaultUninstallKeptProtectedCredentialAndHiveData = $defaultUninstallKeptProtectedCredentialAndHiveData
+    reinstallExitCode = $reinstall.ExitCode
+    reinstallReadProtectedCredentialAndHiveData = $reinstallReadProtectedCredentialAndHiveData
+    explicitRemoveAllDeletedCredentialAndHiveData = $explicitRemoveAllDeletedCredentialAndHiveData
+    secondUninstallExitCode = $secondUninstall.ExitCode
+    secondUninstallEntryRemains = $secondEntryRemains
+    secondInstalledHostRemains = $secondHostRemains
     limitations = @(
         'Fresh hosted runner profile, not a retail Windows image',
         $(if ($measurement.signingMode -eq 'ephemeral-test-signing') { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research artifact' }),
@@ -461,6 +582,6 @@ $env:PATH = $originalPath
 $result | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $outputPath 'lifecycle.json') -Encoding utf8NoBOM
 $result | ConvertTo-Json -Depth 8
 
-if ($entryRemains -or $hostRemains) {
+if ($entryRemains -or $hostRemains -or $secondEntryRemains -or $secondHostRemains) {
     throw 'Electron uninstall left its registration or installed host behind'
 }
