@@ -2,11 +2,17 @@ import { createHash } from 'node:crypto';
 import { copyFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 
-const [repositoryRootInput, labRootInput, serverRootInput, outputRootInput, versionsPathInput] =
-  process.argv.slice(2);
-if (!versionsPathInput) {
+const [
+  repositoryRootInput,
+  labRootInput,
+  serverRootInput,
+  outputRootInput,
+  versionsPathInput,
+  packagedRootInput,
+] = process.argv.slice(2);
+if (!packagedRootInput) {
   throw new Error(
-    'Usage: node Build-Win003ElectronSupplyChain.mjs <repository-root> <lab-root> <server-root> <output-root> <versions-json>',
+    'Usage: node Build-Win003ElectronSupplyChain.mjs <repository-root> <lab-root> <server-root> <output-root> <versions-json> <packaged-root>',
   );
 }
 
@@ -15,8 +21,14 @@ const labRoot = resolve(labRootInput);
 const serverRoot = resolve(serverRootInput);
 const outputRoot = resolve(outputRootInput);
 const versionsPath = resolve(versionsPathInput);
+const packagedRoot = resolve(packagedRootInput);
 const runnerTemp = resolve(process.env.RUNNER_TEMP ?? '');
-if (!runnerTemp || !isWithin(outputRoot, runnerTemp) || !isWithin(labRoot, runnerTemp)) {
+if (
+  !runnerTemp ||
+  !isWithin(outputRoot, runnerTemp) ||
+  !isWithin(labRoot, runnerTemp) ||
+  !isWithin(packagedRoot, labRoot)
+) {
   throw new Error('WIN-003 supply-chain output and lab must remain under RUNNER_TEMP');
 }
 
@@ -61,11 +73,8 @@ buildComponents.sort(componentSort);
 const noticeFiles = new Map();
 await copyNotice(join(repositoryRoot, 'LICENSE'), 'APIARYLENS-LICENSE.txt');
 await copyNotice(join(repositoryRoot, 'NOTICE'), 'APIARYLENS-NOTICE.txt');
-await copyNotice(
-  join(labRoot, 'node_modules', 'electron', 'dist', 'LICENSE'),
-  'ELECTRON-LICENSE.txt',
-);
-const chromiumNotice = join(labRoot, 'node_modules', 'electron', 'dist', 'LICENSES.chromium.html');
+await copyNotice(join(packagedRoot, 'LICENSE'), 'ELECTRON-LICENSE.txt');
+const chromiumNotice = join(packagedRoot, 'LICENSES.chromium.html');
 if ((await stat(chromiumNotice)).size < 100_000) {
   throw new Error('Electron Chromium third-party notice document is unexpectedly small');
 }

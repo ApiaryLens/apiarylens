@@ -74,7 +74,7 @@ module.exports = {
   packagerConfig: {
     asar: true,
     executableName: "ApiaryLensElectronResearch",
-    extraResource: [process.env.WIN003_SERVER_DEPLOY, process.env.WIN003_SUPPLY_CHAIN],
+    extraResource: [process.env.WIN003_SERVER_DEPLOY],
     windowsSign: process.env.WINDOWS_CERTIFICATE_FILE ? true : false
   },
   makers: [
@@ -1054,21 +1054,32 @@ try {
         -not $electronRebuildLock.integrity) {
         throw 'Electron rebuild override did not resolve to the expected integrity-pinned registry artifact'
     }
+    $env:WIN003_SERVER_DEPLOY = $serverDeployPath
+    npx --no-install electron-forge package --arch=x64
+    if ($LASTEXITCODE -ne 0) { throw "Electron Forge package failed with exit code $LASTEXITCODE" }
+    $preMakePackageDirectory = Get-ChildItem -LiteralPath (Join-Path $labPath 'out') -Directory |
+        Where-Object { $_.Name -like '*-win32-x64' } |
+        Select-Object -First 1
+    if (-not $preMakePackageDirectory) {
+        throw 'Electron Forge package did not produce the expected host directory'
+    }
+    $preMakeHost = Get-ChildItem -LiteralPath $preMakePackageDirectory.FullName -Filter 'ApiaryLensElectronResearch.exe' | Select-Object -First 1
+    if (-not $preMakeHost) {
+        throw 'Electron Forge package did not produce the expected host directory'
+    }
     $runtimeVersionsPath = Join-Path $labPath 'runtime-versions.json'
-    & (Join-Path $labPath 'node_modules/electron/dist/electron.exe') (Join-Path $labPath 'main.cjs') '--apiarylens-packaged-probe' $runtimeVersionsPath
+    & $preMakeHost.FullName '--apiarylens-packaged-probe' $runtimeVersionsPath
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $runtimeVersionsPath)) {
-        throw 'Electron runtime-version probe failed before supply-chain reconciliation'
+        throw 'Packaged Electron runtime-version probe failed before supply-chain reconciliation'
     }
     $supplyChainPath = Join-Path $labPath 'supply-chain'
-    node (Join-Path $PSScriptRoot 'Build-Win003ElectronSupplyChain.mjs') $repositoryRoot $labPath $serverDeployPath $supplyChainPath $runtimeVersionsPath
+    node (Join-Path $PSScriptRoot 'Build-Win003ElectronSupplyChain.mjs') $repositoryRoot $labPath $serverDeployPath $supplyChainPath $runtimeVersionsPath $preMakePackageDirectory.FullName
     if ($LASTEXITCODE -ne 0) { throw "Electron supply-chain reconciliation failed with exit code $LASTEXITCODE" }
-    $env:WIN003_SERVER_DEPLOY = $serverDeployPath
-    $env:WIN003_SUPPLY_CHAIN = $supplyChainPath
-    npx --no-install electron-forge make --arch=x64
+    Copy-Item -LiteralPath $supplyChainPath -Destination (Join-Path $preMakePackageDirectory.FullName 'resources/supply-chain') -Recurse
+    npx --no-install electron-forge make --arch=x64 --skip-package
     if ($LASTEXITCODE -ne 0) { throw "Electron Forge make failed with exit code $LASTEXITCODE" }
 } finally {
     Remove-Item Env:WIN003_SERVER_DEPLOY -ErrorAction SilentlyContinue
-    Remove-Item Env:WIN003_SUPPLY_CHAIN -ErrorAction SilentlyContinue
     Pop-Location
 }
 
