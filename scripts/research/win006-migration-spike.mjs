@@ -252,6 +252,8 @@ async function migrate(root, options = {}) {
   const sourceMedia = new FilesystemMediaStore(join(root, 'source-media'));
   const targetMedia = new FilesystemMediaStore(join(root, 'target-media'));
   let applied = 0;
+  let uncheckpointed = 0;
+  const checkpointEvery = Math.max(1, options.checkpointEvery ?? 1);
   try {
     for (const item of journal.records) {
       if (item.state === 'verified') continue;
@@ -282,7 +284,11 @@ async function migrate(root, options = {}) {
       assert.ok(result.status === 'accepted' || result.status === 'duplicate');
       assert.equal(hash(canonical(payload(result.serverValue))), item.payloadHash);
       item.state = 'verified';
-      await atomicJson(journalPath, journal);
+      uncheckpointed += 1;
+      if (uncheckpointed >= checkpointEvery) {
+        await atomicJson(journalPath, journal);
+        uncheckpointed = 0;
+      }
     }
     for (const item of journal.media) {
       if (item.state === 'verified') continue;
@@ -299,7 +305,11 @@ async function migrate(root, options = {}) {
       assert.ok(copied);
       assert.equal(hash(copied), item.sha256);
       item.state = 'verified';
-      await atomicJson(journalPath, journal);
+      uncheckpointed += 1;
+      if (uncheckpointed >= checkpointEvery) {
+        await atomicJson(journalPath, journal);
+        uncheckpointed = 0;
+      }
     }
     if (options.tamperMediaBeforeReconcile) {
       const first = journal.media[0];
@@ -452,6 +462,78 @@ async function exerciseTombstoneTransfer(root) {
   }
 }
 
+function exerciseAnnualReferenceWorkload(recordCount) {
+  const source = new SqliteStore();
+  const target = new SqliteStore();
+  try {
+    const sourceSession = source.bootstrap({
+      identifier: 'scale-source@example.test',
+      displayName: 'Scale Source',
+      passwordHash: SECRET_SENTINEL,
+      organizationName: 'Scale Source Family',
+      timezone: 'America/New_York',
+    });
+    const targetSession = target.bootstrap({
+      identifier: 'scale-target@example.test',
+      displayName: 'Scale Target',
+      passwordHash: SECRET_SENTINEL,
+      organizationName: 'Scale Target Family',
+      timezone: 'America/New_York',
+    });
+    const sourceOrg = sourceSession.view.organization.id;
+    const targetOrg = targetSession.view.organization.id;
+    const sourceUser = sourceSession.view.user.id;
+    const targetUser = targetSession.view.user.id;
+    const hiveId = randomUUID();
+    const batchSize = 100;
+    let duplicateReceipts = 0;
+    for (let batchStart = 0; batchStart < recordCount; batchStart += batchSize) {
+      const batchEnd = Math.min(recordCount, batchStart + batchSize);
+      for (let index = batchStart; index < batchEnd; index += 1) {
+        const item = operation('followUp', randomUUID(), {
+          hiveId,
+          description: `Reference workload follow-up ${index + 1}`,
+          dueDate: '2026-07-20',
+        });
+        assert.equal(source.applyOperation(sourceOrg, sourceUser, item).status, 'accepted');
+        assert.equal(target.applyOperation(targetOrg, targetUser, item).status, 'accepted');
+        if (index === batchStart) {
+          assert.equal(target.applyOperation(targetOrg, targetUser, item).status, 'duplicate');
+          duplicateReceipts += 1;
+        }
+      }
+    }
+    const sourceRecords = inventory(source, sourceOrg);
+    const targetRecords = inventory(target, targetOrg);
+    assert.equal(sourceRecords.length, recordCount);
+    assert.equal(targetRecords.length, recordCount);
+    assert.equal(
+      hash(
+        canonical(
+          sourceRecords.map(({ entityType, entityId, payloadHash }) => ({
+            entityType,
+            entityId,
+            payloadHash,
+          })),
+        ),
+      ),
+      hash(
+        canonical(
+          targetRecords.map(({ entityType, entityId, payloadHash }) => ({
+            entityType,
+            entityId,
+            payloadHash,
+          })),
+        ),
+      ),
+    );
+    return { batches: Math.ceil(recordCount / batchSize), duplicateReceipts };
+  } finally {
+    source.close();
+    target.close();
+  }
+}
+
 async function run(output) {
   const workspace = resolve(output, 'work');
   await rm(workspace, { recursive: true, force: true });
@@ -514,6 +596,11 @@ async function run(output) {
   await exerciseTombstoneTransfer(tombstone);
   results.push('deleted-record-tombstone-replay-is-idempotent-and-remains-deleted');
 
+  const referenceWorkload = exerciseAnnualReferenceWorkload(20_000);
+  assert.equal(referenceWorkload.batches, 200);
+  assert.equal(referenceWorkload.duplicateReceipts, 200);
+  results.push('twenty-thousand-annual-reference-records-batched-and-reconciled-in-memory');
+
   const conflict = join(workspace, 'conflict');
   await seedScenario(conflict, { conflictingTarget: true });
   await assert.rejects(migrate(conflict), /migration_conflict/);
@@ -570,6 +657,9 @@ async function run(output) {
       maximumOriginalMediaBytes: 25 * 1024 * 1024,
       pendingOutboxOperations: 1,
       tombstonesReplayed: 1,
+      annualReferenceRecords: 20_000,
+      annualReferenceBatches: 200,
+      durableAnnualReferenceMigrationProven: false,
       interruptionBoundaries: 5,
       identitiesMigrated: false,
       atomicCutoverAfterReconciliation: true,

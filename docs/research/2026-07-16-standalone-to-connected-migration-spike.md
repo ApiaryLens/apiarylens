@@ -85,6 +85,9 @@ The local run passed these scenarios:
 - preservation, backup, transfer, and reconciliation of a non-empty pending outbox;
 - idempotent replay of a create/delete history with the resulting record remaining a
   tombstone on the target change feed;
+- 20,000 structured records—the accepted family model's approximate active-year
+  workload—applied and reconciled through 200 bounded in-memory batches, including
+  one exact duplicate receipt per batch;
 - colliding target record reported as a conflict while the client remains standalone;
 - target media corruption detected before cutover;
 - incompatible sync-contract version rejected before transfer;
@@ -96,6 +99,26 @@ The workflow
 runs the same evidence on `windows-latest` with Node 24 and locked dependencies. The
 checked-in harness and workflow are research evidence only; the eventual protocol
 must be implemented behind accepted ADRs and authorization boundaries.
+
+### Scale finding
+
+The family capacity model estimates approximately 20,000 structured
+inspection-related writes per active year. It does not establish a hard maximum
+record count, so this spike treats 20,000 as a dated reference workload rather than a
+product limit.
+
+The real SQLite store transferred and reconciled 20,000 records in 200 batches of 100
+when both stores were in memory. A separate attempt to drive the same workload
+through the research JSON journal and one durable SQLite transaction per item ran for
+more than five minutes and was intentionally stopped. That negative result is a
+design finding: normal interactive sync writes plus repeated whole-file JSON journal
+replacement are not an acceptable bulk migration implementation.
+
+The production design therefore needs a SQLite-backed migration journal and bounded
+server-side import transactions with per-item receipts. The current evidence proves
+the record model, batching, idempotency, and reconciliation at the annual reference
+count; it does **not** prove a durable 20,000-record packaged migration. The latter
+remains an exact-artifact acceptance gate after the bulk-import contract exists.
 
 GitHub Actions run
 [`29550672120`](https://github.com/ApiaryLens/apiarylens/actions/runs/29550672120)
@@ -210,7 +233,8 @@ installation ID, accepted hashes, and outcome.
 2. Canonical hashing rules, including field normalization and tombstones.
 3. Target migration-session endpoints with owner authorization, organization
    isolation, expiration, cancellation, quotas, and audit records.
-4. Idempotent record and media import endpoints scoped by migration ID and item hash.
+4. Idempotent, bounded-batch record and media import endpoints scoped by migration ID
+   and item hash, with a durable receipt for every item.
 5. Per-connection and per-organization local sync cursors.
 6. A Windows local-store quiesce/checkpoint/backup/restore contract.
 7. Atomic connection-profile storage whose credentials are references to native
@@ -222,9 +246,9 @@ installation ID, accepted hashes, and outcome.
 
 ## Further evidence required to close WIN-006
 
-- Scale testing with the maximum supported record count. A tombstone replay,
-  conflicts, a non-empty outbox, and the 25 MiB original-media and thumbnail boundary
-  are covered individually; the eventual migration protocol must combine them.
+- Durable packaged migration at the 20,000-record annual family reference workload
+  after the SQLite journal and bounded bulk-import contract exist. The record model
+  and reconciliation pass at that count in memory; this is not yet packaged evidence.
 - Inject process termination, disk-full, access-denied, database-busy, corrupt backup,
   target timeout, expired auth, and partial media failures at each state boundary.
 - Prove restored backup equivalence for the packaged Windows runtime, not only the
