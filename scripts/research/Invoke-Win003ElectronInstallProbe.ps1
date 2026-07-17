@@ -99,6 +99,17 @@ if ($measurement.signingMode -eq 'ephemeral-test-signing' -and (
     throw 'Installed Electron host did not retain the expected Authenticode signer'
 }
 
+$installedFirewallApplicationFilters = @(
+    Get-NetFirewallApplicationFilter -Program $installedHost.FullName -ErrorAction SilentlyContinue
+)
+$installedFirewallRules = @(
+    foreach ($filter in $installedFirewallApplicationFilters) {
+        $filter | Get-NetFirewallRule -ErrorAction SilentlyContinue
+    }
+)
+$installedFirewallRuleCount = $installedFirewallRules.Count
+$installedFirewallRuleNames = @($installedFirewallRules | ForEach-Object DisplayName)
+
 $crossUserSameUserRoundTrip = $false
 $crossUserCiphertextExcludesPlaintext = $false
 $crossUserDifferentUserDenied = $false
@@ -429,10 +440,63 @@ $bridgeProbePath = Join-Path $runnerTemp 'win003-electron-installed-bridge-probe
 $bridgeProbeStdout = Join-Path $outputPath 'installed-bridge-probe.stdout.log'
 $bridgeProbeStderr = Join-Path $outputPath 'installed-bridge-probe.stderr.log'
 $bridgeProbeArguments = "--win003-bridge-output `"$bridgeProbePath`""
-$bridgeProbe = Start-Process -FilePath $installedHost.FullName -ArgumentList $bridgeProbeArguments -WorkingDirectory $appDirectory.FullName -PassThru -WindowStyle Hidden -RedirectStandardOutput $bridgeProbeStdout -RedirectStandardError $bridgeProbeStderr
-if (-not $bridgeProbe.WaitForExit(30000)) {
-    Stop-Process -Id $bridgeProbe.Id -Force -ErrorAction SilentlyContinue
-    throw 'Installed Electron real-service bridge probe exceeded 30 seconds'
+$internetSettingsPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
+$priorInternetSettings = Get-ItemProperty -Path $internetSettingsPath -ErrorAction SilentlyContinue
+$hadProxyEnable = $priorInternetSettings -and $priorInternetSettings.PSObject.Properties.Name -contains 'ProxyEnable'
+$hadProxyServer = $priorInternetSettings -and $priorInternetSettings.PSObject.Properties.Name -contains 'ProxyServer'
+$hadProxyOverride = $priorInternetSettings -and $priorInternetSettings.PSObject.Properties.Name -contains 'ProxyOverride'
+$priorProxyEnable = if ($hadProxyEnable) { $priorInternetSettings.ProxyEnable } else { $null }
+$priorProxyServer = if ($hadProxyServer) { $priorInternetSettings.ProxyServer } else { $null }
+$priorProxyOverride = if ($hadProxyOverride) { $priorInternetSettings.ProxyOverride } else { $null }
+$winInetProxyPolicyConfiguredForBridgeProbe = $false
+$winInetProxyPolicyRestored = $false
+$bridgeProbe = $null
+try {
+    New-Item -Path $internetSettingsPath -Force | Out-Null
+    New-ItemProperty -Path $internetSettingsPath -Name ProxyEnable -Value 1 -PropertyType DWord -Force | Out-Null
+    New-ItemProperty -Path $internetSettingsPath -Name ProxyServer -Value '127.0.0.1:1' -PropertyType String -Force | Out-Null
+    New-ItemProperty -Path $internetSettingsPath -Name ProxyOverride -Value '' -PropertyType String -Force | Out-Null
+    $winInetProxyPolicyConfiguredForBridgeProbe = $true
+
+    $bridgeProbe = Start-Process -FilePath $installedHost.FullName -ArgumentList $bridgeProbeArguments -WorkingDirectory $appDirectory.FullName -PassThru -WindowStyle Hidden -RedirectStandardOutput $bridgeProbeStdout -RedirectStandardError $bridgeProbeStderr
+    if (-not $bridgeProbe.WaitForExit(30000)) {
+        Stop-Process -Id $bridgeProbe.Id -Force -ErrorAction SilentlyContinue
+        throw 'Installed Electron real-service bridge probe exceeded 30 seconds'
+    }
+} finally {
+    if ($hadProxyEnable) {
+        New-ItemProperty -Path $internetSettingsPath -Name ProxyEnable -Value $priorProxyEnable -PropertyType DWord -Force | Out-Null
+    } else {
+        Remove-ItemProperty -Path $internetSettingsPath -Name ProxyEnable -ErrorAction SilentlyContinue
+    }
+    if ($hadProxyServer) {
+        New-ItemProperty -Path $internetSettingsPath -Name ProxyServer -Value $priorProxyServer -PropertyType String -Force | Out-Null
+    } else {
+        Remove-ItemProperty -Path $internetSettingsPath -Name ProxyServer -ErrorAction SilentlyContinue
+    }
+    if ($hadProxyOverride) {
+        New-ItemProperty -Path $internetSettingsPath -Name ProxyOverride -Value $priorProxyOverride -PropertyType String -Force | Out-Null
+    } else {
+        Remove-ItemProperty -Path $internetSettingsPath -Name ProxyOverride -ErrorAction SilentlyContinue
+    }
+
+    $restoredInternetSettings = Get-ItemProperty -Path $internetSettingsPath -ErrorAction SilentlyContinue
+    $proxyEnableRestored = if ($hadProxyEnable) {
+        $restoredInternetSettings.ProxyEnable -eq $priorProxyEnable
+    } else {
+        $restoredInternetSettings.PSObject.Properties.Name -notcontains 'ProxyEnable'
+    }
+    $proxyServerRestored = if ($hadProxyServer) {
+        $restoredInternetSettings.ProxyServer -eq $priorProxyServer
+    } else {
+        $restoredInternetSettings.PSObject.Properties.Name -notcontains 'ProxyServer'
+    }
+    $proxyOverrideRestored = if ($hadProxyOverride) {
+        $restoredInternetSettings.ProxyOverride -eq $priorProxyOverride
+    } else {
+        $restoredInternetSettings.PSObject.Properties.Name -notcontains 'ProxyOverride'
+    }
+    $winInetProxyPolicyRestored = $proxyEnableRestored -and $proxyServerRestored -and $proxyOverrideRestored
 }
 if ($bridgeProbe.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $bridgeProbePath)) {
     $bridgeDiagnostic = [ordered]@{
@@ -447,6 +511,9 @@ if ($bridgeProbe.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $bridgeProbePat
 }
 $bridgeProbeResult = Get-Content -Raw -LiteralPath $bridgeProbePath | ConvertFrom-Json
 $installedRealServiceBridgeProbePassed =
+    $winInetProxyPolicyConfiguredForBridgeProbe -and
+    $winInetProxyPolicyRestored -and
+    $installedFirewallRuleCount -eq 0 -and
     $bridgeProbeResult.sandboxedRendererHasNoNodeProcess -and
     $bridgeProbeResult.sandboxedRendererHasNoRequire -and
     @($bridgeProbeResult.exposedBridgeKeys).Count -eq 1 -and
@@ -933,6 +1000,10 @@ $result = [ordered]@{
     installedBridgeTrustedWindowsShareOneService = $bridgeProbeResult.trustedWindowsShareOneService
     installedBridgeIpv6LoopbackRejected = $bridgeProbeResult.ipv6LoopbackRejected
     installedBridgeEnvironmentProxyDoesNotInterceptLoopbackFetch = $bridgeProbeResult.environmentProxyDoesNotInterceptLoopbackFetch
+    installedWinInetProxyPolicyConfiguredForBridgeProbe = $winInetProxyPolicyConfiguredForBridgeProbe
+    installedWinInetProxyPolicyRestored = $winInetProxyPolicyRestored
+    installedFirewallRuleCount = $installedFirewallRuleCount
+    installedFirewallRuleNames = $installedFirewallRuleNames
     installedApiAcceptancePassed = $bridgeProbeResult.apiAcceptance.passed
     installedApiAcceptanceCheckCount = $bridgeProbeResult.apiAcceptance.checkCount
     installedApiAcceptanceMigrationVersions = @($bridgeProbeResult.apiAcceptance.migrationVersions)
@@ -1026,4 +1097,10 @@ $result | ConvertTo-Json -Depth 8
 
 if ($entryRemains -or $hostRemains -or $secondEntryRemains -or $secondHostRemains) {
     throw 'Electron uninstall left its registration or installed host behind'
+}
+if (-not $winInetProxyPolicyRestored) {
+    throw 'Windows per-user proxy policy was not restored after the bridge probe'
+}
+if ($installedFirewallRuleCount -ne 0) {
+    throw 'Electron installation created a Windows Firewall application rule'
 }
