@@ -13,10 +13,7 @@
     "export": 1,
     "localStore": 1
   },
-  "profiles": [
-    "cloudflare",
-    "compose"
-  ],
+  "profiles": ["cloudflare", "compose"],
   "artifacts": [
     {
       "name": "apiarylens-0.1.0-preview.2-cloudflare-8b544bc26844.tar.gz",
