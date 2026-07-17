@@ -6,9 +6,12 @@
 does not authorize a Windows product scaffold or select Electron or Tauri.
 
 The first disposable lifecycle and security prototype passed on a fresh GitHub-
-hosted Windows runner. Credential protection, host-to-renderer secret delivery,
-real server integration, file ACLs, migration failure recovery, and threat review
-remain before the research gate can close.
+hosted Windows runner. Exact portable-server process integration and its 15 API
+tests also passed persistence and organization-isolation checks, but exposed a
+release-blocking listener defect: the current server binds to the wildcard interface
+while logging a loopback URL. Credential protection, host-to-renderer secret
+delivery, a safe real-server wrapper, file ACLs, migration failure recovery, and
+threat review remain before the research gate can close.
 
 ## Decision question
 
@@ -84,6 +87,45 @@ The workflow retained only sanitized runner-temporary evidence for 14 days.
 The result proves a workable loopback and lifecycle shape; it does not prove the
 production server is safe merely by adopting the same mechanics.
 
+## Exact portable-server process evidence
+
+GitHub Actions run
+[`29549078096`](https://github.com/ApiaryLens/apiarylens/actions/runs/29549078096)
+built `apps/api/dist/server.js` and its exact workspace dependencies on a fresh
+Windows runner. The adjacent Vitest step passed all 15 API/password tests, including
+negative organization isolation for resources, changes, media, memberships, and
+exports. A separate process probe then launched the built entry point with an
+operating-system-assigned port and real filesystem SQLite/media paths.
+
+| Exact-server process check | Result |
+|---|---:|
+| Actual listener address | `::` wildcard |
+| Desktop loopback-only requirement | **Failed** |
+| Console-advertised address | `127.0.0.1` |
+| Console address matches listener | **No** |
+| Health | 200 |
+| Wrong protected-bootstrap token | 403 |
+| Owner bootstrap / authenticated session | 201 / 200 |
+| Forced termination and restart | Completed |
+| Owner available after restart | No; correct retained state |
+| Sign-in / session after restart | 200 / 200 |
+| Organization identity retained | Yes |
+| Credential values in evidence | None |
+
+The cause is deterministic: the entry point passes a port but no `hostname` to
+`@hono/node-server`; Node therefore listens on the unspecified address. Its log line
+is hard-coded to `127.0.0.1` and does not describe the actual socket. This may be an
+intentional server-deployment shape behind Compose port publishing, but it is unsafe
+for the standalone Windows process and cannot be reused unchanged.
+
+The selected desktop design must create the real API with an explicit
+`127.0.0.1` listener (and an intentional separately tested `::1` policy if desired),
+then place the ephemeral control-token/origin boundary and parent supervision in
+front of every request. The process probe remains as a regression test: a desktop
+artifact fails release if any listener is wildcard or non-loopback, even when its
+console output claims otherwise. No product entry-point change is made by this
+research record; that belongs behind the accepted Windows service/host ADR.
+
 ## Threat analysis
 
 | Threat | Required control | Current evidence / gap |
@@ -95,7 +137,7 @@ production server is safe merely by adopting the same mechanics.
 | Two hosts write one SQLite database | Per-user operating-system ownership guard | Duplicate prototype rejected |
 | Child outlives host | Parent liveness watch plus host job/process ownership where available | Parent-death prototype passed; Windows Job Object option remains to compare |
 | Crash corrupts or loses data | WAL, transactions, backup-before-update, integrity/health checks | One forced crash preserved a committed record; fault matrix remains |
-| Local non-loopback exposure | Explicit IPv4/IPv6 loopback bind and listener assertion | IPv4 loopback passed; IPv6 behavior still to define |
+| Local non-loopback exposure | Explicit IPv4/IPv6 loopback bind and listener assertion | Disposable wrapper passed IPv4; exact portable server failed with `::` wildcard |
 | Same-user malicious native process | Windows user boundary, protected credentials, least privilege | Such a process may inspect another same-user process; not solved by bearer token alone |
 | Stale update starts incompatible service | Version handshake, schema range, atomic update, rollback | Not yet exercised |
 
@@ -141,8 +183,10 @@ production server is safe merely by adopting the same mechanics.
 
 `WIN-004` closes only after:
 
-1. Integrating the real portable server and shared SQLite migrations in a disposable
-   host lab, including existing organization-authorization negative tests.
+1. Integrating the real portable server and shared SQLite migrations behind the
+   proposed desktop wrapper, including the existing organization-authorization
+   negative tests and a release-failing loopback assertion. The unwrapped exact
+   server process and the authorization suite are measured; the safe wrapper is not.
 2. Proving Electron preload and Tauri command bridges can keep the token outside
    renderer-accessible storage and global JavaScript.
 3. Testing process startup timeout, crash loops, forced termination during writes,
