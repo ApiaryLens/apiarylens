@@ -152,6 +152,46 @@ restored sessions, and verifies the restarted service. If startup or health chec
 fail, the prior data is restored automatically. A successful restore requires a
 fresh sign-in.
 
+### Update ApiaryLens for Windows
+
+1. Create and verify a current `.albackup` before changing versions.
+2. Open the versioned ApiaryLens release page and confirm the target version,
+   compatibility notes, package size, and SHA-256.
+3. Download and run that release's `ApiaryLensSetup.exe`. Setup updates the
+   current-user installation; it does not replace the private application-data
+   directory.
+4. Reopen ApiaryLens and confirm **Account and build** shows the expected version.
+5. Confirm the local service is healthy and open a recent hive, inspection, and
+   original photo. If connected, allow automatic synchronization to finish.
+
+Do not install an older package over a newer database unless the release explicitly
+declares that rollback compatible. Use the verified backup/restore path when a
+schema rollback requires data restoration.
+
+### Repair the Windows installation
+
+Use [Scout Bee](scout-bee-guide.md#repair) and select **Repair** for the managed
+Windows installation. Repair verifies the pinned application package, replaces
+missing or corrupted program files from the verified cache, restarts the private
+loopback service, and checks health. It does not erase the database or photos to
+hide an application-file problem. Create a backup before repair when the current
+installation can still produce one.
+
+### Uninstall or reinstall
+
+1. Create a current backup and record its SHA-256 and product version.
+2. In Windows **Settings → Apps → Installed apps**, find **ApiaryLens** and choose
+   **Uninstall**, or use Scout Bee's **Remove application, keep data** operation.
+3. Confirm the program is removed. Preview uninstall preserves the private
+   application-data directory so a verified reinstall can recover the family data.
+4. To reinstall, run the exact verified Setup package for a compatible version and
+   confirm health and records before deleting any backup.
+
+Permanent data deletion is intentionally separate from normal uninstall. Do not
+manually remove application-data folders as a shortcut: verify a portable backup,
+review every retained location, and use Scout's separately confirmed remove-data
+workflow when it is available for the selected release.
+
 ## Photos
 
 Selected photos and thumbnails are staged locally first. ApiaryLens uploads them
