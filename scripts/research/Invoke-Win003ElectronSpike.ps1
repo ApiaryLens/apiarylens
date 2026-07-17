@@ -80,12 +80,44 @@ module.exports = {
 };
 '@
 
+$preload = @'
+const { contextBridge, ipcRenderer } = require("electron");
+
+contextBridge.exposeInMainWorld(
+  "apiaryLensDesktop",
+  Object.freeze({
+    health: () => ipcRenderer.invoke("apiarylens:desktop-health")
+  })
+);
+'@
+
 $main = @'
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
-const { app, BrowserWindow } = require("electron");
+const { pathToFileURL } = require("node:url");
+const { app, BrowserWindow, ipcMain } = require("electron");
 
 if (require("electron-squirrel-startup")) app.quit();
+
+const indexPath = path.join(__dirname, "web", "index.html");
+const trustedDocumentUrl = pathToFileURL(indexPath).toString();
+const controlToken = crypto.randomBytes(32).toString("base64url");
+let bridgeInvocationCount = 0;
+let bridgeArgumentCount = 0;
+
+ipcMain.handle("apiarylens:desktop-health", async (event, ...args) => {
+  bridgeArgumentCount += args.length;
+  if (event.senderFrame.url !== trustedDocumentUrl) throw new Error("untrusted-sender");
+  bridgeInvocationCount += 1;
+
+  // Models the main process attaching its process-scoped service credential. The
+  // renderer sends no argument and receives only a typed, non-secret result.
+  const attached = Buffer.from(controlToken, "utf8");
+  const expected = Buffer.from(controlToken, "utf8");
+  if (!crypto.timingSafeEqual(attached, expected)) throw new Error("internal-auth-failed");
+  return Object.freeze({ status: 200, serviceProtocolVersion: 1 });
+});
 
 function sqliteProbe() {
   const { DatabaseSync } = require("node:sqlite");
@@ -96,7 +128,85 @@ function sqliteProbe() {
 }
 
 const probeIndex = process.argv.indexOf("--win003-probe-output");
-if (probeIndex >= 0) {
+const bridgeProbeIndex = process.argv.indexOf("--win003-bridge-output");
+if (bridgeProbeIndex >= 0) {
+  app.whenReady().then(async () => {
+    const consoleMessages = [];
+    const trustedWindow = new BrowserWindow({
+      width: 800,
+      height: 600,
+      show: false,
+      webPreferences: {
+        preload: path.join(__dirname, "preload.cjs"),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true
+      }
+    });
+    trustedWindow.webContents.on("console-message", (...args) => consoleMessages.push(args.map(String).join(" ")));
+    trustedWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    trustedWindow.webContents.on("will-navigate", (event) => event.preventDefault());
+    await trustedWindow.loadFile(indexPath);
+    const rendererResult = await trustedWindow.webContents.executeJavaScript(`(async () => {
+      const health = await window.apiaryLensDesktop.health();
+      const stringGlobals = [];
+      for (const name of Object.getOwnPropertyNames(window)) {
+        try {
+          if (typeof window[name] === "string") stringGlobals.push([name, window[name]]);
+        } catch {}
+      }
+      return {
+        nodeType: typeof process,
+        requireType: typeof require,
+        bridgeKeys: Object.keys(window.apiaryLensDesktop),
+        health,
+        localStorage: Object.entries(localStorage),
+        sessionStorage: Object.entries(sessionStorage),
+        stringGlobals
+      };
+    })()`);
+
+    const untrustedWindow = new BrowserWindow({
+      width: 320,
+      height: 240,
+      show: false,
+      webPreferences: {
+        preload: path.join(__dirname, "preload.cjs"),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true
+      }
+    });
+    await untrustedWindow.loadURL("data:text/html,<title>untrusted</title>");
+    const untrustedSenderRejected = await untrustedWindow.webContents.executeJavaScript(`
+      window.apiaryLensDesktop.health().then(() => false).catch(() => true)
+    `);
+
+    const rendererSnapshot = JSON.stringify(rendererResult);
+    const result = {
+      sandboxedRendererHasNoNodeProcess: rendererResult.nodeType === "undefined",
+      sandboxedRendererHasNoRequire: rendererResult.requireType === "undefined",
+      exposedBridgeKeys: rendererResult.bridgeKeys,
+      typedHealthStatus: rendererResult.health.status,
+      typedHealthProtocolVersion: rendererResult.health.serviceProtocolVersion,
+      bridgeInvocationCount,
+      rendererToMainArgumentCount: bridgeArgumentCount,
+      untrustedSenderRejected,
+      tokenPresentInRendererSnapshot: rendererSnapshot.includes(controlToken),
+      tokenPresentInConsoleMessages: consoleMessages.some((message) => message.includes(controlToken)),
+      tokenPresentInArguments: process.argv.some((argument) => argument.includes(controlToken)),
+      localStorageEntryCount: rendererResult.localStorage.length,
+      sessionStorageEntryCount: rendererResult.sessionStorage.length
+    };
+    fs.writeFileSync(process.argv[bridgeProbeIndex + 1], JSON.stringify(result));
+    trustedWindow.destroy();
+    untrustedWindow.destroy();
+    app.quit();
+  }).catch((error) => {
+    console.error(`bridge-probe-failed:${error.message}`);
+    app.exit(70);
+  });
+} else if (probeIndex >= 0) {
   app.whenReady().then(() => {
     fs.writeFileSync(process.argv[probeIndex + 1], JSON.stringify({ sqlite: sqliteProbe(), electron: process.versions.electron, node: process.versions.node }));
     app.quit();
@@ -108,6 +218,7 @@ if (probeIndex >= 0) {
       height: 800,
       show: false,
       webPreferences: {
+        preload: path.join(__dirname, "preload.cjs"),
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: true
@@ -119,7 +230,7 @@ if (probeIndex >= 0) {
       const readyFile = process.env.WIN003_READY_FILE;
       if (readyFile) fs.writeFileSync(readyFile, JSON.stringify({ sqlite: sqliteProbe(), electron: process.versions.electron, node: process.versions.node }));
     });
-    window.loadFile(path.join(__dirname, "web", "index.html"));
+    window.loadFile(indexPath);
   });
 }
 
@@ -128,6 +239,7 @@ app.on("window-all-closed", () => app.quit());
 
 Set-Content -LiteralPath (Join-Path $labPath 'package.json') -Value $packageJson -Encoding utf8NoBOM
 Set-Content -LiteralPath (Join-Path $labPath 'forge.config.js') -Value $forgeConfig -Encoding utf8NoBOM
+Set-Content -LiteralPath (Join-Path $labPath 'preload.cjs') -Value $preload -Encoding utf8NoBOM
 Set-Content -LiteralPath (Join-Path $labPath 'main.cjs') -Value $main -Encoding utf8NoBOM
 
 Push-Location $labPath
@@ -200,6 +312,33 @@ if ($probe.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $probePath)) { throw 
 $probeResult = Get-Content -Raw -LiteralPath $probePath | ConvertFrom-Json
 if ($probeResult.sqlite -ne 'electron-node-sqlite-ok') { throw "Packaged Electron sqlite result was $($probeResult.sqlite)" }
 
+$bridgeProbePath = Join-Path $runnerTemp 'win003-electron-bridge-probe.json'
+$bridgeProbe = Start-Process -FilePath $hostExecutable.FullName -ArgumentList @('--win003-bridge-output', "`"$bridgeProbePath`"") -PassThru -WindowStyle Hidden
+if (-not $bridgeProbe.WaitForExit(15000)) {
+    Stop-Process -Id $bridgeProbe.Id -Force -ErrorAction SilentlyContinue
+    throw 'Packaged Electron bridge probe exceeded 15 seconds'
+}
+if ($bridgeProbe.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $bridgeProbePath)) {
+    throw 'Packaged Electron bridge probe failed'
+}
+$bridgeResult = Get-Content -Raw -LiteralPath $bridgeProbePath | ConvertFrom-Json
+$bridgePassed =
+    $bridgeResult.sandboxedRendererHasNoNodeProcess -and
+    $bridgeResult.sandboxedRendererHasNoRequire -and
+    @($bridgeResult.exposedBridgeKeys).Count -eq 1 -and
+    $bridgeResult.exposedBridgeKeys[0] -eq 'health' -and
+    $bridgeResult.typedHealthStatus -eq 200 -and
+    $bridgeResult.typedHealthProtocolVersion -eq 1 -and
+    $bridgeResult.bridgeInvocationCount -eq 1 -and
+    $bridgeResult.rendererToMainArgumentCount -eq 0 -and
+    $bridgeResult.untrustedSenderRejected -and
+    -not $bridgeResult.tokenPresentInRendererSnapshot -and
+    -not $bridgeResult.tokenPresentInConsoleMessages -and
+    -not $bridgeResult.tokenPresentInArguments -and
+    $bridgeResult.localStorageEntryCount -eq 0 -and
+    $bridgeResult.sessionStorageEntryCount -eq 0
+if (-not $bridgePassed) { throw 'Packaged Electron bridge isolation acceptance checks failed' }
+
 $runs = @()
 foreach ($run in 1..5) {
     $readyPath = Join-Path $runnerTemp "win003-electron-ready-$run.json"
@@ -254,6 +393,14 @@ $measurement = [ordered]@{
     setupSignatureSubject = if ($setupSignature.SignerCertificate) { $setupSignature.SignerCertificate.Subject } else { $null }
     setupSignatureThumbprint = if ($setupSignature.SignerCertificate) { $setupSignature.SignerCertificate.Thumbprint } else { $null }
     packagedNodeSqliteProbe = $probeResult.sqlite
+    packagedBridgeIsolationPassed = $bridgePassed
+    bridgeSurfaceKeys = @($bridgeResult.exposedBridgeKeys)
+    bridgeRendererToMainArgumentCount = $bridgeResult.rendererToMainArgumentCount
+    bridgeUntrustedSenderRejected = $bridgeResult.untrustedSenderRejected
+    bridgeTokenPresentInRendererStorageGlobalsConsoleOrArguments =
+        $bridgeResult.tokenPresentInRendererSnapshot -or
+        $bridgeResult.tokenPresentInConsoleMessages -or
+        $bridgeResult.tokenPresentInArguments
     runs = $runs
     meanRendererReadyMs = [math]::Round(($runs.rendererReadyMs | Measure-Object -Average).Average, 1)
     medianRendererReadyMs = ($runs.rendererReadyMs | Sort-Object)[2]
