@@ -52,9 +52,19 @@
         "properties": {
           "name": { "type": "string", "minLength": 1 },
           "kind": {
-            "enum": ["deployment-bundle", "deployment-tool", "sbom", "license-report", "provenance"]
+            "enum": [
+              "deployment-bundle",
+              "deployment-tool",
+              "windows-package-manifest",
+              "windows-package-artifact",
+              "sbom",
+              "license-report",
+              "provenance"
+            ]
           },
-          "target": { "enum": ["cloudflare", "compose", "windows-amd64", "release"] },
+          "target": {
+            "enum": ["cloudflare", "compose", "windows-amd64", "windows-x64", "release"]
+          },
           "url": { "type": "string", "format": "uri", "pattern": "^https://" },
           "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
           "bytes": { "type": "integer", "minimum": 1 }

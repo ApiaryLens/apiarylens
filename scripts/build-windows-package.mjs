@@ -184,6 +184,40 @@ const manifest = {
   createdAt: new Date().toISOString(),
   artifacts: records,
 };
-writeFileSync(join(output, 'windows-package.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+const packageManifestPath = join(output, 'windows-package.json');
+const packageManifestBytes = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
+writeFileSync(packageManifestPath, packageManifestBytes);
+if (output === resolve(root, 'release', 'artifacts', 'windows')) {
+  const productManifestPath = join(root, 'release', 'release-manifest.json');
+  const productManifest = JSON.parse(readFileSync(productManifestPath, 'utf8'));
+  if (
+    productManifest.productVersion !== manifest.productVersion ||
+    productManifest.sourceCommit !== manifest.sourceCommit
+  ) {
+    throw new Error('Windows package identity does not match the product release manifest');
+  }
+  const baseUrl = `https://apiarylens.org/releases/${manifest.productVersion}/artifacts/windows`;
+  const windowsArtifacts = [
+    {
+      name: 'windows-package.json',
+      kind: 'windows-package-manifest',
+      target: 'windows-x64',
+      url: `${baseUrl}/windows-package.json`,
+      sha256: createHash('sha256').update(packageManifestBytes).digest('hex'),
+      bytes: packageManifestBytes.length,
+    },
+    ...records.map((record) => ({
+      ...record,
+      kind: 'windows-package-artifact',
+      target: 'windows-x64',
+      url: `${baseUrl}/${record.name}`,
+    })),
+  ];
+  productManifest.artifacts = [
+    ...productManifest.artifacts.filter((artifact) => artifact.target !== 'windows-x64'),
+    ...windowsArtifacts,
+  ];
+  writeFileSync(productManifestPath, `${JSON.stringify(productManifest, null, 2)}\n`);
+}
 rmSync(staging, { recursive: true, force: true });
 console.log(`Built ${records.length} Windows package artifacts in ${relative(root, artifacts)}`);

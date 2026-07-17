@@ -87,6 +87,7 @@ jobs:
           path: |
             release/artifacts/windows/artifacts/
             release/artifacts/windows/windows-package.json
+            release/release-manifest.json
           if-no-files-found: error
           retention-days: 30
 
