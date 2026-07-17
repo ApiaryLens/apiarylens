@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-07-17T22:11:00Z",
+  "status": "passed",
+  "release": {
+    "productVersion": "0.1.0-preview.3",
+    "tag": "v0.1.0-preview.3",
+    "releaseRun": 29616222829,
+    "installerName": "ApiaryLensSetup-UNSIGNED-PREVIEW.exe",
+    "installerSha256": "529a40ac910c749fc289003d13280381dccabc571af4130d2d6a86dc7223032c",
+    "installedDirectory": "app-0.1.0-preview3",
+    "appAsarSha256": "a6f88e88987db7c68b5387ababef3626a1414fe363f8d70cbe6ed632bf752848",
+    "migrationModuleSha256": "78f3ecf9f0a580af8921144d8f58d528220952de5548d497e2c88ba0e6cbe2ee"
+  },
+  "installedHostSecurity": {
+    "loopbackOnly": true,
+    "unauthorizedRequestRejected": true,
+    "authenticatedHealthPassed": true,
+    "productShellServed": true,
+    "sandboxedRenderer": true,
+    "controlTokenExposedInRenderer": false,
+    "serviceProtocolVersion": 1,
+    "bridgeIncludesMigration": true
+  },
+  "migration": {
+    "source": "exact migration and data modules extracted from the installed Preview 3 app.asar",
+    "target": "loopback HTTP using the exact packaged Node API and SQLite schema",
+    "targetAuthentication": "rotating opaque owner session with CSRF enforcement",
+    "records": 527,
+    "media": 1,
+    "boundedRecordBatches": 6,
+    "tombstonesIncluded": true,
+    "verifiedBackup": true,
+    "interruptionAfterAcceptedBatch": true,
+    "resume": "passed",
+    "exactOnceReplay": "passed",
+    "fullHashReconciliation": "passed",
+    "mediaReconciliation": "passed",
+    "authorityCutover": "passed",
+    "noRemoteWriteRollback": "passed",
+    "journalSecretScan": "passed"
+  },
+  "privacy": {
+    "syntheticDataOnly": true,
+    "ownerUatEnvironmentModified": false,
+    "credentialsOrTokensRecorded": false,
+    "temporaryLoopbackTarget": true
+  }
+}
