@@ -283,7 +283,7 @@ preserve the intended behavior. Those are integration and lifecycle gates.
 | Token exposed in process discovery or diagnostics | Never put token in arguments/files/logs; redact structured diagnostics | Arguments and evidence clean; production redaction not yet exercised |
 | Compromised packaged renderer steals full authority | Local-only content, strict CSP, sandbox/isolation, narrow host bridge, no token in ordinary page JavaScript | Not yet proven; highest remaining design risk |
 | Two hosts write one SQLite database | Per-user operating-system ownership guard | Duplicate prototype rejected |
-| Child outlives host | Parent liveness watch plus host job/process ownership where available | Packaged and installed Electron service exited after forced host death; Job Object policy remains to document |
+| Child outlives host | Parent liveness watch plus explicit host shutdown; add native containment only if it reduces measured risk | Packaged and installed Electron service exited after forced host death; Preview policy does not add a native Job Object binding |
 | Crash corrupts or loses data | WAL, transactions, backup-before-update, integrity/health checks | Packaged and installed host retained committed state, rolled back an open transaction, passed integrity, rejected corruption before readiness, rejected deterministic `SQLITE_FULL` without partial state, and rejected an ACL-denied directory before readiness; physical-volume-full remains |
 | Local non-loopback exposure | Explicit IPv4/IPv6 loopback bind and listener assertion | Disposable wrapper passed IPv4; exact portable server failed with `::` wildcard |
 | Another Windows account or hostile filesystem redirect reaches local data | Protected current-user/SYSTEM ACL plus canonical child paths that reject traversal and reparse points | Hosted probe denied a second account and rejected traversal/junction paths; retail-host integration remains |
@@ -311,6 +311,39 @@ preserve the intended behavior. Those are integration and lifecycle gates.
    SQLite and media never contain backend passwords or session secrets.
 8. Host, service, schema, and desktop-bridge versions participate in the same
    compatibility, backup-before-update, health, and rollback transaction.
+
+## Windows Job Object policy
+
+Do **not** add a native Job Object binding or a separate launcher to the initial
+Electron Preview solely for child cleanup. Keep the service non-detached, retain
+host-owned stdio and explicit graceful shutdown, require the child to poll its parent
+PID, and retain dead-PID readiness recovery plus the bounded startup/crash policy.
+
+Windows Job Objects can manage a process tree as a unit, and
+`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` terminates associated processes when the last
+handle closes. Child processes normally inherit membership, while Windows 8 and later
+support nested jobs. These are useful defense-in-depth properties, but they are Win32
+APIs rather than a documented Electron or Node child-process capability. Electron's
+public `utilityProcess` API exposes spawn, exit, and kill behavior but not Job Object
+assignment; Node documents that a Windows child may deliberately outlive its parent
+when spawned detached. See the official
+[Windows Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects),
+[Electron utility process](https://www.electronjs.org/docs/latest/api/utility-process),
+and [Node child process](https://nodejs.org/api/child_process.html) references.
+
+Adding this control now therefore requires a native binding, bootstrap executable, or
+another privileged process boundary. That expands signing, architecture, installer,
+antivirus, supply-chain, crash, and update surface without replacing the readiness,
+database, or credential controls. Job Objects are also not the data/credential
+security boundary; Microsoft requires modern process security restrictions to be set
+per process.
+
+Reopen the decision if a supported Windows profile reproduces an orphan under the
+required non-detached configuration, parent polling fails a shutdown/sign-out test,
+or the selected packaging tool supplies a maintained signed containment primitive
+without a new runtime. Any later integration must test nested-job environments,
+forced host death, graceful shutdown, update handoff, and recovery before becoming a
+release gate.
 
 ## Trade-offs
 
@@ -350,9 +383,11 @@ preserve the intended behavior. Those are integration and lifecycle gates.
    budget, and explicit-retry recovery now pass as well. Production timing/backoff
    values, recovery UX, and physical-volume-full behavior remain.
 4. Integrating the proven current-user/SYSTEM directory ACL and traversal/reparse
-   rejection into each finalist, then measuring Windows Job Object versus parent
-   polling, sleep/resume, sign-out, shutdown, roaming profiles, Remote Desktop, and
-   locked-workstation behavior.
+   rejection into each finalist, then measuring sleep/resume, sign-out, shutdown,
+   roaming profiles, Remote Desktop, and locked-workstation behavior. The Preview Job
+   Object policy is now explicit: retain the exact-artifact-proven parent polling and
+   recovery controls; do not add a native binding absent a reproduced orphan or a
+   maintained package-native containment primitive.
 5. Testing multiple windows, IPv6 loopback, local proxy settings, and firewall policy
    restrictions. Rapid competing launch and stale-readiness replacement are proven;
    the operating-system-assigned port design avoids selecting a colliding fixed port.

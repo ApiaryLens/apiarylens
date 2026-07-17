@@ -952,6 +952,12 @@ The recommendation is based on delivery risk, not framework preference:
 - Squirrel is the measured package mechanism, not yet the selected release package.
   Its residual cache and exotic build dependency must be resolved or a separately
   measured current-user package must replace it before ADR acceptance.
+- Do not introduce a native Windows Job Object binding or bootstrap launcher solely
+  for child cleanup in the initial Preview. The exact packaged and installed host
+  already proves non-detached parent polling, forced-parent-death convergence,
+  dead-PID readiness recovery, bounded startup failure, and explicit retry. Reopen
+  if retail lifecycle testing reproduces an orphan or the package stack provides a
+  maintained signed containment primitive without a new runtime.
 
 Reject a native WinUI rewrite for the first Windows client. Keep a custom WebView2
 host only as a control; reimplementing IPC, security policy, packaging, updating,

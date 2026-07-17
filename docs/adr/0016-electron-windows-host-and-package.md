@@ -180,10 +180,15 @@ The released application:
   organization-authorization behavior rather than creating a desktop-only backend;
 - stores durable standalone and connected credentials through main-process
   `safeStorage` using versioned, purpose-scoped protected files, current-user ACLs,
-  and an atomic recovery journal; and
+  and an atomic recovery journal;
 - keeps standalone data, media, backups, cached verified releases, and package
   residue outside the executable installation directory under documented per-user
-  locations with explicit keep-data and remove-all-data behavior.
+  locations with explicit keep-data and remove-all-data behavior; and
+- uses a non-detached service, host-owned graceful shutdown, child parent-PID polling,
+  dead-PID readiness recovery, and bounded startup attempts. The initial Preview does
+  not add a native Windows Job Object binding or bootstrap launcher solely for child
+  cleanup. Reopen that policy if retail testing reproduces an orphan or the selected
+  package supplies a maintained signed containment primitive without a new runtime.
 
 The application may detect and announce an available update, but package-manager
 success is not the safety boundary. Scout or the approved local lifecycle
@@ -305,7 +310,8 @@ must replace it.
    ACL-denied startup also pass. Bounded readiness timeout, a three-attempt
    pre-readiness crash budget, and explicit-retry recovery pass in both exact forms.
    Production timeout/backoff values and recovery UX, physical-volume-full behavior,
-   Job Object policy, and broader Windows lifecycle behavior remain.
+   and broader Windows lifecycle behavior remain. The Preview Job Object policy is
+   explicit: no native binding absent a reproduced orphan or package-native primitive.
 4. Integrate and replay the `WIN-005` DPAPI, rotation/crash, revocation, restore,
    sign-out, keep-data, and remove-all behavior through the actual main-process
    adapter. The proposed adapter is Electron `safeStorage`; Credential Manager is a
