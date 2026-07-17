@@ -51,6 +51,7 @@ jobs:
           -EvidenceDirectory "$env:RUNNER_TEMP/win003-electron-signed-evidence"
           -OutputDirectory "$env:RUNNER_TEMP/win003-electron-signed-lifecycle"
       - name: Upload sanitized Electron signing evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: win003-electron-test-signed-evidence
@@ -95,6 +96,7 @@ jobs:
           -EvidenceDirectory "$env:RUNNER_TEMP/win003-tauri-signed-evidence"
           -OutputDirectory "$env:RUNNER_TEMP/win003-tauri-signed-lifecycle"
       - name: Upload sanitized Tauri signing evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: win003-tauri-test-signed-evidence

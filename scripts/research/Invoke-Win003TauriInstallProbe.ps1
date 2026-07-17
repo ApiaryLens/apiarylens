@@ -98,9 +98,9 @@ $installedSidecar = Get-ChildItem -LiteralPath $installDirectory -Recurse -Filte
 if (-not $installedHost) { throw 'Installed Tauri host executable not found' }
 if (-not $installedSidecar) { throw 'Installed packaged Node sidecar not found' }
 $installedSignature = Get-AuthenticodeSignature -LiteralPath $installedHost.FullName
-if ($measurement.signingMode -eq 'ephemeral-test-signing' -and (
+if ($buildMeasurement.signingMode -eq 'ephemeral-test-signing' -and (
     -not $installedSignature.SignerCertificate -or
-    $installedSignature.SignerCertificate.Thumbprint -ne $measurement.installerSignatureThumbprint
+    $installedSignature.SignerCertificate.Thumbprint -ne $buildMeasurement.installerSignatureThumbprint
 )) {
     throw 'Installed Tauri host did not retain the expected Authenticode signer'
 }
@@ -186,7 +186,7 @@ $result = [ordered]@{
     uninstallEntryRemains = $uninstallEntryRemains
     limitations = @(
         'Fresh hosted runner profile, not a retail Windows image',
-        $(if ($measurement.signingMode -eq 'ephemeral-test-signing') { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research artifact' }),
+        $(if ($buildMeasurement.signingMode -eq 'ephemeral-test-signing') { 'Ephemeral self-signed research identity; not a production trust chain or release artifact' } else { 'Unsigned research artifact' }),
         'WebView2 was already present on the runner',
         'No real ApiaryLens local service or user data was installed',
         'Detailed startup and memory sampling comes from the build job; this job only verifies a three-second installed-host smoke test'
