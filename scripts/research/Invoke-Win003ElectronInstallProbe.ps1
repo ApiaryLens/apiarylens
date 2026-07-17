@@ -167,13 +167,22 @@ try {
     )
     [void] $verifyOutputAcl.AddAccessRule($modifyOutputRule)
     Set-Acl -LiteralPath $verifyOutput -AclObject $verifyOutputAcl
+    $crossUserChildScript = Join-Path $crossUserLab 'cross-user-child.ps1'
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'win005-electron-cross-user-child.ps1') -Destination $crossUserChildScript
     $verifyStdout = Join-Path $crossUserLab 'verify.stdout.log'
     $verifyStderr = Join-Path $crossUserLab 'verify.stderr.log'
-    $verifyArguments = "--win003-cross-user-lab `"$crossUserLab`" --win003-cross-user-action verify-denied --win003-cross-user-output `"$verifyOutput`""
-    $verify = Start-Process -FilePath $copiedHost -Credential $credential -ArgumentList $verifyArguments -WorkingDirectory $copiedHostDirectory -PassThru -WindowStyle Hidden -RedirectStandardOutput $verifyStdout -RedirectStandardError $verifyStderr
-    if (-not $verify.WaitForExit(30000)) {
+    $verifyArguments = @(
+        '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+        '-File', "`"$crossUserChildScript`"",
+        '-HostPath', "`"$copiedHost`"",
+        '-HostWorkingDirectory', "`"$copiedHostDirectory`"",
+        '-LabDirectory', "`"$crossUserLab`"",
+        '-ResultPath', "`"$verifyOutput`""
+    )
+    $verify = Start-Process -FilePath (Join-Path $PSHOME 'pwsh.exe') -Credential $credential -ArgumentList $verifyArguments -WorkingDirectory $crossUserLab -PassThru -WindowStyle Hidden -RedirectStandardOutput $verifyStdout -RedirectStandardError $verifyStderr
+    if (-not $verify.WaitForExit(45000)) {
         Stop-Process -Id $verify.Id -Force -ErrorAction SilentlyContinue
-        throw 'Different-user safeStorage denial exceeded 30 seconds'
+        throw 'Different-user safeStorage denial exceeded 45 seconds'
     }
     $verifyOutputWritten = (Test-Path -LiteralPath $verifyOutput) -and (Get-Item -LiteralPath $verifyOutput).Length -gt 0
     if ($verify.ExitCode -ne 0 -or -not $verifyOutputWritten) {
