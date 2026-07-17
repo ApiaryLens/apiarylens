@@ -7,10 +7,10 @@
 
 Official-source review plus comparable Electron and Tauri/WebView2 packaging,
 test-signing, and exact-artifact clean-install lifecycle baselines are complete.
-Accessibility, signed update and rollback behavior, retail Windows profile evidence,
-and the final license/provenance comparison remain required before the spike can
-close. Authenticated local-service supervision is being validated separately under
-`WIN-004`.
+Accessibility, integrated signed-update/power-loss behavior, retail Windows profile
+evidence, and the final license/provenance comparison remain required before the
+spike can close. Authenticated local-service supervision is being validated
+separately under `WIN-004`.
 
 ## Question
 
@@ -425,8 +425,32 @@ exercised the same transition sequence as the Electron candidate.
 NSIS also permits a direct signed downgrade. The same product-controlled gates are
 therefore mandatory for either finalist; package-manager success alone does not make
 a schema or data downgrade safe. These tests cover artifact acquisition rejection
-and package transitions. They do not yet cover power loss during installer commit,
-real SQLite migration/health failure, or restore from a verified product backup.
+and package transitions. The following independent SQLite probe covers the recovery
+algorithm; integrated released-product and power-loss tests remain open.
+
+## SQLite migration and recovery evidence
+
+Windows run
+[`29547423940`](https://github.com/ApiaryLens/apiarylens/actions/runs/29547423940)
+used Node 24.18.0 `node:sqlite` on a clean hosted runner to exercise the data half of
+the update transaction independently of either package host.
+
+| Recovery check | Result |
+|---|---:|
+| Kill process with an uncommitted write transaction | Uncommitted row absent; committed hive retained; integrity passed |
+| Checkpointed schema-1 backup | Hash recorded; contents and integrity verified |
+| Truncated backup | Hash mismatch; rejected before restore |
+| Transactional schema 1→2 migration | Inspection preserved; integrity and health passed |
+| Schema-2 database with candidate maximum schema 1 | Downgrade rejected before package transition |
+| Injected migration failure | Transaction rolled back; schema remained 2; partial table absent |
+| Injected post-migration health failure | Verified schema-1 backup restored; original hive retained |
+| Evidence secret scan contract | No credentials or secret values generated |
+
+This closes the research proof for transactional migration failure and verified
+SQLite restore. It does not replace integrated testing with the released ApiaryLens
+migrations, media snapshot, pending PWA/desktop work, and selected package host.
+Process termination also does not prove whole-machine power-loss behavior during a
+filesystem flush; that remains a physical/VM fault-injection acceptance case.
 
 ## Security and lifecycle requirements common to finalists
 
