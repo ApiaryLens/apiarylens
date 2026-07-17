@@ -172,7 +172,7 @@ and contribution model—not domain ownership alone.
 | Repository | Visibility | Responsibility | Activation |
 |---|---|---|---|
 | `apiarylens` | Public | Product monorepo: PWA, portable API/backends, shared contracts, database/migrations, Compose/templates, release artifacts, initial Windows composition, architecture, and ADRs; it never deploys a user's environment | Active |
-| `scout-bee` | Public | Independently versioned installer, updater, repair/recovery, diagnostics, backup/restore/rollback/uninstall, deployment orchestration, and plan/CI export | Accepted and planned; repository creation remains implementation-gated |
+| [`scout-bee`](https://github.com/ApiaryLens/scout-bee) | Public | Independently versioned installer, updater, repair/recovery, diagnostics, backup/restore/rollback/uninstall, deployment orchestration, and plan/CI export | Active; staged cutover under ADR 0014 |
 | `apiarylens-ops` | Private | Internal planning, dashboards, coordination, and operational procedures | Active |
 | `apiarylens.org` | Private | Marketing, public docs experience, tutorials, releases, roadmap, and community | Active and deployed |
 | `apiarylens.app` | Private | Public demo deployment, safe seed data, and hosted-app configuration | Active and deployed |
@@ -566,19 +566,20 @@ self-hosted path must cover:
 - Air-gapped or restricted-network considerations where practical
 
 Docker Compose is the portable server foundation, not the complete experience for a
-non-technical family. Under ADR 0014, Scout Bee becomes a separate Apache-2.0 public
-repository and independently versioned lifecycle product. It installs, updates,
+non-technical family. Under ADR 0014, Scout Bee is maintained in the separate
+Apache-2.0 public [`ApiaryLens/scout-bee`](https://github.com/ApiaryLens/scout-bee)
+repository as an independently versioned lifecycle product. It installs, updates,
 repairs, diagnoses, backs up, restores, rolls back, uninstalls, and recovers
 ApiaryLens; deploys Cloudflare or remote Linux from Windows; and exports secret-free
 plans, artifact locks, verification, and CI instructions. The core repository
 publishes the immutable inputs but never performs the personal deployment.
 
-The current embedded React/Go prototype is migration input, not a permanent
-repository or toolchain decision. End-user Windows distribution must require no Go,
+The React/Go implementation and independent release workflow now live in the Scout
+repository; the duplicate embedded core implementation has been removed. End-user Windows distribution must require no Go,
 Node, WSL, Linux shell, Docker, Rust, or .NET SDK. The Linux distribution is one
 versioned executable archive. Stable is the default channel; Preview/RC requires an
-explicit advanced opt-in. Final executor/packaging technology remains gated by the
-Scout research and implementation plan.
+explicit advanced opt-in. Package promotion remains gated by exact released-byte
+lifecycle, security, accessibility, recovery, and cross-repository compatibility evidence.
 
 For cloud deployment, the ranked targets are:
 

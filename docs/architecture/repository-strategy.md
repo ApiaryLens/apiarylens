@@ -12,6 +12,7 @@ Repository portfolio:
 
 ```text
 D:\git\apiarylens\apiarylens
+D:\git\apiarylens\scout-bee
 D:\git\apiarylens\apiarylens-ops
 D:\git\apiarylens\apiarylens.org
 D:\git\apiarylens\apiarylens.app
@@ -30,7 +31,7 @@ they do not exist solely because a domain name exists.
 | Repository | Visibility | Responsibility | Activation point |
 |---|---|---|---|
 | `apiarylens` | Public | Product clients/backends, shared contracts, migrations, Compose/templates, immutable product artifacts, architecture, and ADRs; build/publish only, never personal-environment deployment | Active |
-| `scout-bee` | Public | Independently versioned lifecycle application for install, update, repair, diagnostics, backup, restore, rollback, uninstall, deployment orchestration, and plan/CI export | Accepted by ADR 0014; repository creation remains implementation-gated |
+| [`scout-bee`](https://github.com/ApiaryLens/scout-bee) | Public | Independently versioned lifecycle application for install, update, repair, diagnostics, backup, restore, rollback, uninstall, deployment orchestration, and plan/CI export | Active; staged cutover under ADR 0014 |
 | `apiarylens-ops` | Private | Internal planning, dashboards, coordination, and operations | Active |
 | `apiarylens.org` | Private | Marketing, public docs experience, tutorials, releases, roadmap, and community | Active and deployed |
 | `apiarylens.app` | Private | Demo deployment, safe seed data, and hosted-app configuration | Active and deployed |
@@ -55,14 +56,16 @@ shared approved brand assets and their public provenance and licensing guidance.
 
 ### `scout-bee`
 
-ADR 0014 accepts a separate Apache-2.0 public repository and independent release
-identity for Scout Bee. Scout consumes exact core product releases and owns
+ADR 0014 established the separate Apache-2.0 public
+[`ApiaryLens/scout-bee`](https://github.com/ApiaryLens/scout-bee) repository and
+independent release identity for Scout Bee. Scout consumes exact core product releases and owns
 orchestration, lifecycle operations, target execution, verified release caching,
 self-update, recovery, diagnostics, and secret-free plan/lock/CI export. It does not
 copy the product source, own the database/API contracts, or make a personal
-deployment workflow part of the core repository. The existing monorepo prototype is
-migration input until the explicit implementation gate authorizes repository
-creation and cutover.
+deployment workflow part of the core repository. The embedded monorepo implementation
+was removed after the separate working repository and its independent validation and
+release workflows were staged. Exact released-byte replacement verification remains
+a release gate rather than a reason to keep duplicate production source.
 
 ### `apiarylens-ops`
 

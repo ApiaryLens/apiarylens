@@ -2,8 +2,8 @@
 
 This page is the accessible companion to the seven-page authoritative Lucidchart
 document `ApiaryLens - Windows and Scout Architecture`. The diagrams describe the
-approved planning and research baseline. They do not authorize product
-implementation or claim that Preview acceptance testing is complete.
+approved planning and research baseline. Implementation is in progress, but the
+diagrams do not claim that Preview acceptance testing is complete.
 
 ## Client Portfolio and Repository Ownership
 
@@ -12,7 +12,8 @@ implementation or claim that Preview acceptance testing is complete.
 `ApiaryLens/apiarylens` owns product source, shared UI and domain behavior, API and
 schema contracts, build automation, and immutable product artifacts. It builds,
 tests, attests, and publishes; it never deploys a personal environment. The separate
-`ApiaryLens/scout-bee` repository owns the installer and lifecycle application and
+[`ApiaryLens/scout-bee`](https://github.com/ApiaryLens/scout-bee) repository owns
+the installer and lifecycle application and
 has its own version and release channel. `my-apiarylens` is a personal deployment
 and CI consumer. It can retain a secret-free plan, artifact lock, verification
 record, and operator automation, but it does not contain copied product source.

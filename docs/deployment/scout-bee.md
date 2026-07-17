@@ -5,8 +5,9 @@
 This is the detailed design baseline for the post-Preview Scout Bee product. The
 repository split is accepted by [ADR 0014](../adr/0014-scout-bee-separate-repository-and-release.md).
 The executor security boundary in [ADR 0011](../adr/0011-scout-bee-and-deployment-execution.md)
-still applies. Product implementation and repository migration remain unauthorized
-until the project owner approves the project plan and tracking dashboard.
+still applies. The project owner approved implementation on 2026-07-17 and the
+repository transition began. Package publication and release promotion remain
+subject to the lifecycle, security, and UAT gates in this design.
 
 Scout Bee is not an ApiaryLens product client. It is the separately installed and
 released lifecycle application for acquiring, installing, updating, repairing,
@@ -33,7 +34,7 @@ and deployments.
 
 ## Repository and release ownership
 
-`ApiaryLens/scout-bee` owns:
+[`ApiaryLens/scout-bee`](https://github.com/ApiaryLens/scout-bee) owns:
 
 - the embedded React guide;
 - the local executor and loopback API;

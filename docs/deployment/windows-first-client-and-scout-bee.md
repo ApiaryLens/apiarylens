@@ -91,7 +91,7 @@ ApiaryLens/apiarylens
   packages/media
   future shared UI/domain packages when measured reuse justifies them
 
-ApiaryLens/scout-bee
+ApiaryLens/scout-bee (https://github.com/ApiaryLens/scout-bee)
   React guide
   executor and platform adapters
   Windows/Linux packaging

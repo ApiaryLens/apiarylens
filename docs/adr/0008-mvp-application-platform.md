@@ -51,11 +51,15 @@ The monorepo has these initial deployable applications:
 | `apps/web` | Offline-first PWA and responsive user interface |
 | `apps/server` | Node/Compose API, static assets, SQLite, and filesystem media |
 | `apps/worker` | Cloudflare API, static assets, D1, and R2 adapter composition |
-| `apps/scout` | Scout Bee React interface and local deployment executor |
+| [`ApiaryLens/scout-bee`](https://github.com/ApiaryLens/scout-bee) | Scout Bee React interface and local deployment executor; moved from the monorepo under ADR 0014 |
 
 Shared packages contain domain rules, API contracts, database schema/migrations,
 storage interfaces, synchronization, UI primitives, configuration, and release
 metadata. A package is created only when more than one application consumes it.
+
+ADR 0014 supersedes only Scout Bee's placement in this table. Core remains
+authoritative for the contracts, migrations, templates, manifests, and immutable
+product artifacts consumed by the separate Scout repository.
 
 Runtime-specific code is restricted to composition roots and adapters. Domain and
 API contract packages must not import Cloudflare, Node filesystem, or database
@@ -83,4 +87,3 @@ profiles.
 - [Node.js SQLite documentation](https://nodejs.org/api/sqlite.html)
 - [Vite documentation](https://vite.dev/guide/)
 - [ADR 0007](0007-deployment-profile-priority.md)
-

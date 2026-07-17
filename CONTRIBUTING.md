@@ -2,7 +2,9 @@
 
 Thanks for helping build ApiaryLens. The public monorepo contains the PWA, Node and
 Cloudflare backends, shared contracts and database code, Docker Compose deployment,
-Scout Bee, tests, release tooling, and authoritative documentation.
+tests, product release tooling, and authoritative documentation. Scout Bee is
+developed independently in the public
+[`ApiaryLens/scout-bee`](https://github.com/ApiaryLens/scout-bee) repository.
 
 ## Before you start
 
@@ -18,9 +20,9 @@ Scout Bee, tests, release tooling, and authoritative documentation.
 
 ## Development setup
 
-Prerequisites are Node.js 24, Corepack, pnpm 11, and Go as selected by
-[`apps/scout-bee/go.mod`](apps/scout-bee/go.mod). Cloudflare or Docker accounts are
-not required for ordinary unit and build work.
+Prerequisites are Node.js 24, Corepack, and pnpm 11. Cloudflare or Docker accounts
+are not required for ordinary unit and build work. Scout Bee contributors should
+use its separate repository and toolchain instructions.
 
 ```bash
 corepack enable
@@ -41,8 +43,9 @@ pnpm build       # All buildable workspace projects
 ```
 
 The complete `pnpm verify` gate includes formatting, linting, type checking,
-TypeScript tests, Scout Bee Go tests, production builds, and backup/restore
-verification. Container-image and vulnerability checks run in GitHub Actions.
+TypeScript tests, production product builds, and backup/restore verification.
+Container-image and vulnerability checks run in GitHub Actions. Scout Bee runs its
+own UI, Go, packaging, signing, and release gates in its repository.
 
 ## Contribution expectations
 

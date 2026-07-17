@@ -65,13 +65,15 @@ ADRs 0008 through 0011 accept the MVP implementation below.
 | Self-hosted server deployment | Docker Compose on personally controlled hardware |
 | Cloud deployment | Cloudflare-native family profile first; Docker Compose on a Linux VM second |
 | Official public frontend hosting | Cloudflare Workers Static Assets (accepted) |
-| Scout Bee | Embedded React UI with a Go loopback executor |
+| Scout Bee | Separate React UI and Go loopback executor consuming immutable product releases |
 
 The table describes the current Public Preview 1 artifact. The accepted post-preview
 direction changes the starting experience without rewriting that release history:
 
-- [ADR 0014](docs/adr/0014-scout-bee-separate-repository-and-release.md) moves Scout
-  Bee to a separate Apache-2.0 public repository and independent release lifecycle.
+- [ADR 0014](docs/adr/0014-scout-bee-separate-repository-and-release.md) moved Scout
+  Bee to the separate Apache-2.0 public
+  [`ApiaryLens/scout-bee`](https://github.com/ApiaryLens/scout-bee) repository and
+  independent release lifecycle.
 - [ADR 0015](docs/adr/0015-windows-first-client-portfolio.md) makes a signed
   standalone/connected Windows application the future default family starting point.
 - Proposed [ADR 0016](docs/adr/0016-electron-windows-host-and-package.md),
@@ -89,7 +91,7 @@ direction changes the starting experience without rewriting that release history
 ```text
 apiarylens/
 ├── .github/      # Repository-specific issue, PR, and CI configuration
-├── apps/         # Deployable PWA, server, Worker, and Scout Bee applications
+├── apps/         # Deployable product PWA, servers, Worker, and client applications
 ├── packages/     # Shared domain, contract, data, sync, configuration, and UI code
 ├── docs/         # Architecture notes, ADRs, design docs
 ├── tasks/        # Working task breakdowns for planned work

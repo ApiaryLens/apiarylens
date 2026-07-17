@@ -75,9 +75,18 @@ while preserving shared behavior and review.
   it is not a shortcut around App Store or Android distribution controls.
 - Repository migration and release cutover require an explicit rollback plan.
 
+## Implementation
+
+The public [`ApiaryLens/scout-bee`](https://github.com/ApiaryLens/scout-bee)
+repository was created and the separately versioned source, packaging, validation,
+and release workflows were staged on 2026-07-17. The duplicate production
+implementation was then removed from the core pnpm workspace. Core-owned contracts,
+migrations, templates, manifests, and immutable product artifacts remain here.
+Release promotion still requires the cross-repository and exact released-byte gates
+defined by this ADR and the Scout lifecycle design.
+
 ## References
 
 - [ADR 0011](0011-scout-bee-and-deployment-execution.md)
 - [Scout Bee design](../deployment/scout-bee.md)
 - [Windows-first client and deployment design](../deployment/windows-first-client-and-scout-bee.md)
-

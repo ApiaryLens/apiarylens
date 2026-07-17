@@ -58,14 +58,14 @@ service, synchronization model, or deployment executor.
 | Self-hosted server deployment | Docker Compose on personally controlled hardware | Accepted MVP target |
 | Cloud deployment | Cloudflare-native family profile first; Compose on a Linux VM second | Accepted MVP targets |
 | Official public frontend hosting | Cloudflare Workers Static Assets | Accepted |
-| Scout Bee | Embedded React UI with Go loopback executor and versioned plan | Accepted |
+| Scout Bee | Separate React UI and Go loopback executor consuming versioned product artifacts | Accepted; implemented in [`ApiaryLens/scout-bee`](https://github.com/ApiaryLens/scout-bee) |
 
 See [`docs/adr/0008-mvp-application-platform.md`](docs/adr/0008-mvp-application-platform.md)
 through [`docs/adr/0011-scout-bee-and-deployment-execution.md`](docs/adr/0011-scout-bee-and-deployment-execution.md).
 
 ## Repository structure and how to use it
 
-- `apps/` — deployable PWA, Node server, Cloudflare Worker, and Scout Bee applications.
+- `apps/` — deployable product PWA, Node server, Cloudflare Worker, and Windows client compositions. Scout Bee is maintained in the separate [`ApiaryLens/scout-bee`](https://github.com/ApiaryLens/scout-bee) repository.
 - `packages/` — shared code consumed by multiple apps. Don't create a package for
   something only one app uses.
 - `docs/` — architecture notes and ADRs. Any non-trivial technical decision (stack
