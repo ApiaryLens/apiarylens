@@ -193,6 +193,36 @@ if (-not $installedRealServiceBridgeProbePassed) {
     throw 'Installed Electron real-service bridge acceptance checks failed'
 }
 
+$credentialCrashPath = Join-Path $runnerTemp 'win003-electron-installed-credential-crash.json'
+$credentialRecoveryPath = Join-Path $runnerTemp 'win003-electron-installed-credential-recovery.json'
+$credentialCrashArguments = "--win003-credential-crash-output `"$credentialCrashPath`""
+$credentialCrash = Start-Process -FilePath $installedHost.FullName -ArgumentList $credentialCrashArguments -WorkingDirectory $appDirectory.FullName -PassThru -WindowStyle Hidden
+if (-not $credentialCrash.WaitForExit(15000)) {
+    Stop-Process -Id $credentialCrash.Id -Force -ErrorAction SilentlyContinue
+    throw 'Installed Electron credential crash probe exceeded 15 seconds'
+}
+if ($credentialCrash.ExitCode -ne 76 -or -not (Test-Path -LiteralPath $credentialCrashPath)) {
+    throw "Installed Electron credential crash probe failed with exit $($credentialCrash.ExitCode)"
+}
+$credentialRecoveryArguments = "--win003-credential-recovery-input `"$credentialCrashPath`" --win003-credential-recovery-output `"$credentialRecoveryPath`""
+$credentialRecovery = Start-Process -FilePath $installedHost.FullName -ArgumentList $credentialRecoveryArguments -WorkingDirectory $appDirectory.FullName -PassThru -WindowStyle Hidden
+if (-not $credentialRecovery.WaitForExit(15000)) {
+    Stop-Process -Id $credentialRecovery.Id -Force -ErrorAction SilentlyContinue
+    throw 'Installed Electron credential recovery probe exceeded 15 seconds'
+}
+if ($credentialRecovery.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $credentialRecoveryPath)) {
+    throw "Installed Electron credential recovery probe failed with exit $($credentialRecovery.ExitCode)"
+}
+$credentialRecoveryState = Get-Content -Raw -LiteralPath $credentialRecoveryPath | ConvertFrom-Json
+$installedCredentialCrashRecoveryPassed =
+    $credentialRecoveryState.interruptedRotationDetected -and
+    $credentialRecoveryState.replacementPromoted -and
+    $credentialRecoveryState.revokedSessionDeleted -and
+    $credentialRecoveryState.signOutRetainedHiveData -and
+    $credentialRecoveryState.keepDataPreservedProtectedRootAndHiveData -and
+    $credentialRecoveryState.removeAllDeletedCredentialAndHiveData
+if (-not $installedCredentialCrashRecoveryPassed) { throw 'Installed Electron credential crash/recovery acceptance failed' }
+
 $crashProbePath = Join-Path $runnerTemp 'win003-electron-installed-crash-probe.json'
 $duplicateProbePath = Join-Path $runnerTemp 'win003-electron-installed-duplicate-probe.json'
 $crashProbeArguments = "--win003-crash-probe-output `"$crashProbePath`""
@@ -397,6 +427,7 @@ $result = [ordered]@{
         $bridgeProbeResult.nativeCredentialProtection.corruptCiphertextRejected -and
         $bridgeProbeResult.nativeCredentialProtection.credentialDeleted -and
         -not $bridgeProbeResult.credentialSecretPresentOutsideMain
+    installedCredentialCrashRecoveryPassed = $installedCredentialCrashRecoveryPassed
     installedSingleInstancePassed = $installedSingleInstancePassed
     installedServiceExitedAfterHostCrash = $installedServiceExitedAfterHostCrash
     installedReadyFileRemovedAfterHostCrash = $installedReadyFileRemovedAfterHostCrash

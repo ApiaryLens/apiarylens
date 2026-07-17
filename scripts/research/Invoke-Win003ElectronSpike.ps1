@@ -284,13 +284,135 @@ function safeStorageCredentialProbe() {
   };
 }
 
+function protectCredentialEnvelope(target, version, purpose) {
+  const envelope = JSON.stringify({
+    schemaVersion: 1,
+    version,
+    purpose,
+    value: crypto.randomBytes(48).toString("base64url")
+  });
+  fs.writeFileSync(target, safeStorage.encryptString(envelope), { mode: 0o600 });
+}
+
+function readCredentialEnvelope(target) {
+  return JSON.parse(safeStorage.decryptString(fs.readFileSync(target)));
+}
+
 const probeIndex = process.argv.indexOf("--win003-probe-output");
 const bridgeProbeIndex = process.argv.indexOf("--win003-bridge-output");
 const crashProbeIndex = process.argv.indexOf("--win003-crash-probe-output");
 const recoveryProbeInputIndex = process.argv.indexOf("--win003-recovery-probe-input");
 const recoveryProbeOutputIndex = process.argv.indexOf("--win003-recovery-probe-output");
+const credentialCrashOutputIndex = process.argv.indexOf("--win003-credential-crash-output");
+const credentialRecoveryInputIndex = process.argv.indexOf("--win003-credential-recovery-input");
+const credentialRecoveryOutputIndex = process.argv.indexOf("--win003-credential-recovery-output");
 if (!hasSingleInstanceLock) {
   // The primary instance owns all application and embedded-service work.
+} else if (credentialRecoveryInputIndex >= 0 && credentialRecoveryOutputIndex >= 0) {
+  app.whenReady().then(() => {
+    if (!safeStorage.isEncryptionAvailable()) throw new Error("safe-storage-unavailable");
+    const crashState = JSON.parse(
+      fs.readFileSync(process.argv[credentialRecoveryInputIndex + 1], "utf8")
+    );
+    const credentialLab = path.resolve(crashState.credentialLab);
+    const tempRoot = path.resolve(os.tmpdir()) + path.sep;
+    if (
+      !credentialLab.startsWith(tempRoot) ||
+      !path.basename(credentialLab).startsWith("apiarylens-win003-electron-credential-")
+    ) {
+      throw new Error("credential-recovery-lab-outside-electron-temp");
+    }
+    const currentFile = path.join(credentialLab, "connected-session.bin");
+    const pendingFile = path.join(credentialLab, "connected-session.pending");
+    const journalFile = path.join(credentialLab, "rotation.json");
+    const dataFile = path.join(credentialLab, "hive-data.sqlite.fixture");
+    const journal = JSON.parse(fs.readFileSync(journalFile, "utf8"));
+    const current = readCredentialEnvelope(currentFile);
+    const pending = readCredentialEnvelope(pendingFile);
+    const interruptedRotationDetected =
+      journal.state === "replacement-protected" &&
+      journal.fromVersion === 1 &&
+      journal.toVersion === 2 &&
+      current.version === 1 &&
+      pending.version === 2 &&
+      current.purpose === "connected-session" &&
+      pending.purpose === "connected-session" &&
+      typeof current.value === "string" &&
+      current.value.length === 64 &&
+      typeof pending.value === "string" &&
+      pending.value.length === 64;
+    if (!interruptedRotationDetected) throw new Error("invalid-interrupted-rotation-state");
+
+    fs.renameSync(pendingFile, currentFile);
+    fs.rmSync(journalFile, { force: true });
+    const promoted = readCredentialEnvelope(currentFile);
+    const replacementPromoted =
+      promoted.version === 2 &&
+      promoted.purpose === "connected-session" &&
+      promoted.value === pending.value &&
+      !fs.existsSync(pendingFile) &&
+      !fs.existsSync(journalFile);
+
+    fs.rmSync(currentFile, { force: true });
+    const revokedSessionDeleted = !fs.existsSync(currentFile);
+    const signOutRetainedHiveData = fs.existsSync(dataFile);
+
+    const standaloneRoot = path.join(credentialLab, "standalone-root.bin");
+    protectCredentialEnvelope(standaloneRoot, 1, "standalone-auth-root");
+    const keepDataPreservedProtectedRootAndHiveData =
+      readCredentialEnvelope(standaloneRoot).purpose === "standalone-auth-root" &&
+      fs.existsSync(dataFile);
+
+    fs.rmSync(credentialLab, { recursive: true, force: true });
+    const removeAllDeletedCredentialAndHiveData = !fs.existsSync(credentialLab);
+    fs.writeFileSync(
+      process.argv[credentialRecoveryOutputIndex + 1],
+      JSON.stringify({
+        interruptedRotationDetected,
+        replacementPromoted,
+        revokedSessionDeleted,
+        signOutRetainedHiveData,
+        keepDataPreservedProtectedRootAndHiveData,
+        removeAllDeletedCredentialAndHiveData
+      })
+    );
+    app.quit();
+  }).catch((error) => {
+    console.error(`credential-recovery-probe-failed:${error.message}`);
+    app.exit(77);
+  });
+} else if (credentialCrashOutputIndex >= 0) {
+  app.whenReady().then(() => {
+    if (!safeStorage.isEncryptionAvailable()) throw new Error("safe-storage-unavailable");
+    const credentialLab = fs.mkdtempSync(
+      path.join(os.tmpdir(), "apiarylens-win003-electron-credential-")
+    );
+    const currentFile = path.join(credentialLab, "connected-session.bin");
+    const pendingFile = path.join(credentialLab, "connected-session.pending");
+    const journalFile = path.join(credentialLab, "rotation.json");
+    fs.writeFileSync(path.join(credentialLab, "hive-data.sqlite.fixture"), "non-secret-hive-data");
+    protectCredentialEnvelope(currentFile, 1, "connected-session");
+    protectCredentialEnvelope(pendingFile, 2, "connected-session");
+    fs.writeFileSync(
+      journalFile,
+      JSON.stringify({
+        schemaVersion: 1,
+        state: "replacement-protected",
+        purpose: "connected-session",
+        fromVersion: 1,
+        toVersion: 2
+      }),
+      { encoding: "utf8", mode: 0o600 }
+    );
+    fs.writeFileSync(
+      process.argv[credentialCrashOutputIndex + 1],
+      JSON.stringify({ credentialLab })
+    );
+    app.exit(76);
+  }).catch((error) => {
+    console.error(`credential-crash-probe-failed:${error.message}`);
+    app.exit(78);
+  });
 } else if (recoveryProbeInputIndex >= 0 && recoveryProbeOutputIndex >= 0) {
   app.whenReady().then(async () => {
     const crashState = JSON.parse(fs.readFileSync(process.argv[recoveryProbeInputIndex + 1], "utf8"));
@@ -617,6 +739,34 @@ $bridgePassed =
     $bridgeResult.sessionStorageEntryCount -eq 0
 if (-not $bridgePassed) { throw 'Packaged Electron bridge isolation acceptance checks failed' }
 
+$credentialCrashPath = Join-Path $runnerTemp 'win003-electron-package-credential-crash.json'
+$credentialRecoveryPath = Join-Path $runnerTemp 'win003-electron-package-credential-recovery.json'
+$credentialCrash = Start-Process -FilePath $hostExecutable.FullName -ArgumentList @('--win003-credential-crash-output', "`"$credentialCrashPath`"") -PassThru -WindowStyle Hidden
+if (-not $credentialCrash.WaitForExit(15000)) {
+    Stop-Process -Id $credentialCrash.Id -Force -ErrorAction SilentlyContinue
+    throw 'Packaged Electron credential crash probe exceeded 15 seconds'
+}
+if ($credentialCrash.ExitCode -ne 76 -or -not (Test-Path -LiteralPath $credentialCrashPath)) {
+    throw "Packaged Electron credential crash probe failed with exit $($credentialCrash.ExitCode)"
+}
+$credentialRecovery = Start-Process -FilePath $hostExecutable.FullName -ArgumentList @('--win003-credential-recovery-input', "`"$credentialCrashPath`"", '--win003-credential-recovery-output', "`"$credentialRecoveryPath`"") -PassThru -WindowStyle Hidden
+if (-not $credentialRecovery.WaitForExit(15000)) {
+    Stop-Process -Id $credentialRecovery.Id -Force -ErrorAction SilentlyContinue
+    throw 'Packaged Electron credential recovery probe exceeded 15 seconds'
+}
+if ($credentialRecovery.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $credentialRecoveryPath)) {
+    throw "Packaged Electron credential recovery probe failed with exit $($credentialRecovery.ExitCode)"
+}
+$credentialRecoveryState = Get-Content -Raw -LiteralPath $credentialRecoveryPath | ConvertFrom-Json
+$credentialCrashRecoveryPassed =
+    $credentialRecoveryState.interruptedRotationDetected -and
+    $credentialRecoveryState.replacementPromoted -and
+    $credentialRecoveryState.revokedSessionDeleted -and
+    $credentialRecoveryState.signOutRetainedHiveData -and
+    $credentialRecoveryState.keepDataPreservedProtectedRootAndHiveData -and
+    $credentialRecoveryState.removeAllDeletedCredentialAndHiveData
+if (-not $credentialCrashRecoveryPassed) { throw 'Packaged Electron credential crash/recovery acceptance failed' }
+
 $crashProbePath = Join-Path $runnerTemp 'win003-electron-package-crash-probe.json'
 $duplicateProbePath = Join-Path $runnerTemp 'win003-electron-package-duplicate-probe.json'
 $crashProbe = Start-Process -FilePath $hostExecutable.FullName -ArgumentList @('--win003-crash-probe-output', "`"$crashProbePath`"") -PassThru -WindowStyle Hidden
@@ -757,6 +907,7 @@ $measurement = [ordered]@{
         $bridgeResult.nativeCredentialProtection.corruptCiphertextRejected -and
         $bridgeResult.nativeCredentialProtection.credentialDeleted -and
         -not $bridgeResult.credentialSecretPresentOutsideMain
+    packagedCredentialCrashRecoveryPassed = $credentialCrashRecoveryPassed
     packagedSingleInstancePassed = $singleInstancePassed
     packagedServiceExitedAfterHostCrash = $serviceExitedAfterHostCrash
     packagedReadyFileRemovedAfterHostCrash = $readyFileRemovedAfterHostCrash
