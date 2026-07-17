@@ -109,6 +109,15 @@ not enter the tested renderer, storage, console, arguments, readiness, service
 output, or evidence surfaces. Backup/restore, Windows-account changes, actual
 installer choices, supported retail profiles, and owner acceptance remain open.
 
+Run
+[`29558629887`](https://github.com/ApiaryLens/apiarylens/actions/runs/29558629887)
+then passed two exact installed retention cycles: default uninstall retained the
+protected standalone root and hive data, reinstalling the same artifact decrypted
+and read both as the same Windows user, explicit remove-all deleted both, and the
+second uninstall removed its registration and host. This advances conditions 4 and
+6. Final user-facing choice/confirmation UX and updater/cache cleanup policy remain
+open.
+
 ## Proposed Decision
 
 Use **Electron** as the initial Windows Preview host. Use a **signed per-user
@@ -263,12 +272,16 @@ must replace it.
    store/read/rotate/corruption/delete baseline and synthetic interrupted-rotation,
    revocation, sign-out, keep-data, and remove-all state machine now pass. Real
    server issue/refresh/revocation/restart/sign-out now passes as well. Restore and
-   account-change behavior, installer choices, and owner acceptance stay open.
+   account-change behavior, final installer-choice UX, and owner acceptance stay
+   open. Exact default keep-data, same-user reinstall/decrypt, explicit remove-all,
+   and second-uninstall mechanics now pass.
 5. Resolve or reject the Forge/Squirrel exotic dependency under the repository
    supply-chain policy; reconcile every runtime/build component to an allowlisted
    license and install complete Apache-2.0 and third-party notices.
 6. Prove complete current-user uninstall and both explicit data-retention choices,
-   including the measured updater/cache residue.
+   including the measured updater/cache residue. Default keep-data,
+   same-user reinstall/decrypt, explicit remove-all, and a second uninstall now
+   pass; final UI choices and updater/cache policy remain.
 7. Pass exact signed-package UAT on supported retail Windows profiles: keyboard,
    high contrast, 200%/400% zoom, reduced motion, NVDA, native dialogs, updates,
    recovery, sleep/resume, sign-out, shutdown, multiple sessions, and locked screen.

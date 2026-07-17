@@ -489,6 +489,31 @@ local directory, replaced readiness only after the service was live, and then
 removed it during clean shutdown. Forced-write, disk-full, read-only-directory,
 sleep/resume, sign-out, Job Object policy, and retail-device matrices remain open.
 
+Retention follow-on run
+[`29558629887`](https://github.com/ApiaryLens/apiarylens/actions/runs/29558629887)
+at commit `c9cf68b8ca897378aef292b0b6a374b0e53abd53` exercised two
+complete uninstall cycles with the same exact setup artifact. The setup SHA-256 was
+`D700B1C84EAAB01B8C220CF33D7633611C8AF81E52341FA8C06F2A2DAFEBF1FF`.
+
+| Exact installed retention check | Result |
+|---|---:|
+| Default uninstall retained protected standalone root | Passed |
+| Default uninstall retained hive-data fixture | Passed |
+| Same exact artifact reinstalled | Exit 0 |
+| Reinstalled host decrypted protected root as same Windows user | Passed |
+| Reinstalled host read retained hive data | Passed |
+| Explicit remove-all deleted protected root and hive data | Passed |
+| Second uninstall | Exit 0 |
+| Second uninstall registration / host remains | No / no |
+| External Node / Rust / .NET | Absent / absent / absent |
+| Existing API, host-recovery, and credential suites | Passed |
+
+This closes the exact installed keep-data, reinstall, protected-state readability,
+remove-all, and second-uninstall mechanics subgate. It does not yet prove the final
+user-facing choice, warning, confirmation, cancellation, accessibility, or recovery
+UX. Updater/cache residue outside product data remains a separately measured cleanup
+and policy gate.
+
 ### Electron package-transition evidence
 
 Exact-artifact replay

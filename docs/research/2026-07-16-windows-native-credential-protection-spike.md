@@ -276,6 +276,17 @@ authenticated local service, but it never enters ordinary renderer JavaScript or
 sanitized evidence. Backup/restore UX, Windows-account changes, actual installer
 choices, supported retail profiles, production signing, and ADR acceptance remain.
 
+Exact installer retention run
+[`29558629887`](https://github.com/ApiaryLens/apiarylens/actions/runs/29558629887)
+then created a protected standalone root and hive-data fixture outside the install
+directory, uninstalled, verified both were retained, reinstalled the same exact
+artifact, decrypted/read both as the same Windows user, executed explicit
+remove-all, and uninstalled a second time. Both uninstalls exited 0 and the final
+registration/host checks were empty. This proves the selected adapter's installed
+keep-data/reinstall/remove-all mechanics. Final user-facing choice and confirmation
+UX, backup/restore, account-change, retail-profile, and production-signing evidence
+remain open.
+
 Primary source:
 
 - [Electron `safeStorage`](https://www.electronjs.org/docs/latest/api/safe-storage)
@@ -342,7 +353,9 @@ Primary sources:
    packaged and installed synthetic rotation-crash, revocation, sign-out,
    keep-data, and remove-all state machine now passes. The real API
    issue/refresh/revocation/restart/sign-out lifecycle also passes. Restore,
-   account-change, and actual installer-choice evidence remain.
+   account-change, and final installer-choice UX evidence remain. Exact default
+   keep-data, same-user reinstall/decrypt, explicit remove-all, and second-uninstall
+   mechanics now pass.
 5. Recording ACL, roaming-profile, Remote Desktop, multiple Windows session, and
    locked-workstation behavior on supported retail Windows profiles.
 6. Completing the supported Electron API, protected-file, dependency, license, and
