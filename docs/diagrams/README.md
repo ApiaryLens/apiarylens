@@ -32,6 +32,13 @@ identifier are never stored in the public repository.
 | CI/CD and release promotion | `72787958-9344-4a71-af56-98a216b35aa1`, page 5 | `../../assets/graphics/architecture/cicd-release-promotion.png` | Current; source filed; visual review passed |
 | Update, rollback, and recovery | `f22ae65e-c353-488e-ba54-51f7de4c189c`, page 2 | `../../assets/graphics/architecture/update-rollback-recovery.png` | Current; source filed; visual review passed |
 | Primary MVP user journeys | `72787958-9344-4a71-af56-98a216b35aa1`, page 7 | `../../assets/graphics/architecture/primary-user-journeys.png` | Current; source filed; visual review passed |
+| Windows client portfolio and repository ownership | `f518f689-89dc-42d6-8200-bbb43467debe`, page 1 | `../../assets/graphics/architecture/windows-client-repository-ownership.png` | Current; source filed; visual review passed |
+| Standalone Windows runtime and trust boundaries | `f518f689-89dc-42d6-8200-bbb43467debe`, page 2 | `../../assets/graphics/architecture/windows-standalone-trust-boundaries.png` | Current; source filed; visual review passed |
+| Connected client deployment | `f518f689-89dc-42d6-8200-bbb43467debe`, page 3 | `../../assets/graphics/architecture/connected-client-deployment.png` | Current; source filed; visual review passed |
+| Scout Windows target flows | `f518f689-89dc-42d6-8200-bbb43467debe`, page 4 | `../../assets/graphics/architecture/scout-windows-target-flows.png` | Current; source filed; visual review passed |
+| Standalone-to-connected migration and rollback | `f518f689-89dc-42d6-8200-bbb43467debe`, page 5 | `../../assets/graphics/architecture/standalone-connected-migration-rollback.png` | Current; source filed; visual review passed |
+| Independent Scout, client, and backend updates | `f518f689-89dc-42d6-8200-bbb43467debe`, page 6 | `../../assets/graphics/architecture/independent-update-state-machines.png` | Current; source filed; visual review passed |
+| Backup, restore, and data locations | `f518f689-89dc-42d6-8200-bbb43467debe`, page 7 | `../../assets/graphics/architecture/backup-restore-data-locations.png` | Current; source filed; visual review passed |
 
 Legacy Mermaid sources remain only as migration history and are not authoritative.
 See [Operational Architecture and Journeys](operational-architecture.md) for
@@ -47,6 +54,13 @@ editable Lucid sources, filed in the dedicated `ApiaryLens` folder, exported thr
 the official Lucid API, and visually rechecked before their PNGs were promoted. The
 four unchanged pages also passed. Rejected draft documents were labeled and moved out
 of the authoritative folder so the catalog has no ambiguous final source.
+
+The 2026-07-17 Windows and Scout review inspected all seven new pages at their
+committed 1,600-pixel export width. The initial drafts exposed oversized automatic
+text and connector-label collisions. They were rejected rather than promoted. The
+final source uses fixed readable typography, explicit connector attachment points,
+filled shapes above connectors, and adjacent accessible explanations in
+[Windows Client and Scout Bee Architecture](windows-scout-architecture.md).
 
 ## Publishing Rules
 

@@ -208,6 +208,12 @@ must replace it.
 8. Update the authoritative Lucidchart Windows host/service/security diagrams and
    publish accessible public exports before implementation approval.
 
+The seven-page authoritative Windows and Scout diagram set is now filed and its
+accessible exports are published in
+[Windows Client and Scout Bee Architecture](../diagrams/windows-scout-architecture.md).
+This completes the diagram artifact portion of condition 8; owner review and the
+remaining acceptance conditions still prevent this ADR from becoming Accepted.
+
 ## Revisit Conditions
 
 Reopen the host or package decision if Electron cannot satisfy a condition above,

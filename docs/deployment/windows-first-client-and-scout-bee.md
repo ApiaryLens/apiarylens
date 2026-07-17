@@ -278,6 +278,9 @@ Each export needs adjacent explanatory text and must be cataloged in the diagram
 README. Mermaid may be used only as temporary thinking material, never the source of
 truth.
 
+The authoritative seven-page source and accessible exports are cataloged in
+[Windows Client and Scout Bee Architecture](../diagrams/windows-scout-architecture.md).
+
 ## Documentation and how-to deliverables
 
 ### Public user guides
