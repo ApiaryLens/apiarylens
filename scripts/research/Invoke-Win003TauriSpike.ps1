@@ -7,7 +7,10 @@ param(
     [string] $IconPath,
 
     [Parameter(Mandatory)]
-    [string] $OutputDirectory
+    [string] $OutputDirectory,
+
+    [ValidatePattern('^\d+\.\d+\.\d+$')]
+    [string] $ResearchVersion = '0.0.0'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -127,6 +130,10 @@ $tauriConfig = @'
 }
 '@
 
+$packageJson = $packageJson.Replace('"version": "0.0.0"', '"version": "' + $ResearchVersion + '"')
+$cargoToml = $cargoToml.Replace('version = "0.0.0"', 'version = "' + $ResearchVersion + '"')
+$tauriConfig = $tauriConfig.Replace('"version": "0.0.0"', '"version": "' + $ResearchVersion + '"')
+
 if ($env:WIN003_CERT_THUMBPRINT) {
     $configObject = $tauriConfig | ConvertFrom-Json
     $configObject.bundle.windows | Add-Member -NotePropertyName certificateThumbprint -NotePropertyValue $env:WIN003_CERT_THUMBPRINT
@@ -244,6 +251,7 @@ $measurement = [ordered]@{
     sourceCommit = $env:GITHUB_SHA
     runnerImage = $env:ImageOS
     runnerImageVersion = $env:ImageVersion
+    researchVersion = $ResearchVersion
     nodeVersion = (& node --version)
     rustVersion = (& rustc --version)
     cargoVersion = (& cargo --version)

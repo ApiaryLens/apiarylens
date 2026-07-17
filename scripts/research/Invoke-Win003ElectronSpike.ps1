@@ -4,7 +4,10 @@ param(
     [string] $WebDist,
 
     [Parameter(Mandatory)]
-    [string] $OutputDirectory
+    [string] $OutputDirectory,
+
+    [ValidatePattern('^\d+\.\d+\.\d+$')]
+    [string] $ResearchVersion = '0.0.1'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -53,6 +56,7 @@ $packageJson = @'
   }
 }
 '@
+$packageJson = $packageJson.Replace('"version": "0.0.1"', '"version": "' + $ResearchVersion + '"')
 
 $forgeConfig = @'
 module.exports = {
@@ -230,6 +234,7 @@ $measurement = [ordered]@{
     sourceCommit = $env:GITHUB_SHA
     runnerImage = $env:ImageOS
     runnerImageVersion = $env:ImageVersion
+    researchVersion = $ResearchVersion
     electronVersion = $probeResult.electron
     bundledNodeVersion = $probeResult.node
     electronForgeVersion = (Get-Content -Raw -LiteralPath (Join-Path $labPath 'node_modules/@electron-forge/cli/package.json') | ConvertFrom-Json).version

@@ -1,0 +1,120 @@
+name: WIN-003 package update research
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate:
+        description: Candidate package lifecycle to exercise
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - electron
+          - tauri
+
+permissions:
+  contents: read
+
+jobs:
+  electron-update:
+    if: inputs.candidate == 'both' || inputs.candidate == 'electron'
+    runs-on: windows-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Build current shared client
+        shell: pwsh
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm --filter @apiarylens/web... build
+      - name: Create runner-only test certificate
+        shell: pwsh
+        run: ./scripts/research/New-Win003TestCertificate.ps1
+      - name: Build signed Electron baseline and upgrade
+        shell: pwsh
+        run: |
+          ./scripts/research/Invoke-Win003ElectronSpike.ps1 `
+            -WebDist ./apps/web/dist `
+            -OutputDirectory "$env:RUNNER_TEMP/electron-baseline" `
+            -ResearchVersion 0.1.0
+          ./scripts/research/Invoke-Win003ElectronSpike.ps1 `
+            -WebDist ./apps/web/dist `
+            -OutputDirectory "$env:RUNNER_TEMP/electron-upgrade" `
+            -ResearchVersion 0.1.1
+      - name: Exercise Electron package transitions
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003PackageUpdateProbe.ps1
+          -Candidate electron
+          -BaselineEvidenceDirectory "$env:RUNNER_TEMP/electron-baseline"
+          -UpgradeEvidenceDirectory "$env:RUNNER_TEMP/electron-upgrade"
+          -OutputDirectory "$env:RUNNER_TEMP/electron-update-evidence"
+      - name: Upload Electron transition evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: win003-electron-update-evidence
+          path: |
+            ${{ runner.temp }}/electron-baseline
+            ${{ runner.temp }}/electron-upgrade
+            ${{ runner.temp }}/electron-update-evidence
+          if-no-files-found: warn
+          retention-days: 14
+
+  tauri-update:
+    if: inputs.candidate == 'both' || inputs.candidate == 'tauri'
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Build current shared client
+        shell: pwsh
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm --filter @apiarylens/web... build
+      - name: Create runner-only test certificate
+        shell: pwsh
+        run: ./scripts/research/New-Win003TestCertificate.ps1
+      - name: Build signed Tauri baseline and upgrade
+        shell: pwsh
+        run: |
+          ./scripts/research/Invoke-Win003TauriSpike.ps1 `
+            -WebDist ./apps/web/dist `
+            -IconPath ./apps/web/public/icons/apiarylens-512.png `
+            -OutputDirectory "$env:RUNNER_TEMP/tauri-baseline" `
+            -ResearchVersion 0.1.0
+          ./scripts/research/Invoke-Win003TauriSpike.ps1 `
+            -WebDist ./apps/web/dist `
+            -IconPath ./apps/web/public/icons/apiarylens-512.png `
+            -OutputDirectory "$env:RUNNER_TEMP/tauri-upgrade" `
+            -ResearchVersion 0.1.1
+      - name: Exercise Tauri package transitions
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003PackageUpdateProbe.ps1
+          -Candidate tauri
+          -BaselineEvidenceDirectory "$env:RUNNER_TEMP/tauri-baseline"
+          -UpgradeEvidenceDirectory "$env:RUNNER_TEMP/tauri-upgrade"
+          -OutputDirectory "$env:RUNNER_TEMP/tauri-update-evidence"
+      - name: Upload Tauri transition evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: win003-tauri-update-evidence
+          path: |
+            ${{ runner.temp }}/tauri-baseline
+            ${{ runner.temp }}/tauri-upgrade
+            ${{ runner.temp }}/tauri-update-evidence
+          if-no-files-found: warn
+          retention-days: 14
