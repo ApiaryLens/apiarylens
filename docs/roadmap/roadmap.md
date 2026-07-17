@@ -9,6 +9,11 @@ Keep backups and exports current; Preview 1 must not be the sole copy of irrepla
 hive records or media. See the [Preview 1 release notes](../releases/0.1.0-preview.1.md)
 and [MVP UAT record](../testing/mvp-uat.md).
 
+The independently versioned
+[Scout Bee 0.1.0 Preview 2](https://github.com/ApiaryLens/scout-bee/releases/tag/v0.1.0-preview.2)
+is now available for Windows and Linux. It manages verified product lifecycle
+operations while production signing and physical-target acceptance continue.
+
 ## MVP Target
 
 The initial go-to-market user is a family or hobbyist beekeeper. The default journey

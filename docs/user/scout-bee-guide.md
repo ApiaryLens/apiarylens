@@ -5,12 +5,16 @@ manager. Run Scout on the computer in front of you; it can manage ApiaryLens on
 that Windows computer, in Cloudflare, or on a separate Linux computer over SSH.
 Windows users do not need to type Linux commands.
 
-> **Preview availability:** Scout Bee is under active Preview development. Use only
-> packages published by the official
-> [`ApiaryLens/scout-bee` releases](https://github.com/ApiaryLens/scout-bee/releases)
-> page. If that page does not contain a signed package for your platform, the
-> end-user package has not been released yet. A source clone is a contributor
+> **Preview availability:** Scout Bee `0.1.0-preview.2` is available from the
+> [official versioned release](https://github.com/ApiaryLens/scout-bee/releases/tag/v0.1.0-preview.2)
+> for Windows and Linux. The Windows Preview executable is explicitly unsigned;
+> verify the checksum below before running it. A source clone is a contributor
 > workflow, not a substitute installer.
+
+| Package | SHA-256 |
+|---|---|
+| [Windows x64 unsigned Preview](https://github.com/ApiaryLens/scout-bee/releases/download/v0.1.0-preview.2/scout-bee-0.1.0-preview.2-windows-amd64-UNSIGNED-PREVIEW.exe) | `bd20e9361ef71948874763e49d0fe1f2c57398ada4ae685f7deb53f40eec2d9c` |
+| [Linux x64 archive](https://github.com/ApiaryLens/scout-bee/releases/download/v0.1.0-preview.2/scout-bee-0.1.0-preview.2-linux-amd64.tar.gz) | `f44e3c7739816ff158823e93165c51cbad530b9fe67919ba3c9babadad758ce5` |
 
 ## Choose what Scout should manage
 
@@ -27,11 +31,10 @@ backend does not copy ApiaryLens product source into your deployment repository.
 
 ## Five-minute Windows start
 
-1. Open the official Scout Bee release and choose the latest stable signed Windows
-   executable. Preview or RC builds appear only after selecting an advanced release
-   channel.
-2. Verify that the release includes checksums and provenance, then confirm that
-   Windows shows the expected ApiaryLens publisher.
+1. Download the Windows x64 Preview executable linked above.
+2. Verify its SHA-256 against the table and release manifest. This Preview is not
+   Authenticode-signed, so Windows may require **More info → Run anyway**. Do not
+   bypass that warning if the hash differs.
 3. Run Scout Bee. It is portable and does not require Go, Node, WSL, Docker, or a
    Linux shell.
 4. Select **Windows standalone**, **Family Cloud**, **Own hardware or cloud VM**, or
@@ -42,7 +45,7 @@ backend does not copy ApiaryLens product source into your deployment repository.
    activation or health verification; an interrupted operation can be resumed from
    its last verified checkpoint.
 
-For Windows standalone, Scout installs the signed current-user package without
+For Windows standalone, Scout installs the exact verified current-user package without
 administrator rights. ApiaryLens data remains outside the replaceable installation
 directory. For a connected deployment, sign in inside ApiaryLens after the
 connection profile is imported; Scout never places a password or session in that
@@ -50,7 +53,7 @@ file.
 
 ## Five-minute Linux start
 
-1. Download the versioned Linux archive from the official Scout Bee release.
+1. Download the versioned Linux archive linked above.
 2. Verify its checksum and attestation using the files attached to the same release.
 3. Extract the single Scout executable and concise README into a directory owned by
    your user.

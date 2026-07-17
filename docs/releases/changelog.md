@@ -39,9 +39,11 @@ verification, and feedback instructions.
 - Fixed installed-PWA cached launch so local navigation and records render before a
   stalled initial network session refresh. Automatic sync/media and physical
   iPhone/iPad relaunch gates remain visible.
-- Published the independent Scout Bee repository, Windows connection handoff, and
-  complete public Scout installation and operations guide. Signed Scout packages
-  and exact released-target lifecycle evidence remain open.
+- Published independently versioned Scout Bee `0.1.0-preview.2` for Windows and
+  Linux with install/configure/update/repair/rollback/backup/restore/uninstall UI,
+  sanitized diagnostics, a release manifest, checksums, SBOM, signing evidence,
+  attestations, and a complete public operations guide. Production signing and
+  physical released-target lifecycle evidence remain open.
 
 ## 0.1.0-rc.7 — 2026-07-16
 
