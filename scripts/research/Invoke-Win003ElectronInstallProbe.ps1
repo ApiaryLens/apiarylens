@@ -145,8 +145,28 @@ try {
     $temporaryPassword = ConvertTo-SecureString -String $temporaryPasswordText -AsPlainText -Force
     New-LocalUser -Name $temporaryUserName -Password $temporaryPassword -AccountNeverExpires -PasswordNeverExpires -UserMayNotChangePassword | Out-Null
     $temporaryUserSid = (Get-LocalUser -Name $temporaryUserName).SID.Value
+    $temporarySid = [Security.Principal.SecurityIdentifier]::new($temporaryUserSid)
+    $labAcl = Get-Acl -LiteralPath $crossUserLab
+    $readExecuteRule = [Security.AccessControl.FileSystemAccessRule]::new(
+        $temporarySid,
+        [Security.AccessControl.FileSystemRights]::ReadAndExecute,
+        [Security.AccessControl.InheritanceFlags]'ContainerInherit, ObjectInherit',
+        [Security.AccessControl.PropagationFlags]::None,
+        [Security.AccessControl.AccessControlType]::Allow
+    )
+    [void] $labAcl.AddAccessRule($readExecuteRule)
+    Set-Acl -LiteralPath $crossUserLab -AclObject $labAcl
     $credential = [pscredential]::new("$env:COMPUTERNAME\$temporaryUserName", $temporaryPassword)
     $verifyOutput = Join-Path $crossUserLab 'verify.json'
+    New-Item -ItemType File -Path $verifyOutput -Force | Out-Null
+    $verifyOutputAcl = Get-Acl -LiteralPath $verifyOutput
+    $modifyOutputRule = [Security.AccessControl.FileSystemAccessRule]::new(
+        $temporarySid,
+        [Security.AccessControl.FileSystemRights]::Modify,
+        [Security.AccessControl.AccessControlType]::Allow
+    )
+    [void] $verifyOutputAcl.AddAccessRule($modifyOutputRule)
+    Set-Acl -LiteralPath $verifyOutput -AclObject $verifyOutputAcl
     $verifyStdout = Join-Path $crossUserLab 'verify.stdout.log'
     $verifyStderr = Join-Path $crossUserLab 'verify.stderr.log'
     $verifyArguments = "--win003-cross-user-lab `"$crossUserLab`" --win003-cross-user-action verify-denied --win003-cross-user-output `"$verifyOutput`""
@@ -155,8 +175,27 @@ try {
         Stop-Process -Id $verify.Id -Force -ErrorAction SilentlyContinue
         throw 'Different-user safeStorage denial exceeded 30 seconds'
     }
-    if ($verify.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $verifyOutput)) {
-        throw "Different-user safeStorage denial failed: $(Get-Content -Raw -LiteralPath $verifyStderr -ErrorAction SilentlyContinue)"
+    $verifyOutputWritten = (Test-Path -LiteralPath $verifyOutput) -and (Get-Item -LiteralPath $verifyOutput).Length -gt 0
+    if ($verify.ExitCode -ne 0 -or -not $verifyOutputWritten) {
+        $redactDiagnostic = {
+            param([string] $Value)
+            if ($null -eq $Value) { return $null }
+            foreach ($sensitive in @($temporaryUserName, $temporaryUserSid, $temporaryPasswordText)) {
+                if ($sensitive) { $Value = $Value.Replace($sensitive, '[redacted]') }
+            }
+            return $Value
+        }
+        $sanitizedStdout = & $redactDiagnostic $(if (Test-Path -LiteralPath $verifyStdout) { Get-Content -Raw -LiteralPath $verifyStdout } else { $null })
+        $sanitizedStderr = & $redactDiagnostic $(if (Test-Path -LiteralPath $verifyStderr) { Get-Content -Raw -LiteralPath $verifyStderr } else { $null })
+        [ordered]@{
+            measuredAtUtc = [DateTimeOffset]::UtcNow.ToString('o')
+            exitCode = $verify.ExitCode
+            outputWritten = $verifyOutputWritten
+            stdout = $sanitizedStdout
+            stderr = $sanitizedStderr
+            sensitiveValuesRedacted = $true
+        } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $outputPath 'cross-user-failure.json') -Encoding utf8NoBOM
+        throw "Different-user safeStorage denial failed with exit $($verify.ExitCode) and outputWritten=$verifyOutputWritten"
     }
     $verifyState = Get-Content -Raw -LiteralPath $verifyOutput | ConvertFrom-Json
     $crossUserDifferentUserDenied = [bool] $verifyState.differentUserDenied
