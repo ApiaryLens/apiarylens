@@ -1,0 +1,122 @@
+name: WIN-003 SBOM and provenance research
+
+on:
+  workflow_dispatch:
+    inputs:
+      electron_source_run_id:
+        description: Signed Electron evidence workflow run
+        required: true
+        default: "29545351946"
+        type: string
+      tauri_source_run_id:
+        description: Signed Tauri evidence workflow run
+        required: true
+        default: "29545675051"
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  electron-sbom:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download exact signed Electron evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: win003-electron-test-signed-evidence
+          path: ${{ runner.temp }}/signed-input
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.electron_source_run_id }}
+      - name: Install pinned verified Syft
+        shell: pwsh
+        run: ./scripts/research/Install-Win003Syft.ps1
+      - name: Generate installed-runtime SBOM during exact lifecycle
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003ElectronInstallProbe.ps1
+          -EvidenceDirectory "$env:RUNNER_TEMP/signed-input/win003-electron-signed-evidence"
+          -OutputDirectory "$env:RUNNER_TEMP/electron-sbom-evidence"
+          -SbomToolPath "$env:WIN003_SYFT_PATH"
+          -SbomOutputPath "$env:RUNNER_TEMP/electron-sbom-evidence/runtime.cdx.json"
+      - name: Generate lockfile/build-input SBOM and summary
+        shell: pwsh
+        run: |
+          & $env:WIN003_SYFT_PATH scan "dir:$env:RUNNER_TEMP/signed-input/win003-electron-signed-evidence" -o "cyclonedx-json=$env:RUNNER_TEMP/electron-sbom-evidence/build-inputs.cdx.json"
+          if ($LASTEXITCODE -ne 0) { throw 'Electron build-input SBOM generation failed' }
+          $lifecycle = Get-Content -Raw "$env:RUNNER_TEMP/electron-sbom-evidence/lifecycle.json" | ConvertFrom-Json
+          $runtime = Get-Content -Raw "$env:RUNNER_TEMP/electron-sbom-evidence/runtime.cdx.json" | ConvertFrom-Json
+          $inputs = Get-Content -Raw "$env:RUNNER_TEMP/electron-sbom-evidence/build-inputs.cdx.json" | ConvertFrom-Json
+          [ordered]@{
+            candidate = 'electron'
+            sourceRunId = '${{ inputs.electron_source_run_id }}'
+            syftVersion = $env:WIN003_SYFT_VERSION
+            syftArchiveSha256 = $env:WIN003_SYFT_ARCHIVE_SHA256
+            runtimeComponents = @($runtime.components).Count
+            buildInputComponents = @($inputs.components).Count
+            installedLicenseNoticeFiles = @($lifecycle.licenseNoticeFiles)
+            runtimeSbomSha256 = (Get-FileHash "$env:RUNNER_TEMP/electron-sbom-evidence/runtime.cdx.json" -Algorithm SHA256).Hash
+            buildInputSbomSha256 = (Get-FileHash "$env:RUNNER_TEMP/electron-sbom-evidence/build-inputs.cdx.json" -Algorithm SHA256).Hash
+          } | ConvertTo-Json -Depth 8 | Set-Content "$env:RUNNER_TEMP/electron-sbom-evidence/provenance-summary.json" -Encoding utf8NoBOM
+      - name: Upload Electron provenance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: win003-electron-sbom-provenance
+          path: ${{ runner.temp }}/electron-sbom-evidence
+          if-no-files-found: warn
+          retention-days: 14
+
+  tauri-sbom:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download exact signed Tauri evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: win003-tauri-test-signed-evidence
+          path: ${{ runner.temp }}/signed-input
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.tauri_source_run_id }}
+      - name: Install pinned verified Syft
+        shell: pwsh
+        run: ./scripts/research/Install-Win003Syft.ps1
+      - name: Generate installed-runtime SBOM during exact lifecycle
+        shell: pwsh
+        run: >-
+          ./scripts/research/Invoke-Win003TauriInstallProbe.ps1
+          -EvidenceDirectory "$env:RUNNER_TEMP/signed-input/win003-tauri-signed-evidence"
+          -OutputDirectory "$env:RUNNER_TEMP/tauri-sbom-evidence"
+          -SbomToolPath "$env:WIN003_SYFT_PATH"
+          -SbomOutputPath "$env:RUNNER_TEMP/tauri-sbom-evidence/runtime.cdx.json"
+      - name: Generate lockfile/build-input SBOM and summary
+        shell: pwsh
+        run: |
+          & $env:WIN003_SYFT_PATH scan "dir:$env:RUNNER_TEMP/signed-input/win003-tauri-signed-evidence" -o "cyclonedx-json=$env:RUNNER_TEMP/tauri-sbom-evidence/build-inputs.cdx.json"
+          if ($LASTEXITCODE -ne 0) { throw 'Tauri build-input SBOM generation failed' }
+          $lifecycle = Get-Content -Raw "$env:RUNNER_TEMP/tauri-sbom-evidence/lifecycle.json" | ConvertFrom-Json
+          $runtime = Get-Content -Raw "$env:RUNNER_TEMP/tauri-sbom-evidence/runtime.cdx.json" | ConvertFrom-Json
+          $inputs = Get-Content -Raw "$env:RUNNER_TEMP/tauri-sbom-evidence/build-inputs.cdx.json" | ConvertFrom-Json
+          [ordered]@{
+            candidate = 'tauri'
+            sourceRunId = '${{ inputs.tauri_source_run_id }}'
+            syftVersion = $env:WIN003_SYFT_VERSION
+            syftArchiveSha256 = $env:WIN003_SYFT_ARCHIVE_SHA256
+            runtimeComponents = @($runtime.components).Count
+            buildInputComponents = @($inputs.components).Count
+            installedLicenseNoticeFiles = @($lifecycle.licenseNoticeFiles)
+            runtimeSbomSha256 = (Get-FileHash "$env:RUNNER_TEMP/tauri-sbom-evidence/runtime.cdx.json" -Algorithm SHA256).Hash
+            buildInputSbomSha256 = (Get-FileHash "$env:RUNNER_TEMP/tauri-sbom-evidence/build-inputs.cdx.json" -Algorithm SHA256).Hash
+          } | ConvertTo-Json -Depth 8 | Set-Content "$env:RUNNER_TEMP/tauri-sbom-evidence/provenance-summary.json" -Encoding utf8NoBOM
+      - name: Upload Tauri provenance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: win003-tauri-sbom-provenance
+          path: ${{ runner.temp }}/tauri-sbom-evidence
+          if-no-files-found: warn
+          retention-days: 14

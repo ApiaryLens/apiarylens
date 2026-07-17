@@ -4,7 +4,11 @@ param(
     [string] $EvidenceDirectory,
 
     [Parameter(Mandatory)]
-    [string] $OutputDirectory
+    [string] $OutputDirectory,
+
+    [string] $SbomToolPath,
+
+    [string] $SbomOutputPath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -156,6 +160,25 @@ $installedFiles = Get-ChildItem -LiteralPath $installDirectory -Recurse -File
 $installedBytes = ($installedFiles | Measure-Object Length -Sum).Sum
 $installedFileCount = $installedFiles.Count
 $installedHostBytes = $installedHost.Length
+$licenseNoticeFiles = @($installedFiles | Where-Object Name -Match '(?i)(license|notice|copying)' | ForEach-Object {
+    $_.FullName.Substring($installDirectory.Length).TrimStart('\')
+})
+$runtimeSbom = $null
+if ($SbomToolPath -or $SbomOutputPath) {
+    if (-not $SbomToolPath -or -not $SbomOutputPath) { throw 'Both SbomToolPath and SbomOutputPath are required together' }
+    $resolvedSbomTool = (Resolve-Path -LiteralPath $SbomToolPath).Path
+    $resolvedSbomOutput = [IO.Path]::GetFullPath($SbomOutputPath)
+    if (-not $resolvedSbomOutput.StartsWith($runnerTemp, [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Runtime SBOM output must remain under the runner temporary directory'
+    }
+    & $resolvedSbomTool scan "dir:$installDirectory" -o "cyclonedx-json=$resolvedSbomOutput"
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $resolvedSbomOutput)) { throw 'Electron runtime SBOM generation failed' }
+    $runtimeSbom = [ordered]@{
+        path = $resolvedSbomOutput
+        sha256 = (Get-FileHash -LiteralPath $resolvedSbomOutput -Algorithm SHA256).Hash
+        componentCount = @((Get-Content -Raw -LiteralPath $resolvedSbomOutput | ConvertFrom-Json).components).Count
+    }
+}
 
 $uninstall = Start-Process -FilePath $updateExecutable -ArgumentList @('--uninstall', '-s') -PassThru -WindowStyle Hidden
 if (-not $uninstall.WaitForExit(60000)) {
@@ -185,6 +208,8 @@ $result = [ordered]@{
     installedBytes = $installedBytes
     installedFileCount = $installedFileCount
     installedHostBytes = $installedHostBytes
+    licenseNoticeFiles = $licenseNoticeFiles
+    runtimeSbom = $runtimeSbom
     installedHostSignatureStatus = [string] $installedSignature.Status
     installedHostSignatureSubject = if ($installedSignature.SignerCertificate) { $installedSignature.SignerCertificate.Subject } else { $null }
     installedHostSignatureThumbprint = if ($installedSignature.SignerCertificate) { $installedSignature.SignerCertificate.Thumbprint } else { $null }
