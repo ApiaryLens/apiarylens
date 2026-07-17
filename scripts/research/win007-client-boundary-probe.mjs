@@ -67,7 +67,14 @@ async function analyzeTree(path) {
 async function directoryEntries(path) {
   const entries = [];
   async function visit(directory) {
-    for (const entry of await readdir(directory, { withFileTypes: true })) {
+    let children;
+    try {
+      children = await readdir(directory, { withFileTypes: true });
+    } catch (error) {
+      if (error.code === 'ENOENT') return;
+      throw error;
+    }
+    for (const entry of children) {
       const child = join(directory, entry.name);
       if (entry.isDirectory()) await visit(child);
       else if (entry.name !== '.gitkeep') entries.push(relative(path, child).replaceAll('\\', '/'));
