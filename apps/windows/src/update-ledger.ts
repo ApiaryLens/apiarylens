@@ -16,12 +16,25 @@ import { resolveInstallOwnership, type InstallOwnership } from './install-source
  * was planned against a different installed version, or when it moves
  * backward. Whoever applies a package (app, winget, or Chocolatey), the
  * ledger validates the observed result on next launch — package-manager
- * success is never the safety boundary (ADR 0016).
+ * success is never the safety boundary (ADR 0016). An externally applied
+ * version that fails the same known-version rules is recorded as
+ * `external_unverified`, never as a clean `applied` entry.
  */
 
 export const UPDATE_LEDGER_SCHEMA_VERSION = 1;
 
-export type UpdateOutcome = 'applied' | 'rejected' | 'failed';
+export type UpdateOutcome = 'applied' | 'external_unverified' | 'rejected' | 'failed';
+
+/**
+ * Outcomes that advance the recorded installed version. `applied` is a
+ * verified transition; `external_unverified` acknowledges that an external
+ * updater already changed the binary on disk (the running version is a
+ * fact), while flagging that the release catalog could not vouch for the
+ * jump.
+ */
+function advancesInstalledVersion(outcome: UpdateOutcome): boolean {
+  return outcome === 'applied' || outcome === 'external_unverified';
+}
 
 export type UpdateLedgerEntry = {
   schemaVersion: typeof UPDATE_LEDGER_SCHEMA_VERSION;
@@ -50,6 +63,15 @@ export type ReleaseCatalogEntry = {
    */
   minimumDirectUpgrade?: string;
 };
+
+/**
+ * The subset of a release-catalog entry that identifies a version this
+ * build knows and its lifecycle constraint. Next-launch reconciliation
+ * validates externally observed versions against these known-version rules;
+ * the artifact checksum cannot be re-verified after an external install, so
+ * it is not part of this contract.
+ */
+export type KnownReleaseVersion = Pick<ReleaseCatalogEntry, 'version' | 'minimumDirectUpgrade'>;
 
 export type UpdatePlan = {
   /** Installed version the plan was computed against. */
@@ -161,7 +183,9 @@ function parseEntry(line: string, index: number): UpdateLedgerEntry {
     (candidate.artifactSha256 !== null &&
       (typeof candidate.artifactSha256 !== 'string' ||
         !/^[0-9a-f]{64}$/.test(candidate.artifactSha256))) ||
-    !['applied', 'rejected', 'failed'].includes(candidate.outcome as string) ||
+    !['applied', 'external_unverified', 'rejected', 'failed'].includes(
+      candidate.outcome as string,
+    ) ||
     !['app', 'winget', 'chocolatey', 'unknown'].includes(candidate.appliedBy as string)
   ) {
     throw new UpdateRejectedError(
@@ -190,7 +214,7 @@ export class UpdateLedger {
     const entries = lines.map(parseEntry);
     let head: string | null = null;
     for (const [index, entry] of entries.entries()) {
-      if (entry.outcome !== 'applied') continue;
+      if (!advancesInstalledVersion(entry.outcome)) continue;
       if (entry.fromVersion !== head) {
         throw new UpdateRejectedError(
           'update_ledger_invalid',
@@ -204,8 +228,8 @@ export class UpdateLedger {
 
   /** The installed version according to the ledger, or `null` before the install record. */
   installedVersion(): string | null {
-    const applied = this.entries().filter((entry) => entry.outcome === 'applied');
-    return applied.at(-1)?.toVersion ?? null;
+    const advancing = this.entries().filter((entry) => advancesInstalledVersion(entry.outcome));
+    return advancing.at(-1)?.toVersion ?? null;
   }
 
   /**
@@ -218,10 +242,10 @@ export class UpdateLedger {
     now: () => Date = () => new Date(),
   ): UpdateLedgerEntry {
     const head = this.installedVersion();
-    if (entry.outcome === 'applied' && entry.fromVersion !== head) {
+    if (advancesInstalledVersion(entry.outcome) && entry.fromVersion !== head) {
       throw new UpdateRejectedError(
         'update_out_of_order',
-        `An applied update must continue from ${head ?? 'a first install'}, not ${entry.fromVersion ?? 'a first install'}`,
+        `A version-advancing update must continue from ${head ?? 'a first install'}, not ${entry.fromVersion ?? 'a first install'}`,
       );
     }
     const record: UpdateLedgerEntry = {
@@ -232,6 +256,48 @@ export class UpdateLedger {
     appendFileSync(this.path, `${JSON.stringify(record)}\n`, { mode: 0o600 });
     return record;
   }
+}
+
+/**
+ * The known-version rules shared by the preflight gate and next-launch
+ * reconciliation: the target version must exist in the release catalog and
+ * must not skip the release's minimum directly supported upgrade version.
+ * Preflight turns a failure into a rejection; reconciliation turns it into
+ * an `external_unverified` ledger entry.
+ */
+function checkKnownVersion<Entry extends KnownReleaseVersion>(
+  toVersion: string,
+  installed: string | null,
+  catalog: readonly Entry[],
+):
+  | { allowed: true; release: Entry }
+  | {
+      allowed: false;
+      code: Extract<UpdateRejectionCode, 'update_unknown_version' | 'update_skipped_version'>;
+      message: string;
+    } {
+  const release = catalog.find((entry) => entry.version === toVersion);
+  if (!release) {
+    return {
+      allowed: false,
+      code: 'update_unknown_version',
+      message: `Version ${toVersion} is ahead of every release this build knows`,
+    };
+  }
+  if (
+    installed !== null &&
+    release.minimumDirectUpgrade !== undefined &&
+    compareProductVersions(installed, release.minimumDirectUpgrade) < 0
+  ) {
+    return {
+      allowed: false,
+      code: 'update_skipped_version',
+      message:
+        `Version ${toVersion} supports direct upgrade only from ${release.minimumDirectUpgrade} or later; ` +
+        `update ${installed} through the intermediate releases first`,
+    };
+  }
+  return { allowed: true, release };
 }
 
 /**
@@ -271,23 +337,11 @@ export function assertUpdateAllowed(
       `Version ${plan.toVersion} is already installed`,
     );
   }
-  const release = catalog.find((entry) => entry.version === plan.toVersion);
-  if (!release) {
-    throw new UpdateRejectedError(
-      'update_unknown_version',
-      `Version ${plan.toVersion} is ahead of every release this build knows`,
-    );
+  const verdict = checkKnownVersion(plan.toVersion, installed, catalog);
+  if (!verdict.allowed) {
+    throw new UpdateRejectedError(verdict.code, verdict.message);
   }
-  if (
-    release.minimumDirectUpgrade !== undefined &&
-    compareProductVersions(installed, release.minimumDirectUpgrade) < 0
-  ) {
-    throw new UpdateRejectedError(
-      'update_skipped_version',
-      `Version ${plan.toVersion} supports direct upgrade only from ${release.minimumDirectUpgrade} or later; ` +
-        `update ${installed} through the intermediate releases first`,
-    );
-  }
+  const release = verdict.release;
   if (plan.artifactSha256.toLowerCase() !== release.artifactSha256.toLowerCase()) {
     throw new UpdateRejectedError(
       'update_checksum_mismatch',
@@ -327,15 +381,25 @@ export function preflightSelfUpdate(input: {
  * package manager). Downgrades observed on disk are recorded as `failed`
  * so support diagnostics show them, without ever advancing history
  * backward silently.
+ *
+ * Because app-side preflight is suppressed while a package manager owns the
+ * install, this path is the only place that can still enforce the release
+ * catalog: an observed version is validated against the same known-version
+ * rules the preflight gate uses (known release, minimum directly supported
+ * upgrade version). A jump the catalog cannot vouch for is recorded as
+ * `external_unverified` — never as a clean `applied` entry — so the
+ * append-only chain stays intact while callers can surface the unverified
+ * transition.
  */
 export function reconcileObservedVersion(
   ledger: UpdateLedger,
   runningVersion: string,
   installSourceMarkerPath: string,
+  catalog: readonly KnownReleaseVersion[],
 ): UpdateLedgerEntry | undefined {
   const entries = ledger.entries();
   const installed =
-    entries.filter((entry) => entry.outcome === 'applied').at(-1)?.toVersion ?? null;
+    entries.filter((entry) => advancesInstalledVersion(entry.outcome)).at(-1)?.toVersion ?? null;
   if (installed === runningVersion) return undefined;
   const ownership = resolveInstallOwnership(installSourceMarkerPath);
   const appliedBy = ownership.owner === 'app' ? 'app' : ownership.owner;
@@ -357,11 +421,12 @@ export function reconcileObservedVersion(
       appliedBy,
     });
   }
+  const verdict = checkKnownVersion(runningVersion, installed, catalog);
   return ledger.append({
     fromVersion: installed,
     toVersion: runningVersion,
     artifactSha256: null,
-    outcome: 'applied',
+    outcome: verdict.allowed ? 'applied' : 'external_unverified',
     appliedBy,
   });
 }

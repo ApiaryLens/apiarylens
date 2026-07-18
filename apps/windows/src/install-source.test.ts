@@ -3,8 +3,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  isSquirrelFirstRun,
   parsePackageManagerArgument,
   readInstallSourceMarker,
+  reclaimAppInstallOwnership,
   resolveInstallOwnership,
   writeInstallSourceMarker,
 } from './install-source.js';
@@ -83,6 +85,39 @@ describe('package-manager install-source marker', () => {
     writeInstallSourceMarker(path, 'chocolatey');
     expect(resolveInstallOwnership(path)).toEqual({
       owner: 'chocolatey',
+      selfUpdateApplyAllowed: false,
+    });
+  });
+});
+
+describe('app-owned install ownership reclaim', () => {
+  it('detects the Squirrel first-run switch', () => {
+    expect(isSquirrelFirstRun(['ApiaryLens.exe'])).toBe(false);
+    expect(isSquirrelFirstRun(['ApiaryLens.exe', '--squirrel-firstrun'])).toBe(true);
+  });
+
+  it('removes a stale package-manager marker when the app-owned Setup reinstalls', () => {
+    const path = markerPath();
+    writeInstallSourceMarker(path, 'winget');
+    expect(resolveInstallOwnership(path).selfUpdateApplyAllowed).toBe(false);
+    expect(reclaimAppInstallOwnership(path)).toBe(true);
+    expect(readInstallSourceMarker(path)).toBeUndefined();
+    expect(resolveInstallOwnership(path)).toEqual({ owner: 'app', selfUpdateApplyAllowed: true });
+  });
+
+  it('is a no-op when the app already owns the install', () => {
+    const path = markerPath();
+    expect(reclaimAppInstallOwnership(path)).toBe(true);
+    expect(readInstallSourceMarker(path)).toBeUndefined();
+  });
+
+  it('fails closed: an invalid marker is left in place and apply stays suppressed', () => {
+    const path = markerPath();
+    writeFileSync(path, '{"schemaVersion":1,"source":"apt","recordedAt":"junk"}');
+    expect(reclaimAppInstallOwnership(path)).toBe(false);
+    expect(readInstallSourceMarker(path)).toBe('invalid');
+    expect(resolveInstallOwnership(path)).toEqual({
+      owner: 'unknown',
       selfUpdateApplyAllowed: false,
     });
   });

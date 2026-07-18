@@ -21,10 +21,15 @@ import { dirname } from 'node:path';
  * `app-<version>` directory) so it survives upgrades. Absence of a marker
  * means the app owns the update apply step (ADR 0025 invariant 3). A marker
  * that exists but cannot be validated fails closed: apply stays suppressed
- * so two updaters can never both claim the install.
+ * so two updaters can never both claim the install. An app-owned Setup
+ * install reclaims ownership symmetrically: its Squirrel first run carries
+ * no forwarded switch, which removes a stale package-manager marker.
  */
 
 export const PACKAGE_MANAGER_ARGUMENT_PREFIX = '--package-manager=';
+
+/** Squirrel Setup launches the installed app exactly once with this switch. */
+export const SQUIRREL_FIRST_RUN_ARGUMENT = '--squirrel-firstrun';
 
 export const installSourceValues = ['winget', 'chocolatey'] as const;
 export type InstallSource = (typeof installSourceValues)[number];
@@ -81,6 +86,38 @@ export function writeInstallSourceMarker(
     rmSync(temporary, { force: true });
   }
   return marker;
+}
+
+/** True when Squirrel Setup launched this process right after an install. */
+export function isSquirrelFirstRun(argv: readonly string[]): boolean {
+  return argv.includes(SQUIRREL_FIRST_RUN_ARGUMENT);
+}
+
+/**
+ * Reclaims app ownership when the app-owned Setup (re)installs the app.
+ *
+ * Ownership must reflect the most recent installer, and the marker channel
+ * is install-time evidence in both directions: a package-manager install
+ * forwards `--package-manager=<source>` and writes the marker; an app-owned
+ * Setup install forwards nothing, so its Squirrel first run removes a
+ * marker left behind by an earlier winget or Chocolatey install. Without
+ * this, a stale marker would suppress self-update apply forever after the
+ * user moved back to the direct installer.
+ *
+ * Call this only at install time (Squirrel first run without a forwarded
+ * `--package-manager` switch) — a normal launch must never touch the
+ * marker. Ambiguity fails closed: a present-but-invalid marker is left in
+ * place, keeping apply suppressed, because a corrupted arbiter must never
+ * be resolved in favor of a second live updater.
+ *
+ * Returns `true` when the app owns the install afterwards.
+ */
+export function reclaimAppInstallOwnership(markerPath: string): boolean {
+  const marker = readInstallSourceMarker(markerPath);
+  if (marker === undefined) return true;
+  if (marker === 'invalid') return false;
+  rmSync(markerPath, { force: true });
+  return true;
 }
 
 /**

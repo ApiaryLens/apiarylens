@@ -57,7 +57,12 @@ import {
   recoverAuthorityCutover,
   runStandaloneToConnectedMigration,
 } from './standalone-migration.js';
-import { parsePackageManagerArgument, writeInstallSourceMarker } from './install-source.js';
+import {
+  isSquirrelFirstRun,
+  parsePackageManagerArgument,
+  reclaimAppInstallOwnership,
+  writeInstallSourceMarker,
+} from './install-source.js';
 import { UpdateLedger, reconcileObservedVersion } from './update-ledger.js';
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
@@ -132,18 +137,35 @@ async function start(): Promise<void> {
   mkdirSync(userData, { recursive: true, mode: 0o700 });
   const paths = createWindowsDataPaths(userData);
   // ADR 0025: a packaged installer forwards --package-manager=<source>; the
-  // marker it produces names the single steady-state update apply owner.
+  // marker it produces names the single steady-state update apply owner. An
+  // app-owned Setup install forwards no switch, so its Squirrel first run
+  // reclaims ownership from a stale package-manager marker instead —
+  // ownership always reflects the most recent installer.
   const forwardedInstallSource = parsePackageManagerArgument(process.argv);
   if (forwardedInstallSource) {
     writeInstallSourceMarker(paths.installSourceMarker, forwardedInstallSource);
+  } else if (isSquirrelFirstRun(process.argv)) {
+    reclaimAppInstallOwnership(paths.installSourceMarker);
   }
   // Whoever applied the last update (app, winget, or Chocolatey), the ledger
-  // records the observed version transition before anything else runs.
-  reconcileObservedVersion(
+  // records the observed version transition before anything else runs. The
+  // catalog this build carries is its own release entry; a release that
+  // declares a minimum directly supported upgrade version adds it here so an
+  // externally applied jump that skips it is recorded as external_unverified
+  // rather than as a clean applied entry.
+  const reconciled = reconcileObservedVersion(
     new UpdateLedger(paths.updateLedger),
     app.getVersion(),
     paths.installSourceMarker,
+    [{ version: app.getVersion() }],
   );
+  if (reconciled?.outcome === 'external_unverified') {
+    console.warn(
+      `ApiaryLens update ledger: the externally applied update ` +
+        `${reconciled.fromVersion ?? '(first install)'} -> ${reconciled.toVersion} ` +
+        `could not be verified against the releases this build knows`,
+    );
+  }
   const lifecycleRequestArgument = process.argv.find((argument) =>
     argument.startsWith('--desktop-lifecycle-request='),
   );

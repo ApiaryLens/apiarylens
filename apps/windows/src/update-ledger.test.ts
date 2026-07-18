@@ -238,6 +238,29 @@ describe('update ledger integrity', () => {
     );
   });
 
+  it('treats an external_unverified entry as the chain head that later entries continue from', () => {
+    const ledger = installedLedger(temporaryRoot());
+    ledger.append({
+      fromVersion: '0.1.0-preview.3',
+      toVersion: '9.9.9',
+      artifactSha256: null,
+      outcome: 'external_unverified',
+      appliedBy: 'winget',
+    });
+    expect(ledger.installedVersion()).toBe('9.9.9');
+    expect(
+      rejectionCode(() =>
+        ledger.append({
+          fromVersion: '0.1.0-preview.3',
+          toVersion: '0.1.0-preview.4',
+          artifactSha256: sha('4'),
+          outcome: 'applied',
+          appliedBy: 'app',
+        }),
+      ),
+    ).toBe('update_out_of_order');
+  });
+
   it('keeps rejected outcomes in history without advancing the installed version', () => {
     const ledger = installedLedger(temporaryRoot());
     ledger.append({
@@ -320,17 +343,17 @@ describe('next-launch reconciliation', () => {
     const path = join(root, 'updates', 'update-ledger.v1.jsonl');
     const markerPath = join(root, 'updates', 'install-source.v1.json');
     const ledger = new UpdateLedger(path);
-    const install = reconcileObservedVersion(ledger, '0.1.0-preview.3', markerPath);
+    const install = reconcileObservedVersion(ledger, '0.1.0-preview.3', markerPath, catalog);
     expect(install).toMatchObject({
       fromVersion: null,
       toVersion: '0.1.0-preview.3',
       outcome: 'applied',
       appliedBy: 'app',
     });
-    expect(reconcileObservedVersion(ledger, '0.1.0-preview.3', markerPath)).toBeUndefined();
+    expect(reconcileObservedVersion(ledger, '0.1.0-preview.3', markerPath, catalog)).toBeUndefined();
 
     writeInstallSourceMarker(markerPath, 'winget');
-    const upgraded = reconcileObservedVersion(ledger, '0.1.0-preview.4', markerPath);
+    const upgraded = reconcileObservedVersion(ledger, '0.1.0-preview.4', markerPath, catalog);
     expect(upgraded).toMatchObject({
       fromVersion: '0.1.0-preview.3',
       toVersion: '0.1.0-preview.4',
@@ -346,7 +369,7 @@ describe('next-launch reconciliation', () => {
     const path = join(root, 'updates', 'update-ledger.v1.jsonl');
     const markerPath = join(root, 'updates', 'install-source.v1.json');
     const ledger = installedLedger(root, '0.1.0-preview.4');
-    const observed = reconcileObservedVersion(ledger, '0.1.0-preview.3', markerPath);
+    const observed = reconcileObservedVersion(ledger, '0.1.0-preview.3', markerPath, catalog);
     expect(observed).toMatchObject({
       fromVersion: '0.1.0-preview.4',
       toVersion: '0.1.0-preview.3',
@@ -354,7 +377,61 @@ describe('next-launch reconciliation', () => {
       appliedBy: 'app',
     });
     expect(ledger.installedVersion()).toBe('0.1.0-preview.4');
-    expect(reconcileObservedVersion(ledger, '0.1.0-preview.3', markerPath)).toBeUndefined();
+    expect(reconcileObservedVersion(ledger, '0.1.0-preview.3', markerPath, catalog)).toBeUndefined();
     expect(readFileSync(path, 'utf8').trim().split('\n')).toHaveLength(2);
+  });
+
+  it('never records an external update to a version the catalog does not know as applied', () => {
+    const root = temporaryRoot();
+    const path = join(root, 'updates', 'update-ledger.v1.jsonl');
+    const markerPath = join(root, 'updates', 'install-source.v1.json');
+    const ledger = installedLedger(root);
+    writeInstallSourceMarker(markerPath, 'winget');
+    const observed = reconcileObservedVersion(ledger, '9.9.9', markerPath, catalog);
+    expect(observed).toMatchObject({
+      fromVersion: '0.1.0-preview.3',
+      toVersion: '9.9.9',
+      artifactSha256: null,
+      outcome: 'external_unverified',
+      appliedBy: 'winget',
+    });
+    // The chain stays intact and append-only: the unverified head is a fact
+    // on disk, recorded once, and survives a reload without becoming clean.
+    expect(ledger.installedVersion()).toBe('9.9.9');
+    expect(reconcileObservedVersion(ledger, '9.9.9', markerPath, catalog)).toBeUndefined();
+    const reopened = new UpdateLedger(path);
+    expect(reopened.entries().at(-1)?.outcome).toBe('external_unverified');
+    expect(readFileSync(path, 'utf8').trim().split('\n')).toHaveLength(2);
+  });
+
+  it('flags an external update that skips the minimum directly supported upgrade version', () => {
+    const root = temporaryRoot();
+    const markerPath = join(root, 'updates', 'install-source.v1.json');
+    const ledger = installedLedger(root); // 0.1.0-preview.3; 0.1.0 requires preview.4 first
+    writeInstallSourceMarker(markerPath, 'chocolatey');
+    const observed = reconcileObservedVersion(ledger, '0.1.0', markerPath, catalog);
+    expect(observed).toMatchObject({
+      fromVersion: '0.1.0-preview.3',
+      toVersion: '0.1.0',
+      outcome: 'external_unverified',
+      appliedBy: 'chocolatey',
+    });
+    expect(ledger.installedVersion()).toBe('0.1.0');
+  });
+
+  it('applies the same known-version rules the preflight gate enforces to the stepwise path', () => {
+    const root = temporaryRoot();
+    const markerPath = join(root, 'updates', 'install-source.v1.json');
+    const ledger = installedLedger(root);
+    writeInstallSourceMarker(markerPath, 'winget');
+    expect(reconcileObservedVersion(ledger, '0.1.0-preview.4', markerPath, catalog)).toMatchObject({
+      outcome: 'applied',
+    });
+    expect(reconcileObservedVersion(ledger, '0.1.0', markerPath, catalog)).toMatchObject({
+      fromVersion: '0.1.0-preview.4',
+      toVersion: '0.1.0',
+      outcome: 'applied',
+      appliedBy: 'winget',
+    });
   });
 });
