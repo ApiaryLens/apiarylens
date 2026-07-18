@@ -1,3 +1,4 @@
+import { createBuildIdentity } from '@apiarylens/contracts';
 import { SqliteStore } from '@apiarylens/database';
 import { MemoryMediaStore } from '@apiarylens/media';
 import { createApi } from '@apiarylens/server';
@@ -19,6 +20,10 @@ export function createNodeBackend(): ConformanceBackend {
     mediaStore,
     secureCookies: true,
     authRootSecret: AUTH_ROOT_SECRET,
+    // Declare the same identity the real Compose bootstrap declares
+    // (apps/api/src/bootstrap.ts) so profile-aware verifiers such as the
+    // Windows compatibility check see a production-shaped backend.
+    buildIdentity: createBuildIdentity({ deploymentProfile: 'compose' }),
   });
   return {
     label: 'node',

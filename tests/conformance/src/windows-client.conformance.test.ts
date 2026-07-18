@@ -2,8 +2,10 @@
  * Windows client contract layer. The Windows standalone service IS the
  * Compose/Node profile exercised by every other fixture in this package; the
  * additional Windows-only contracts that are testable in CI are the service
- * readiness handshake, the loopback control-token comparison, and the
- * connection profile v1 document. The packaged Electron shell itself cannot
+ * readiness handshake, the loopback control-token comparison, the connection
+ * profile v1 document, and the production compatibility verifier
+ * (verifyConnectedBackend) exercised against each live backend profile
+ * through a fetch bridge. The packaged Electron shell itself cannot
  * run in CI and is covered by the windows-client-verification workflow and
  * owner UAT (documented gap).
  */
@@ -13,13 +15,16 @@ import {
   DATABASE_MIGRATION_HEAD,
   PRODUCT_VERSION,
   SYNC_CONTRACT_VERSION,
-  type BuildIdentity,
 } from '@apiarylens/contracts';
-import { parseConnectionProfile } from '@apiarylens/windows/connected-profile';
+import {
+  parseConnectionProfile,
+  verifyConnectedBackend,
+} from '@apiarylens/windows/connected-profile';
 import { parseServiceReadiness, safeTokenEqual } from '@apiarylens/windows/service-contract';
 import { describe, expect, it } from 'vitest';
 import type { ConformanceFixture } from './fixtures/types.js';
 import { runConformanceSuite } from './harness/runner.js';
+import type { World } from './harness/world.js';
 
 function canonicalProfile(deploymentProfile: 'cloudflare' | 'compose'): Record<string, unknown> {
   return {
@@ -28,7 +33,9 @@ function canonicalProfile(deploymentProfile: 'cloudflare' | 'compose'): Record<s
     displayName: 'Conformance connected family',
     mode: 'connected',
     clientKind: 'windows',
-    backendUrl: 'https://family.example.test/',
+    // No trailing slash: the Windows verifier compares this string against the
+    // response origin exactly as a real connected install stores it.
+    backendUrl: 'https://family.example.test',
     deploymentProfile,
     provisioningSource: 'ci',
     createdAt: new Date().toISOString(),
@@ -100,23 +107,63 @@ describe('windows-client contract layer (host side)', () => {
   });
 });
 
+/**
+ * Route the production verifier's absolute-URL fetch into the in-process
+ * backend while preserving the final response URL the verifier inspects for
+ * origin/redirect enforcement.
+ */
+function bridgeVerifierFetch(world: World): () => void {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(
+      typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
+    );
+    const response = await world.backend.request(`${url.pathname}${url.search}`, init);
+    Object.defineProperty(response, 'url', { value: url.href });
+    return response;
+  }) as typeof fetch;
+  return () => {
+    globalThis.fetch = originalFetch;
+  };
+}
+
 const windowsBackendFixtures: readonly ConformanceFixture[] = [
   {
-    contract: 'windows/profile.compatibility-identity',
-    title: 'the connection profile compatibility block matches the live backend identity',
+    contract: 'windows/profile.compatibility-verifier',
+    title:
+      'the production Windows compatibility verifier accepts the live backend and rejects mismatched locks',
     async run(world) {
       const deploymentProfile = world.backend.label === 'cloudflare' ? 'cloudflare' : 'compose';
-      const profile = parseConnectionProfile(canonicalProfile(deploymentProfile));
-      const response = await world.guest().request('/health');
-      expect(response.status).toBe(200);
-      const body = (await response.json()) as { build: BuildIdentity };
-      expect(body.build.productVersion).toBe(profile.compatibility.productVersion);
-      expect(body.build.apiContract).toBe(profile.compatibility.apiContract);
-      expect(body.build.syncContract).toBe(profile.compatibility.syncContract);
-      expect(body.build.databaseMigration).toBe(profile.compatibility.databaseMigration);
-      expect(response.headers.get('x-api-contract-version')).toBe(
-        profile.compatibility.apiContract,
-      );
+      const restoreFetch = bridgeVerifierFetch(world);
+      try {
+        // The exact connected-client code path (verifyConnectedBackend) must
+        // accept this live backend under the canonical compatibility lock…
+        const profile = parseConnectionProfile(canonicalProfile(deploymentProfile));
+        const build = await verifyConnectedBackend(profile);
+        expect(build.product).toBe('ApiaryLens');
+        expect(build.productVersion).toBe(PRODUCT_VERSION);
+        expect(build.deploymentProfile).toBe(deploymentProfile);
+
+        // …and reject the same live backend when the imported lock names the
+        // other deployment profile or a different product release.
+        const wrongDeployment = parseConnectionProfile(
+          canonicalProfile(deploymentProfile === 'cloudflare' ? 'compose' : 'cloudflare'),
+        );
+        await expect(verifyConnectedBackend(wrongDeployment)).rejects.toThrow(/compatibility lock/);
+
+        const staleRelease = parseConnectionProfile({
+          ...canonicalProfile(deploymentProfile),
+          compatibility: {
+            productVersion: '0.0.1',
+            apiContract: API_CONTRACT_VERSION,
+            syncContract: SYNC_CONTRACT_VERSION,
+            databaseMigration: DATABASE_MIGRATION_HEAD,
+          },
+        });
+        await expect(verifyConnectedBackend(staleRelease)).rejects.toThrow(/compatibility lock/);
+      } finally {
+        restoreFetch();
+      }
     },
   },
 ];
