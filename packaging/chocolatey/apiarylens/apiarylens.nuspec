@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- NOT PACKED FOR RELEASE, NOT PUSHED. Submission locked until GV4 per the
+     platform plan. Seeded at C2 (Phase P2 Track Release-eng) from the
+     DIST-002 drafts; {VERSION} is substituted by the release workflow. -->
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>apiarylens</id>
+    <version>{VERSION}</version><!-- placeholder, e.g. 1.0.0 -->
+    <packageSourceUrl>https://github.com/ApiaryLens/apiarylens/tree/main/packaging/chocolatey</packageSourceUrl>
+    <owners>ApiaryLens</owners>
+    <title>ApiaryLens</title>
+    <authors>ApiaryLens contributors</authors>
+    <projectUrl>https://github.com/ApiaryLens/apiarylens</projectUrl>
+    <!-- Chocolatey CLI rejects NuGet <license> elements (CHCU0002); licenseUrl
+         is the supported form. License: Apache-2.0. -->
+    <licenseUrl>https://github.com/ApiaryLens/apiarylens/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/ApiaryLens/apiarylens</projectSourceUrl>
+    <docsUrl>https://apiarylens.org/docs</docsUrl>
+    <bugTrackerUrl>https://github.com/ApiaryLens/apiarylens/issues</bugTrackerUrl>
+    <releaseNotes>https://github.com/ApiaryLens/apiarylens/releases/tag/v{VERSION}</releaseNotes>
+    <tags>apiarylens beekeeping hive-inspection electron</tags>
+    <summary>Beehive inspection and apiary management for families</summary>
+    <description><![CDATA[
+ApiaryLens is an open-source (Apache-2.0) beehive inspection and apiary
+management application. Works fully offline in disconnected mode (no account,
+no network, local SQLite) or connected to a self-hosted family backend.
+
+**Per-user installer.** This package runs a Squirrel per-user Setup: the
+application installs into the profile of the **user running choco** (under
+`%LOCALAPPDATA%`), even though Chocolatey runs elevated. It is not suitable
+for machine-wide or SYSTEM-context deployment (Intune/GPO/Ansible) — each
+Windows user installs their own copy.
+
+**Updates.** Installing via Chocolatey suppresses the application's built-in
+update apply; use `choco upgrade apiarylens` to update. Uninstalling via
+`choco uninstall` keeps your hive data by default; use the in-app removal
+flow for permanent data deletion.
+]]></description>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

@@ -1,0 +1,42 @@
+# NOT SUBMITTED — submission to microsoft/winget-pkgs is locked until GV4
+# (stable, signed only). Seeded at C2 (Phase P2 Track Release-eng) from the
+# DIST-001 drafts. PLACEHOLDER version/URL/hash/date — the C2 automation
+# rewrites these from the actual GitHub release at submission time.
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.12.0.schema.json
+
+PackageIdentifier: ApiaryLens.ApiaryLens
+PackageVersion: 0.0.0-DRAFT # PLACEHOLDER — real value written by release automation
+Platform:
+  - Windows.Desktop
+MinimumOSVersion: 10.0.19045.0 # Win10 22H2 floor per ADR 0016 conditional baseline; Win11 is standard support
+InstallerType: exe # Squirrel Setup.exe — no native 'squirrel' type exists (winget-cli#372/#1748)
+Scope: user # per-user Squirrel install, no elevation (ADR 0016)
+InstallModes:
+  - interactive
+  - silent
+InstallerSwitches:
+  Silent: --silent # Squirrel.Windows Setup.exe silent flag — verify against real Forge artifact (DIST-001 open question)
+  SilentWithProgress: --silent
+  # Custom marker switch: Setup forwards this so first run writes the
+  # package-manager marker file that suppresses the in-app Squirrel updater
+  # (Design v2 §6 dual-updater suppression; detail design in R3).
+  Custom: --package-manager=winget
+UpgradeBehavior: install # Squirrel handles install-over-self as an update
+# Load-bearing: the app self-updates via Squirrel, so exclude it from
+# `winget upgrade --all` (same pattern as Discord.Discord).
+RequireExplicitUpgrade: true
+AppsAndFeaturesEntries:
+  - DisplayName: ApiaryLens
+    Publisher: ApiaryLens
+    DisplayVersion: 0.0.0-DRAFT # PLACEHOLDER — must track the ARP entry Squirrel writes
+    ProductCode: ApiaryLens # PLACEHOLDER — confirm exact ARP key name from a real Squirrel install
+    InstallerType: exe
+ReleaseDate: 2026-01-01 # PLACEHOLDER
+Installers:
+  - Architecture: x64
+    # PLACEHOLDER URL — stable GitHub release asset; previews are never
+    # submitted. Asset name matches the release workflow's published subject.
+    InstallerUrl: https://github.com/ApiaryLens/apiarylens/releases/download/v0.0.0-DRAFT/ApiaryLensSetup.exe
+    InstallerSha256: 0000000000000000000000000000000000000000000000000000000000000000 # PLACEHOLDER
+ManifestType: installer
+ManifestVersion: 1.12.0

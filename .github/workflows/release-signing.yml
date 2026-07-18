@@ -41,7 +41,15 @@ jobs:
         env:
           APIARYLENS_EXACT_TAG: ${{ inputs.exact_tag || github.ref_name }}
           APIARYLENS_ALLOW_UNSIGNED_PREVIEW: ${{ inputs.allow_unsigned_preview && 'true' || 'false' }}
-          APIARYLENS_WINDOWS_SIGNING_AVAILABLE: ${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 != '' && secrets.WINDOWS_CERTIFICATE_PASSWORD != '' }}
+          # ADR 0026: Authenticode signing is performed by SignPath Foundation
+          # through a submit/wait round trip in the windows job, not by locally
+          # held PFX material. Signing counts as "available" only when the
+          # SignPath wiring is fully configured (API token secret plus
+          # organization-id repository variable). When it is not, the policy
+          # script fails closed: Stable and RC releases hard-fail, and
+          # Previews require the explicit allow_unsigned_preview opt-in to
+          # ship labeled unsigned bytes.
+          APIARYLENS_WINDOWS_SIGNING_AVAILABLE: ${{ secrets.SIGNPATH_API_TOKEN != '' && vars.SIGNPATH_ORGANIZATION_ID != '' }}
         run: |
           release_commit="$(git rev-list -n 1 "$APIARYLENS_EXACT_TAG")"
           test -n "$release_commit"
@@ -78,7 +86,7 @@ jobs:
           pnpm verify
           pnpm docs:check
           pnpm audit --audit-level high
-          pnpm exec vitest run scripts/product-release-policy.test.mjs scripts/product-release-workflow.test.mjs
+          pnpm exec vitest run scripts/product-release-policy.test.mjs scripts/product-release-workflow.test.mjs scripts/apply-signed-windows-setup.test.mjs
 
       - name: Bind release inputs to the exact revision
         env:
@@ -166,29 +174,69 @@ jobs:
         shell: pwsh
         run: Copy-Item -Path dist/product-input/release/* -Destination release -Recurse -Force
 
-      - name: Build Windows package under resolved signing policy
+      - name: Build Windows package (unsigned; SignPath signs after packaging)
         shell: pwsh
-        env:
-          RELEASE_SIGNING_MODE: ${{ needs.policy.outputs.signing_mode }}
-          WINDOWS_CERTIFICATE_PFX_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 }}
-          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         run: |
-          if ($env:RELEASE_SIGNING_MODE -eq 'signed') {
-            $certificate = Join-Path $env:RUNNER_TEMP 'apiarylens-release-signing.pfx'
-            try {
-              [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_PFX_BASE64))
-              $env:WINDOWS_CERTIFICATE_FILE = $certificate
-              $env:APIARYLENS_SOURCE_COMMIT = (Get-Content -Raw release/release-manifest.json | ConvertFrom-Json).sourceCommit
-              pnpm release:windows
-            } finally {
-              Remove-Item -LiteralPath $certificate -Force -ErrorAction SilentlyContinue
-            }
-          } else {
-            Remove-Item Env:WINDOWS_CERTIFICATE_PFX_BASE64 -ErrorAction SilentlyContinue
-            Remove-Item Env:WINDOWS_CERTIFICATE_PASSWORD -ErrorAction SilentlyContinue
-            $env:APIARYLENS_SOURCE_COMMIT = (Get-Content -Raw release/release-manifest.json | ConvertFrom-Json).sourceCommit
-            pnpm release:windows
-          }
+          # ADR 0026 (C1): the Squirrel package is always built unsigned here.
+          # On the 'signed' policy branch the Setup bytes are signed by
+          # SignPath Foundation in the round trip below, and every manifest
+          # hash is recomputed from the signed bytes before finalization, so
+          # windows-package.json, SHA256SUMS, and the attestations describe
+          # the signed bytes. No PFX or local signing material exists in any
+          # branch of this workflow.
+          $env:APIARYLENS_SOURCE_COMMIT = (Get-Content -Raw release/release-manifest.json | ConvertFrom-Json).sourceCommit
+          pnpm release:windows
+
+      # ADR 0026 (C1): SignPath Foundation signing round trip for the Setup
+      # executable. Runs only on the 'signed' policy branch; GV3 unsigned
+      # previews never touch SignPath.
+      #
+      # PLACEHOLDER slugs: the SignPath organization and project do not exist
+      # yet. Per ADR 0026 the GV3 labeled unsigned preview ships BEFORE the
+      # SignPath application is submitted, so until the application is
+      # approved leave SIGNPATH_API_TOKEN (secret) and
+      # SIGNPATH_ORGANIZATION_ID (repository variable) unset: the policy job
+      # then resolves signing as unavailable and Stable/RC releases fail
+      # closed instead of shipping unsigned. Before the first signed run the
+      # SignPath GitHub App must be installed on this repository and the slugs
+      # below replaced with the real values from the approved SignPath
+      # project.
+      #
+      # Scope note (prototyped in C1, per ADR 0026): only ApiaryLensSetup.exe
+      # is signed. Squirrel's RELEASES file indexes the .nupkg (not Setup.exe),
+      # so post-packaging Setup signing leaves RELEASES consistent; the
+      # binaries inside the .nupkg delta/full update channel remain unsigned
+      # in this iteration and are a recorded follow-up for GV4 hardening.
+      - name: Upload unsigned Windows Setup for signing
+        if: needs.policy.outputs.signing_mode == 'signed'
+        id: unsigned-setup
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: apiarylens-windows-setup-unsigned
+          path: release/artifacts/windows/artifacts/ApiaryLensSetup.exe
+          if-no-files-found: error
+
+      - name: Submit SignPath signing request and wait for signed bytes
+        if: needs.policy.outputs.signing_mode == 'signed'
+        uses: signpath/github-action-submit-signing-request@b9d91eadd323de506c0c81cf0c7fe7438f3360fd # v2.2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: apiarylens # PLACEHOLDER - real slug assigned when the SignPath application is approved (ADR 0026)
+          signing-policy-slug: release-signing # PLACEHOLDER - release policy with per-release manual approval (ADR 0026)
+          github-artifact-id: ${{ steps.unsigned-setup.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: release/signpath-signed
+
+      - name: Apply signed Setup bytes and recompute manifest hashes
+        if: needs.policy.outputs.signing_mode == 'signed'
+        shell: pwsh
+        run: |
+          $signed = 'release/signpath-signed/ApiaryLensSetup.exe'
+          if (-not (Test-Path -LiteralPath $signed)) { throw 'SignPath did not return ApiaryLensSetup.exe.' }
+          Copy-Item -LiteralPath $signed -Destination release/artifacts/windows/artifacts/ApiaryLensSetup.exe -Force
+          Remove-Item release/signpath-signed -Recurse -Force
+          node scripts/apply-signed-windows-setup.mjs
 
       - name: Finalize visible signing evidence and exact manifests
         shell: pwsh
@@ -333,3 +381,99 @@ jobs:
               --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release-signing.yml" \
               --source-ref "$GITHUB_REF"
           done
+
+  # ---------------------------------------------------------------------------
+  # C2 package-manager submission jobs - DISABLED until GV4.
+  # Both jobs are hard-gated with `if: false`: they cannot run on any trigger
+  # until a maintainer deliberately edits this file after the owner passes the
+  # GV4 stable gate (signed artifacts + conformance evidence). Stable versions
+  # only; Previews and RCs are never submitted to any package manager.
+  # ---------------------------------------------------------------------------
+
+  winget-submission:
+    # GV4 gate: submission to microsoft/winget-pkgs is locked until GV4.
+    # Flipping `if: false` is the explicit enable switch and is an owner
+    # decision recorded in the platform plan. Untested automation: this job
+    # has never run; validate it on a fork before the first enabled run.
+    if: ${{ false }}
+    needs: [policy, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact immutable revision
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+          ref: ${{ needs.policy.outputs.release_commit }}
+
+      - name: Submit winget manifest update with komac
+        env:
+          # komac requires a CLASSIC personal access token with `public_repo`
+          # scope on an account that owns a fork of microsoft/winget-pkgs.
+          # Fine-grained PATs and GitHub App installation tokens are NOT
+          # supported for komac's cross-repo PR flow (DIST-001 finding 3), so
+          # this secret is a recorded exception to the GitHub-App-token rule.
+          KOMAC_PAT: ${{ secrets.WINGET_SUBMISSION_PAT }}
+          RELEASE_VERSION: ${{ needs.policy.outputs.version }}
+          RELEASE_CHANNEL: ${{ needs.policy.outputs.channel }}
+        run: |
+          if [[ "$RELEASE_CHANNEL" != "stable" ]]; then
+            echo "Refusing to submit $RELEASE_CHANNEL version $RELEASE_VERSION to winget." >&2
+            exit 1
+          fi
+          curl -fsSL -o komac.deb \
+            https://github.com/russellbanks/Komac/releases/download/v2.16.0/komac_2.16.0-1_amd64.deb
+          sudo dpkg -i komac.deb
+          # NOTE: the FIRST version of ApiaryLens.ApiaryLens must be submitted
+          # as a manual PR to microsoft/winget-pkgs (see packaging/winget/);
+          # komac can only update a package that already exists there.
+          komac update ApiaryLens.ApiaryLens \
+            --version "$RELEASE_VERSION" \
+            --urls "https://github.com/ApiaryLens/apiarylens/releases/download/v${RELEASE_VERSION}/ApiaryLensSetup.exe" \
+            --submit \
+            --token "$KOMAC_PAT"
+
+  chocolatey-submission:
+    # GV4 gate: pushing to the Chocolatey Community Repository is locked until
+    # GV4. Flipping `if: false` is the explicit enable switch and is an owner
+    # decision recorded in the platform plan. First-party `choco pack` and
+    # `choco push` only - chocolatey-AU is GPL-2.0 and is deliberately not
+    # used (DIST-002 finding 3). Untested automation: this job has never run;
+    # validate it on a fork before the first enabled run.
+    if: ${{ false }}
+    needs: [policy, publish]
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact immutable revision
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+          ref: ${{ needs.policy.outputs.release_commit }}
+
+      - name: Pack and push Chocolatey package from published release bytes
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+          RELEASE_VERSION: ${{ needs.policy.outputs.version }}
+          RELEASE_CHANNEL: ${{ needs.policy.outputs.channel }}
+          EXACT_TAG: ${{ needs.policy.outputs.exact_tag }}
+        run: |
+          if ($env:RELEASE_CHANNEL -ne 'stable') { throw "Refusing to submit $($env:RELEASE_CHANNEL) version $($env:RELEASE_VERSION) to Chocolatey." }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          gh release download $env:EXACT_TAG --pattern SHA256SUMS --dir dist
+          $line = Select-String -Path dist/SHA256SUMS -Pattern ([regex]::Escape('ApiaryLensSetup.exe')) |
+            Select-Object -First 1
+          if (-not $line) { throw 'Release SHA256SUMS does not list ApiaryLensSetup.exe.' }
+          $sha256 = ($line.Line -split '\s+')[0]
+          $staging = 'dist/choco/apiarylens'
+          New-Item -ItemType Directory -Force $staging | Out-Null
+          Copy-Item packaging/chocolatey/apiarylens/* $staging -Recurse -Force
+          foreach ($file in @("$staging/apiarylens.nuspec", "$staging/tools/chocolateyinstall.ps1")) {
+            (Get-Content -Raw $file).Replace('{VERSION}', $env:RELEASE_VERSION).Replace('{SHA256_SETUP_X64}', $sha256) |
+              Set-Content -NoNewline -Path $file
+          }
+          choco pack "$staging/apiarylens.nuspec" --output-directory dist/choco
+          $nupkg = Get-ChildItem dist/choco/*.nupkg -File -ErrorAction Stop
+          choco push $nupkg.FullName --source https://push.chocolatey.org/ --api-key $env:CHOCOLATEY_API_KEY
