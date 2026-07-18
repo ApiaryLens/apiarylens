@@ -54,14 +54,14 @@ Before deployment, confirm:
 - the SSH host-key SHA-256 fingerprint was collected through a trusted provider
   console or an independently verified channel.
 
-Run Scout Bee on the operator computer, select **My Own Hardware or VM**, and enter
-the VM address, SSH user, `/opt/apiarylens`, public HTTPS URL, and pinned host-key
-fingerprint. Run preflight before apply. Scout Bee transfers the signed release over
-SSH, keeps credentials out of the plan and diagnostics, and verifies `/health`
-against the pinned release identity.
-
-The equivalent direct Compose commands are documented in
+Use the direct Compose procedure available today. Verify the host identity and
+release bundle before transfer, keep secrets out of command history, and verify
+`/health` against the expected release identity after startup. The commands are
+documented in
 [`docker/README.md`](../../docker/README.md).
+
+Scout Bee will provide the guided Windows-to-Linux workflow when its separate
+end-user release is ready.
 
 ## Provider prerequisites
 

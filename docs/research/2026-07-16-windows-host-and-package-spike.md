@@ -3,7 +3,7 @@
 ## Status
 
 `WIN-003` research is complete. The owner subsequently accepted ADR 0016 and
-authorized the Electron implementation delivered in Public Preview 3. This record
+authorized an experimental Electron implementation. This record
 preserves the research evidence that informed that decision.
 
 Official-source review plus comparable Electron and Tauri/WebView2 packaging,

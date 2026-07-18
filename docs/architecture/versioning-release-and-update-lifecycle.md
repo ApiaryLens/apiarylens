@@ -6,8 +6,8 @@ Accepted and implemented MVP architecture. The required user outcomes and releas
 gates are part of the accepted
 [MVP Definition and UAT Contract](../product/mvp-definition.md). Release manifests,
 content-addressed bundles, contract and migration identity, keyless attestations,
-backup-before-update, recovery tooling, and Scout Bee lifecycle execution are
-implemented and exercised by the release-candidate evidence.
+backup-before-update, and direct recovery tooling are implemented. Scout Bee will
+apply this lifecycle after its separate end-user release is ready.
 
 ## Purpose
 
@@ -38,7 +38,8 @@ For every supported update, an operator can:
 2. Read plain-language release notes, compatibility requirements, and known risks.
 3. Verify prerequisites and available storage before making changes.
 4. Create and verify a backup before a data-changing update.
-5. Apply the update through Scout Bee or a documented provider-specific procedure.
+5. Apply the update through a documented provider-specific procedure or, when it
+   becomes available, Scout Bee.
 6. Preserve pending offline inspections and media on client devices.
 7. See migration and health-check progress without exposing secrets.
 8. Confirm that the application, API, schema, and deployment profile are compatible.
@@ -173,8 +174,9 @@ known limitations so a deployed build can always be traced to its documentation.
 
 ## Update Orchestration
 
-Scout Bee owns the guided update experience for its supported targets. Direct
-operator procedures remain documented so users are not locked into Scout Bee.
+Direct operator procedures provide the current update experience. Scout Bee will
+provide the guided experience for its supported deployment targets after release;
+the direct procedures remain documented so users are not locked into Scout Bee.
 
 The shared update state machine is:
 

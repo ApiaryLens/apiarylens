@@ -1,37 +1,21 @@
 # Changelog
 
-## 0.1.0-preview.3 — 2026-07-17
+## Unreleased
 
-Preview 3 adds production-grade standalone-to-connected Windows migration,
-transactional exact-once import receipts, the accessible hive equipment stack,
-offline weather snapshots and a privacy-preserving enrichment boundary. It also
-records complete released-byte Cloudflare, Windows-to-Linux, and installed-Windows
-acceptance, including interrupted packaged migration and exact reconciliation.
-Production signing remains a GA gate; the extended manual assistive-technology
-matrix is scheduled for Version 1.1.
-
-See the [Preview 3 release notes](0.1.0-preview.3.md).
-
-## 0.1.0-preview.2 — 2026-07-17
-
-Preview 2 publishes the standalone Windows product, automatic connected sync,
-offline relaunch and media reliability fixes, protected Windows backup/restore,
-family and field usability improvements, and the backend-only or backend-plus-web
-deployment choice. It also strengthens Windows-to-Linux SSH identity, secret, and
-exact-health verification while keeping Scout Bee independently versioned.
-
-This remains a Public Preview. Production signing, exact released-target replay,
-interrupted production migration, and remaining physical-device/accessibility gates
-remain visible rather than being represented as complete. See the
-[Preview 2 release notes](0.1.0-preview.2.md).
+- Continued offline relaunch, automatic synchronization, media reliability, family
+  administration, hive equipment, weather-entry, and accessibility work for a
+  future Preview update.
+- Continued standalone Windows application research and implementation. It is not
+  currently an end-user release.
+- Continued separately versioned Scout Bee deployment-bootloader work. It is not
+  currently an end-user release.
 
 ## 0.1.0-preview.1 — 2026-07-16
 
 ApiaryLens is now available as Public Preview 1. This is an early, usable product,
 not GA or a stable release. It carries forward the verified MVP acceptance candidate
 with the installable PWA, family access, synchronized hive history, private media,
-portable Cloudflare and Compose deployments, Scout Bee operations, and the public
-documentation set.
+portable Cloudflare and Compose deployments, and the public documentation set.
 
 Features and workflows may change, and preview updates may arrive frequently,
 including multiple times per day. Keep current backups and exports, and do not use
@@ -44,31 +28,13 @@ verification, and feedback instructions.
 
 ### 2026-07-17 Preview updates
 
-- Published the directly installable unsigned Windows Public Preview from source
-  `b433d9f`. Exact Windows run `29604870862` passed build, manifest and package
-  hashes, packaged-host smoke, clean current-user install, installed-host security
-  and health smoke, and keep-data uninstall.
 - Completed automatic online synchronization across open, resume, reconnect, and
   connected saves, including complete multi-batch push and paginated pull handling,
   organization-scoped cursors, and protection for unsynchronized/conflicted local
   records.
-- Added a protected headless Windows backup/restore boundary with exact compatibility,
-  verified recovery backup, staged SQLite integrity checks, session revocation,
-  post-restore health verification, and rollback verification.
-- Added the standalone/connected Electron Windows host, secret-free deployment
-  profile import, verified `.albackup` backup, atomic restore/rollback, and real
-  Squirrel current-user Setup/update artifacts. Exact Windows run `29604870862`
-  passed package hashes, packaged-host smoke, clean install, installed-host smoke,
-  and keep-data uninstall. Production Authenticode signing and physical UAT remain
-  release gates.
 - Fixed installed-PWA cached launch so local navigation and records render before a
   stalled initial network session refresh. Automatic sync/media and physical
   iPhone/iPad relaunch gates remain visible.
-- Published independently versioned Scout Bee `0.1.0-preview.2` for Windows and
-  Linux with install/configure/update/repair/rollback/backup/restore/uninstall UI,
-  sanitized diagnostics, a release manifest, checksums, SBOM, signing evidence,
-  attestations, and a complete public operations guide. Production signing and
-  physical released-target lifecycle evidence remain open.
 
 ## 0.1.0-rc.7 — 2026-07-16
 

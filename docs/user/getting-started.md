@@ -114,79 +114,6 @@ using account recovery also revokes that person's sessions. Signing out locally 
 removes the cached account context even when the device is offline, while leaving
 family records in place until **Clear local data** is explicitly selected.
 
-The Windows application starts in standalone mode unless Scout Bee imports a
-verified, secret-free connection profile. Connected mode keeps the same offline
-records, media staging, outbox, reconnect, and session behavior as the PWA, in an
-isolated Windows application storage partition. The imported profile contains the
-HTTPS backend and compatibility identity but no password, session, provider token,
-SSH key, deployment secret, or recovery code. Authentication happens in the Windows
-client after import. Returning to standalone mode preserves the prior standalone
-data; it does not silently copy newer remote-only records back into that database.
-
-The ApiaryLens for Windows Preview 3 download was withdrawn on 2026-07-17 after
-owner testing showed that its first-run experience did not satisfy the approved
-standalone Windows product requirements. Do not install or recommend that package.
-A corrected Windows application will return only after it launches directly into
-usable device-only standalone mode without a browser or account login.
-
-The release also publishes a full Squirrel update package, `RELEASES` metadata,
-artifact sizes, and SHA-256 hashes. The database, original photos, protected
-credentials, connection profile, and backups live in the user's application-data
-directory rather than the replaceable install directory, so application updates do
-not overwrite family data.
-
-An owner using Windows standalone can choose **Account and build → Create Windows
-backup**. Select a destination for the `.albackup` file and keep it somewhere other
-than the computer running ApiaryLens. The application briefly restarts its private
-local service so the SQLite database and original photos form one consistent,
-checksum-verified archive. Windows-protected application credentials are excluded.
-Choose **Restore Windows backup** to select a compatible archive. ApiaryLens verifies
-every checksum before showing the destructive confirmation, creates a separate
-pre-restore recovery backup, replaces the current database and photos, revokes
-restored sessions, and verifies the restarted service. If startup or health checks
-fail, the prior data is restored automatically. A successful restore requires a
-fresh sign-in.
-
-### Update ApiaryLens for Windows
-
-1. Create and verify a current `.albackup` before changing versions.
-2. Open the versioned ApiaryLens release page and confirm the target version,
-   compatibility notes, package size, and SHA-256.
-3. Download and run that release's explicitly named Preview Setup executable. Setup updates the
-   current-user installation; it does not replace the private application-data
-   directory.
-4. Reopen ApiaryLens and confirm **Account and build** shows the expected version.
-5. Confirm the local service is healthy and open a recent hive, inspection, and
-   original photo. If connected, allow automatic synchronization to finish.
-
-Do not install an older package over a newer database unless the release explicitly
-declares that rollback compatible. Use the verified backup/restore path when a
-schema rollback requires data restoration.
-
-### Repair the Windows installation
-
-Use [Scout Bee](scout-bee-guide.md#repair) and select **Repair** for the managed
-Windows installation. Repair verifies the pinned application package, replaces
-missing or corrupted program files from the verified cache, restarts the private
-loopback service, and checks health. It does not erase the database or photos to
-hide an application-file problem. Create a backup before repair when the current
-installation can still produce one.
-
-### Uninstall or reinstall
-
-1. Create a current backup and record its SHA-256 and product version.
-2. In Windows **Settings → Apps → Installed apps**, find **ApiaryLens** and choose
-   **Uninstall**, or use Scout Bee's **Remove application, keep data** operation.
-3. Confirm the program is removed. Preview uninstall preserves the private
-   application-data directory so a verified reinstall can recover the family data.
-4. To reinstall, run the exact verified Setup package for a compatible version and
-   confirm health and records before deleting any backup.
-
-Permanent data deletion is intentionally separate from normal uninstall. Do not
-manually remove application-data folders as a shortcut: verify a portable backup,
-review every retained location, and use Scout's separately confirmed remove-data
-workflow when it is available for the selected release.
-
 ## Photos
 
 Selected photos and thumbnails are staged locally first. ApiaryLens uploads them
@@ -200,12 +127,9 @@ a manifest, JSON data, CSV tables, and original photos. Store it somewhere you
 control. This portable export is separate from a deployment backup, and a phone or
 browser's offline working copy is not a server backup.
 
-Open Scout Bee on the operator computer to create and verify a deployment backup or
-to see the last backup and restore result recorded there. Before restore, Scout
-requires a compatible verified archive, creates a recovery backup of the current
-deployment, warns that current records and media will be replaced, revokes active
-sessions, and verifies health afterward. See the [Scout Bee backup and restore
-guide](scout-bee-guide.md#backup).
+Use the direct [operations guide](../operator/operations-guide.md) to create and
+verify a deployment backup or restore a compatible archive. Scout Bee will provide
+the same guided deployment workflow after its separate release is ready.
 
 Recovery codes are single-use; after using one, sign in and create a new set through
 the family recovery workflow.

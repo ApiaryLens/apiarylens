@@ -1,52 +1,39 @@
 # Scout Bee installation and operations guide
 
-Scout Bee is the ApiaryLens installer, updater, recovery tool, and deployment
-manager. Run Scout on the computer in front of you; it can manage ApiaryLens on
-that Windows computer, in Cloudflare, or on a separate Linux computer over SSH.
-Windows users do not need to type Linux commands.
+Scout Bee is the separately versioned ApiaryLens deployment bootloader. It is
+designed to deploy and manage the backend and optional web frontend in Cloudflare
+or on a Linux computer over SSH. Windows users will be able to run Scout without
+typing Linux commands.
 
-> **Public download unavailable:** Scout Bee is not currently offered to normal
-> users from ApiaryLens.org. The previous buttons sent users to GitHub, which
-> violated the bootloader's family-friendly distribution requirement. Source and
-> historical release artifacts remain available to contributors, but `.org` will
-> not advertise Scout Bee until it has a direct, verified download experience.
+> **Coming soon:** Scout Bee is not currently offered as an end-user download.
+> This guide describes the intended workflow so operators and contributors can
+> review it before the separately versioned release is ready.
 
 ## Choose what Scout should manage
 
 | Choice | Use it when | Where data lives |
 |---|---|---|
-| Windows standalone | One Windows computer is the main ApiaryLens home | That Windows user's private application-data directory |
 | Family Cloud | Phones, tablets, and computers need one shared family deployment | Your Cloudflare account |
 | Own hardware or cloud VM | You control a Linux server, home server, mini-PC, Hyper-V VM, or cloud VM | The selected Linux target |
 | Advanced export | Your own CI/CD system will apply the deployment | In the target selected by the exported plan |
 
-The optional web frontend may accompany a connected backend. The Windows client can
-also connect to the backend using a secret-free connection profile. Installing a
-backend does not copy ApiaryLens product source into your deployment repository.
+The optional web frontend may accompany a connected backend. Installing a backend
+does not copy ApiaryLens product source into your deployment repository.
 
-## Five-minute Windows start
+## Planned five-minute Windows start
 
-1. Download the Windows x64 Preview executable linked above.
-2. Verify its SHA-256 against the table and release manifest. This Preview is not
-   Authenticode-signed, so Windows may require **More info → Run anyway**. Do not
-   bypass that warning if the hash differs.
-3. Run Scout Bee. It is portable and does not require Go, Node, WSL, Docker, or a
+1. Download Scout Bee from the direct ApiaryLens download offered after release.
+2. Verify the version and published integrity information shown with the download.
+3. Run Scout Bee. It will be portable and will not require Go, Node, WSL, Docker, or a
    Linux shell.
-4. Select **Windows standalone**, **Family Cloud**, **Own hardware or cloud VM**, or
-   **Advanced export**.
+4. Select **Family Cloud**, **Own hardware or cloud VM**, or **Advanced export**.
 5. Review the prerequisite and ownership summary. Scout does not change anything
    during preflight.
 6. Review the exact actions and confirm **Apply**. Do not close Scout during
    activation or health verification; an interrupted operation can be resumed from
    its last verified checkpoint.
 
-For Windows standalone, Scout installs the exact verified current-user package without
-administrator rights. ApiaryLens data remains outside the replaceable installation
-directory. For a connected deployment, sign in inside ApiaryLens after the
-connection profile is imported; Scout never places a password or session in that
-file.
-
-## Five-minute Linux start
+## Planned five-minute Linux start
 
 1. Download the versioned Linux archive linked above.
 2. Verify its checksum and attestation using the files attached to the same release.
@@ -97,8 +84,7 @@ live. The normal guided flow is:
 8. Scout transfers the exact verified release, verifies it again on the target,
    creates target-side secrets through the protected boundary, applies each
    migration once, and runs health and authenticated smoke checks.
-9. Save the redacted operation summary. If requested, save the secret-free Windows
-   connection profile and import it into the Windows client.
+9. Save the redacted operation summary and secret-free deployment record.
 
 ## Deploy to Cloudflare
 
@@ -116,8 +102,7 @@ the intended D1, R2, Worker, route, DNS, and secret operations.
 6. Confirm apply. Scout pins the product release, creates storage, applies
    migrations, uploads secrets through the provider API, deploys the backend and
    optional frontend, then verifies DNS, TLS, authenticated API access, D1, and R2.
-7. Save the connection profile if a Windows client should use this deployment. Sign
-   in from the Windows client; provider credentials are not copied to it.
+7. Save the redacted operation summary and secret-free deployment record.
 
 ## Install, update, and repair
 
@@ -158,9 +143,6 @@ family data to make an application-file problem disappear.
 3. Review included database, original media, product/contract identity, and
    verification metadata. Secrets and Windows-protected credentials are excluded.
 4. Create the backup and wait for checksum verification to complete.
-
-For Windows standalone, an owner may also use **Account and build → Create Windows
-backup** inside ApiaryLens to create a `.albackup` file.
 
 ### Restore
 

@@ -1,18 +1,18 @@
 # ApiaryLens Product Overview and Capability Whitepaper
 
-**Status:** Public Preview 3 product narrative. For the concise audience-facing
+**Status:** Public Preview 1 product narrative. For the concise audience-facing
 version, see the [Marketing Overview](marketing-overview.md).
 
 ## What is ApiaryLens?
 
 ApiaryLens is an open-source apiary intelligence platform for beekeepers. Public
-Preview 3 tracks apiaries, hives, queens,
+Preview 1 tracks apiaries, hives, queens,
 equipment, inspections, health observations, photos, mite counts, feeding,
 treatments, harvests, follow-ups, and long-term hive history. It is licensed under
 Apache License 2.0 and is not GA or a stable release. Features and workflows may
 change as Preview updates arrive, sometimes multiple times per day.
 
-Keep backups current during Preview 3; do not make ApiaryLens the sole copy of
+Keep backups current during Preview 1; do not make ApiaryLens the sole copy of
 irreplaceable hive records or media.
 
 ApiaryLens is designed to be simple enough for a family getting its first hive and powerful enough to grow into bee club, research, and commercial use.
@@ -145,7 +145,7 @@ The open-source project remains first-class even if a hosted version exists late
 ## Public Web Experience
 
 - `apiarylens.org` is the project, learning, documentation, release, and community home.
-- `apiarylens.app` is the hosted PWA and safe public demo, with optional SaaS later.
+- `apiarylens.app` is the safe public demo. A managed application or SaaS offering remains a possible future direction.
 - `apiarylens.dev` is the developer, API, integration, SDK, and contributor portal.
 - `apiarylens.com` redirects to `.org` while reserved for future commercial use.
 

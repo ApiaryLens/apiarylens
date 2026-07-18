@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted and implemented for Public Preview
+Accepted design; experimental implementation exists but is not an end-user release
 
 ## Date
 

@@ -2,46 +2,42 @@
 
 ## Status and intent
 
-**Status:** Product Preview 3 and Scout Bee Preview 4 published; authorized Preview
-scope accepted. Production signing remains a GA gate, and the extended manual
-assistive-technology matrix is scheduled for Version 1.1.
+**Status:** Accepted future design. Public Preview 1 remains the current product
+release. The standalone Windows application and independently versioned Scout Bee
+are not currently offered as end-user downloads.
 
 This is the detailed post-Preview design for making the packaged Windows client the
 default family starting point while preserving the existing portable backend and web
-frontend. It implements the product direction accepted in
+frontend. It describes the product direction accepted in
 [ADR 0015](../adr/0015-windows-first-client-portfolio.md) and the Scout repository
 boundary accepted in [ADR 0014](../adr/0014-scout-bee-separate-repository-and-release.md).
 
-Public Preview 3 is the current testable product release. It includes the Windows
-package, and Scout Bee Preview 4 is independently published for Windows and Linux
-with exact Product Preview 3 compatibility. Both Windows executables are explicitly
-unsigned Preview artifacts; production signing is not complete and therefore no GA
-claim is made.
+Public Preview 1 is the current testable product release. Experimental Windows and
+Scout Bee builds are development evidence, not supported end-user releases.
 
-The accepted Windows implementation exists in [`apps/windows`](../../apps/windows/README.md).
+The experimental Windows implementation exists in [`apps/windows`](../../apps/windows/README.md).
 It composes the real React UI and portable API in a single-instance Electron host,
 supervises an IPv4-loopback-only local service, protects standalone secrets in the
-main process, and exposes only a versioned preload bridge. ADR 0016 is accepted and
-the exact installed Preview package passed security, recovery, and migration
-acceptance; signing remains a separate GA gate.
+main process, and exposes only a versioned preload bridge. This code does not
+constitute an approved or downloadable Windows product.
 
 ## Product experience
 
 The default family journey is:
 
-1. Download the signed ApiaryLens for Windows package or begin in Scout Bee.
+1. Download the signed ApiaryLens for Windows package when it becomes available.
 2. Choose **Use on this computer** or **Connect my family**.
 3. Use the complete hive-management client immediately in standalone mode, without
    Linux, WSL, Docker, SSH, DNS, or a cloud account.
-4. At any later time choose **Add family access**. Scout Bee explains options,
-   deploys a compatible backend and optional web frontend, verifies it, and returns
-   a secret-free connection profile.
+4. At any later time choose **Add family access**. Deploy a compatible backend and
+   optional web frontend directly or with Scout Bee when Scout is available, then
+   connect through the Windows application's own connection workflow.
 5. ApiaryLens creates and verifies a local backup, authenticates the owner to the
    target, previews transfer/conflicts, connects the current Windows installation,
    and automatically synchronizes.
 
-Advanced users can begin with a connected profile, export plans to CI/CD, or deploy
-the backend without installing the Windows client.
+Advanced users can deploy the backend directly or export deployment plans to CI/CD.
+Scout Bee does not install, update, or manage the Windows product client.
 
 ## System composition
 
@@ -107,16 +103,19 @@ ApiaryLens/scout-bee (https://github.com/ApiaryLens/scout-bee)
   Windows/Linux packaging
   self-update
   compatibility resolver
-  deployment/client lifecycle tests
+  deployment lifecycle tests
 ```
 
 The product monorepo publishes immutable client, backend, web, migration, and
-evidence artifacts. Scout Bee downloads and applies them. It never copies product
-source into a personal deployment repository.
+evidence artifacts. Scout Bee consumes only backend, optional web, migration, and
+deployment artifacts. The Windows application owns its own install and update
+lifecycle. Scout never copies product source into a personal deployment repository.
 
-## Scout Bee responsibilities
+## Independent product responsibilities
 
-### Windows client lifecycle
+### Windows application lifecycle
+
+The Windows application and its release process—not Scout Bee—own this lifecycle:
 
 - Discover stable by default; Preview/RC requires explicit advanced opt-in.
 - Verify manifest identity, checksum, signature/attestation, size, publisher, and
@@ -139,9 +138,11 @@ source into a personal deployment repository.
 - Export the secret-free deployment plan, artifact lock, verification record, and
   CI/CD instructions for advanced users.
 
-### Client connection handoff
+### Windows connection workflow
 
-Scout writes or transfers only the schema-validated connection profile:
+The Windows application may import a schema-validated connection profile created by
+the user or deployment operator. Scout may export deployment facts, but it does not
+install, configure, launch, or update the Windows application. The profile contains:
 
 - profile ID and display name;
 - mode and client kind;
@@ -170,11 +171,11 @@ sync use the shared client behavior. Launching with `--desktop-standalone` remov
 only the connection profile and returns to the untouched local standalone service;
 it does not claim that remote-only data was migrated back.
 
-### Later Scout mobile direction
+### Later mobile deployment companion direction
 
 A later Scout companion on iPhone or Android may select a target, invoke a remote
-or provider API, monitor progress, and hand a connection profile to the product
-client. It does not install an iPhone application outside the App Store, retain
+or provider API, and monitor progress. It does not install or configure the product
+client, install an iPhone application outside the App Store, retain
 high-privilege deployment credentials unnecessarily, or require a phone to stay
 awake for unsafe long-running execution. This work requires a separate threat model,
 research spike, ADR, and platform-store review.
@@ -331,7 +332,6 @@ The authoritative seven-page source and accessible exports are cataloged in
 - Install/update Scout on Windows without Go, Node, WSL, or Linux commands.
 - Deploy backend plus optional web frontend to Cloudflare.
 - Deploy from Windows to owned or cloud Linux over SSH.
-- Install/configure/update the Windows client.
 - Export plans and use `my-apiarylens`/CI/CD.
 - Repair, diagnose, roll back, restore, and uninstall.
 - Explain every data location, log, cache, secret boundary, and privacy choice.

@@ -3,7 +3,7 @@
 - **Backlog:** WIN-007
 - **Date:** 2026-07-16
 - **Status:** Research complete; Windows/shared-core implementation subsequently
-  authorized and delivered in Public Preview 3
+  authorized in experimental code; not released as a Windows product
 - **Scope:** Web PWA, Windows standalone/connected, and future iOS/Android clients
 
 ## Decision sought

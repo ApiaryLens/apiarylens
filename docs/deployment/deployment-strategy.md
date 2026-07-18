@@ -54,9 +54,9 @@ diagnostics, and recovery workflows.
 ## MVP Lifecycle
 
 Every supported server profile must be installable, updateable, recoverable, and
-traceable to an exact release. Scout Bee provides the guided lifecycle for its MVP
-targets, while documented Cloudflare and Compose procedures provide an independent
-operator path.
+traceable to an exact release. Documented Cloudflare and Compose procedures provide
+the current operator paths. Scout Bee will add a guided lifecycle after its separate
+end-user release is ready.
 
 An update discovers an explicit compatible release, performs preflight checks,
 creates and verifies a backup, stages immutable artifacts, applies versioned

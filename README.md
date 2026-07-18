@@ -38,16 +38,17 @@ every decision made in this repo:
 
 ## Status
 
-ApiaryLens is entering **Public Preview 1**. The PWA, Node and Cloudflare backends,
-Docker Compose profile, Scout Bee, release artifacts, and public documentation are
-available for controlled evaluation. This is not GA or a stable release: features
+ApiaryLens is in **Public Preview 1**. The PWA, Node and Cloudflare backends,
+Docker Compose profile, release artifacts, and public documentation are available
+for controlled evaluation. Scout Bee and the standalone Windows application are
+separate work that is not currently offered as an end-user download. This is not GA or a stable release: features
 and workflows may change, updates may arrive frequently (sometimes multiple times a
 day), and physical-device, assistive-technology, and final owner acceptance gates
 remain open in the [MVP UAT record](docs/testing/mvp-uat.md).
 
 Preview users should keep current backups and must not treat ApiaryLens as the sole
 copy of irreplaceable hive records or media. See the
-[Public Preview 3 release notes](docs/releases/0.1.0-preview.3.md) for scope,
+[Public Preview 1 release notes](docs/releases/0.1.0-preview.1.md) for scope,
 verification, and recovery guidance.
 
 ## Project direction

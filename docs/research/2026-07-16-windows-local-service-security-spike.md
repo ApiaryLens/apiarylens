@@ -3,7 +3,7 @@
 ## Status
 
 `WIN-004` research is complete. The owner subsequently accepted ADR 0018 and
-authorized the supervised loopback service delivered in Public Preview 3. This
+authorized an experimental supervised loopback service. This
 record preserves the original security evidence.
 
 The first disposable lifecycle and security prototype passed on a fresh GitHub-

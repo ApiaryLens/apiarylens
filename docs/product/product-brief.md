@@ -61,7 +61,7 @@ capability narrative and the [Roadmap](../roadmap/roadmap.md) for delivery seque
 | Property | Purpose |
 |---|---|
 | `apiarylens.org` | Project, marketing, documentation, tutorials, releases, roadmap, and community |
-| `apiarylens.app` | Hosted PWA, interactive demo, and possible future managed application |
+| `apiarylens.app` | Public synthetic demo; possible future managed application only after an explicit product decision |
 | `apiarylens.dev` | API, SDK, integration, plugin, architecture, and contributor portal |
 | `apiarylens.com` | Reserved commercial flexibility; redirects to `.org` for now |
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Active Public Preview 3 delivery sequence. Preview 3 is not GA or a stable release:
+Active Public Preview 1 delivery sequence. Preview 1 is not GA or a stable release:
 features and workflows may change, updates may arrive frequently (sometimes multiple
 times per day), and preview users must keep backups and exports rather than relying
 on ApiaryLens as the sole copy of irreplaceable records or media. The
@@ -15,17 +15,15 @@ which the portfolio moves from foundation through release.
 - Architecture, research, ADRs, security model, and MVP/UAT contract: accepted
   2026-07-15
 - Six-repository portfolio and independently deployed public frontends: complete
-- PWA, Windows client, Node and Cloudflare backends, shared SQLite contracts,
-  Compose, and separately versioned Scout Bee: published for Preview evaluation
-- Content-addressed Preview artifacts, checksums, and attestations: published;
-  Windows Authenticode signing remains open
+- PWA, Node and Cloudflare backends, shared SQLite contracts, and Compose:
+  published for Preview evaluation
+- Content-addressed Preview artifacts, checksums, and attestations: published
 - MVP core implementation: Cloudflare family profile, approved Hyper-V Compose
-  profile, Scout Bee, documentation, and release artifacts are available in Public
-  Preview 3.
+  profile, documentation, and release artifacts are available in Public Preview 1.
 - Post-MVP Version 1.1 backlog: AWS/provider expansion, the extended physical
   assistive-technology support matrix, and broader operational polish.
-- Public Preview 3 non-deferred scope is complete. Production signing remains the
-  explicit gate before any stable/GA promotion.
+- The standalone Windows application and separately released Scout Bee remain active
+  future work and are not current end-user downloads.
 
 ## Delivery Rule
 
@@ -191,4 +189,4 @@ and deployment support rather than treating them as later cleanup.
 7. Track AWS, extended physical-device sessions, assistive-technology review, and
    formal support operations in the Version 1.1 backlog.
 8. Record project-owner acceptance only after the remaining GA gates close; do not
-   promote Preview 3 directly to stable merely because the preview is available.
+   promote Preview 1 directly to stable merely because the preview is available.

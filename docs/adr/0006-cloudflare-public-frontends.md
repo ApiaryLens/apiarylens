@@ -13,7 +13,7 @@ Accepted
 ApiaryLens has three public frontend properties and one redirecting domain:
 
 - `apiarylens.org` for the public project and documentation experience
-- `apiarylens.app` for the hosted PWA, demo, and possible future managed service
+- `apiarylens.app` for the public synthetic demo and a possible future managed service
 - `apiarylens.dev` for developer documentation and tooling
 - `apiarylens.com` reserved for commercial use and redirected to `.org` for now
 

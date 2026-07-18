@@ -32,7 +32,7 @@ foundation phase:
 | `apiarylens` | Public | Existing core product monorepo and architecture source of truth |
 | `apiarylens-ops` | Private | Internal planning, portfolio coordination, dashboards, runbooks, and private operations |
 | `apiarylens.org` | Private | Project, marketing, documentation, tutorial, release, roadmap, and community frontend |
-| `apiarylens.app` | Private | Hosted PWA/demo frontend and safe public deployment configuration |
+| `apiarylens.app` | Private | Public synthetic demo frontend and safe property configuration; possible future application entry point |
 | `apiarylens.dev` | Private | Developer portal, generated API reference, SDK, integration, plugin, and contributor frontend |
 | `.github` | Private | Internal organization configuration, reference templates, and private-repository workflow sources |
 

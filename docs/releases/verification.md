@@ -4,8 +4,8 @@ Download an artifact from the matching release page, verify its SHA-256 against 
 release manifest, and then verify the repository attestation:
 
 ```powershell
-Get-FileHash .\apiarylens-scout-bee-0.1.0-rc.7-windows-amd64.exe -Algorithm SHA256
-gh attestation verify .\apiarylens-scout-bee-0.1.0-rc.7-windows-amd64.exe `
+Get-FileHash .\apiarylens-0.1.0-preview.1-compose-a21796d1cb07.tar.gz -Algorithm SHA256
+gh attestation verify .\apiarylens-0.1.0-preview.1-compose-a21796d1cb07.tar.gz `
   --repo ApiaryLens/apiarylens `
   --signer-workflow ApiaryLens/apiarylens/.github/workflows/release-signing.yml
 ```

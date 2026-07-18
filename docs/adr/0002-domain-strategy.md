@@ -71,14 +71,14 @@ Reserve for possible future commercial or company use, such as:
 
 ## apiarylens.app
 
-The hosted application identity.
+The public demo identity and possible future application entry point.
 
 Use for:
 
 - The interactive public demo
-- The hosted app and PWA entry point
+- A future managed app or PWA entry point only after an explicit product decision
 - A future optional SaaS service
-- SaaS sign-in and onboarding
+- Future SaaS sign-in and onboarding if a managed service is approved
 - Mobile app landing or install experiences
 
 ## apiarylens.dev
@@ -123,6 +123,6 @@ SaaS-capable later.
 - The open-source project identity centers on `.org`.
 - `.org` is the public home for learning about, deploying, and participating in the project.
 - `.com` stays reserved for defensive or future commercial use and redirects to `.org` for now.
-- `.app` is the permanent home of the interactive demo and hosted application, including an optional future SaaS service.
+- `.app` is the permanent home of the interactive demo and may become a managed application entry point in the future.
 - `.dev` is the developer documentation, API, integration, contributor, and tooling home.
 - Each domain has a durable purpose that does not need to change as the project grows.

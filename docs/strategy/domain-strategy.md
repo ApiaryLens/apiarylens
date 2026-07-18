@@ -15,7 +15,7 @@ and repository context is maintained in the
 | Domain | Durable purpose |
 |---|---|
 | `apiarylens.org` | Public project, marketing, documentation, tutorials, videos, downloads, releases, changelog, roadmap, community, and self-hosting |
-| `apiarylens.app` | Interactive demo and hosted application; optional SaaS later |
+| `apiarylens.app` | Public synthetic demo; possible future managed application or SaaS entry point |
 | `apiarylens.dev` | Developer portal, APIs, integrations, SDKs, plugins, architecture, contributor resources, and development tooling |
 | `apiarylens.com` | Reserved for future commercial or company use; redirects to `.org` for now |
 

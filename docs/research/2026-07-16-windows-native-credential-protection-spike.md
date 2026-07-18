@@ -3,7 +3,7 @@
 ## Status
 
 `WIN-005` research is complete. The owner subsequently accepted ADR 0017 and
-authorized the credential boundary delivered in Public Preview 3. This record
+authorized an experimental credential boundary. This record
 preserves the evaluation that informed that decision.
 
 Official-source review is complete for Windows Credential Manager, DPAPI, Electron

@@ -47,8 +47,9 @@ sanitized diagnostics, manifest, and digests. A readable ZIP or tar file alone i
 proof of compatibility. Restore only when product, migration, and format identities
 match the documented path.
 
-## Scout Bee Stops Safely
+## Future Scout Bee operation stops safely
 
-Read the failed phase and recovery guidance, correct the prerequisite, then use
+When Scout Bee becomes available, read the failed phase and recovery guidance,
+correct the prerequisite, then use
 **Resume safely**. Export the secret-free plan and sanitized diagnostics. Runtime
 credentials must be entered again; they are deliberately not persisted.

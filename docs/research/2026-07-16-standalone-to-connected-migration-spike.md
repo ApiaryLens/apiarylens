@@ -3,7 +3,7 @@
 - **Backlog:** WIN-006
 - **Date:** 2026-07-16
 - **Status:** Research complete; implementation subsequently authorized and
-  delivered in Public Preview 3
+  exercised in experimental code; not released as a Windows product
 - **Scope:** Windows standalone client to a connected ApiaryLens family deployment
 
 ## Decision sought
@@ -187,7 +187,7 @@ outcomes are satisfied as follows:
 
 This closed the research gate; the owner later authorized implementation. The
 downstream packaged Windows migration and released-artifact UAT subsequently passed
-for Public Preview 3; the original spike itself remains research evidence rather
+in experimental builds; the original spike itself remains research evidence rather
 than release evidence.
 
 ## Proposed migration protocol

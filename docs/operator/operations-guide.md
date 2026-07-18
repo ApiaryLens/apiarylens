@@ -4,7 +4,7 @@
 
 The MVP supports the Cloudflare family profile and Docker Compose on personally
 controlled Linux hardware. The same Compose bundle is the supported cloud-VM path.
-Scout Bee is optional: every operation below also has a documented direct path.
+Scout Bee is coming soon. Every operation below has a direct path available today.
 
 ## Release Identity
 
@@ -29,9 +29,10 @@ contracts.
 6. Verify public HTTPS, `/health`, bootstrap protection, authenticated data access,
    private media, export, and quota assumptions.
 
-Scout Bee temporarily creates `SCOUT_OPERATOR_TOKEN` only for backup, export, or
-restore. The endpoint returns 404 when that value is absent. Scout removes the secret
-after the operation.
+The maintenance endpoint requires a short-lived `SCOUT_OPERATOR_TOKEN` for backup,
+export, or restore. The endpoint returns 404 when that value is absent. Operators
+using the direct path must create it only for the operation and remove it afterward;
+future Scout Bee automation will enforce the same boundary.
 
 ## Compose Direct Operations
 
@@ -85,7 +86,8 @@ failure of the critical UAT journey.
 
 ## Uninstall
 
-Scout Bee and the direct Compose procedure default to keeping data. A Cloudflare
+The direct Compose procedure defaults to keeping data; future Scout Bee workflows
+will do the same. A Cloudflare
 keep-data uninstall removes public triggers but retains a dormant service so its
 write-only authentication root secret survives for a later reinstall; deleting the
 Worker would make retained peppered credentials unrecoverable. Removing D1, R2, the

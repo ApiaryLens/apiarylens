@@ -1,19 +1,16 @@
 # ApiaryLens Roadmap
 
-## Current release: Public Preview 3
+## Current release: Public Preview 1
 
-ApiaryLens is in Public Preview 3, not GA. The core MVP implementation is available
-for real-world evaluation, with all non-deferred Preview scope accepted. Preview features
+ApiaryLens is in Public Preview 1, not GA. The PWA and supported Cloudflare and
+Docker Compose deployment paths are available for real-world evaluation. Preview features
 and workflows may change, with updates sometimes arriving multiple times per day.
-Keep backups and exports current; Preview 3 must not be the sole copy of irreplaceable
-hive records or media. See the [Preview 3 release notes](../releases/0.1.0-preview.3.md)
-and [MVP UAT record](../testing/mvp-uat.md).
+Keep backups and exports current; Preview 1 must not be the sole copy of irreplaceable
+hive records or media. See the [Preview 1 release notes](../releases/0.1.0-preview.1.md).
 
-The independently versioned
-[Scout Bee 0.1.0 Preview 4](https://github.com/ApiaryLens/scout-bee/releases/tag/v0.1.0-preview.4)
-is now available for Windows and Linux. It manages verified product lifecycle
-operations. Production signing remains a GA gate; the extended physical
-assistive-technology matrix is scheduled for Version 1.1.
+Scout Bee is an independently versioned deployment bootloader and is coming soon.
+The standalone Windows application is also future work; neither is currently an
+end-user download.
 
 ## MVP Target
 
@@ -155,45 +152,39 @@ the completed Preview 1 artifact.
 - Cross-device authentication/session explanations and session-management UX without
   weakening secure-cookie or server-side authorization boundaries
 
-## Active Preview 3 Direction: Windows-First Client and Scout Bee
+## Active direction: Windows application and Scout Bee
 
 This strategic program takes precedence over Phase 2 and later feature expansion.
 It makes a packaged Windows client the default family starting point while keeping
 the backend and optional web frontend as the portable connected core.
 
-### Now — Public Preview 3 delivered
+### Now — Public Preview 1
 
-- The owner approved the detailed project plan and live tracker. Product Preview 3
-  and Scout Bee Preview 4 complete the authorized, non-deferred Preview scope with
-  exact package, security, migration, deployment, recovery, and automated
-  accessibility evidence.
-- Scout Bee now has a separate public repository, independent version, UI, Go
-  executor, Windows/Linux verification, and release workflow. Production signing
-  remains an explicit GA gate rather than a Public Preview blocker.
-- ADR 0015 keeps the initial Windows client in the product monorepo. The Electron
-  host now runs the real React/API/SQLite/media composition, supports standalone and
-  connected profiles, verified backup/restore, and produces Squirrel Setup/update
-  artifacts. Exact Windows package and migration acceptance passed; production
-  signing remains deferred to GA, and the extended physical assistive-technology
-  matrix is tracked for Version 1.1.
+- Public Preview 1 provides the PWA, Cloudflare deployment, portable Docker Compose
+  deployment, user documentation, and operator guidance available today.
+- Scout Bee has a separate public repository and independent versioning. It remains
+  a deployment bootloader for backend and optional web targets and is not currently
+  distributed to end users.
+- ADR 0015 keeps the planned Windows client in the product monorepo. Experimental
+  Windows code does not constitute a released application.
 - Keep follow-on ADRs and the detailed security, UX, lifecycle, and data designs
   synchronized as implementation evidence closes or changes a decision
 - Maintain the authoritative Lucidchart diagrams and accessible exports for
   standalone, connected, migration, update, backup, and repository/artifact flows
 - Continue framework-neutral standalone/connected connection contracts and tests
-- Complete Scout's signed portable Windows executable (no Go, Node, WSL, or Linux
+- Complete Scout's portable Windows executable (no Go, Node, WSL, or Linux
   shell required), Linux single-executable archive, Stable-default channels,
   verified artifact cache, Windows-client lifecycle adapter, secret-free plan
   export, and `my-apiarylens` CI handoff
 
-### Next release outcome — Windows standalone and connected family
+### Future outcome — Windows standalone and connected family
 
 - Ship a signed Windows application that runs completely standalone with embedded
   loopback service, SQLite, local media, offline use, updates, and backup/restore
-- Let the current Windows installation add family access through Scout Bee without
-  starting over or losing local records/media
-- Let Scout install/update Windows, deploy backend only or backend plus web to
-  Cloudflare or Linux over SSH, and configure a secret-free connection profile
+- Let the current Windows installation add family access without starting over or
+  losing local records/media.
+- Let Scout deploy backend only or backend plus web to Cloudflare or Linux over SSH.
+  Scout does not install, update, or configure the Windows application.
 - Let Scout verify immutable release manifests, checksums, attestations, sizes, and
   compatibility before install, while retaining verified versions for resume and
   rollback and updating Scout through its independent channel

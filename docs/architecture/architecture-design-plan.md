@@ -80,10 +80,11 @@ the current plan.
 
 ## Current Project State
 
-The product architecture and MVP contract are accepted. ApiaryLens Public Preview 3
-publishes the PWA, Windows client, both backends, shared contracts and schema,
-Compose profile, separately versioned Scout Bee Preview 4, public properties,
-attested release artifacts, and documentation. Preview 3 is not GA or a stable
+The product architecture and MVP contract are accepted. ApiaryLens Public Preview 1
+publishes the PWA, both backends, shared contracts and schema, Compose profile,
+public properties, attested release artifacts, and documentation. The standalone
+Windows application and separately versioned Scout Bee are planned work and are not
+currently distributed to end users. Preview 1 is not GA or a stable
 release; features and workflows may change and updates may arrive frequently. Stable
 promotion remains gated by the open physical-device, manual accessibility,
 pending-work update, and project-owner UAT evidence. Preview users must keep backups
@@ -205,7 +206,7 @@ scaffold are accepted in [ADR 0005](../adr/0005-initial-repository-portfolio.md)
 | Domain | Durable purpose |
 |---|---|
 | `apiarylens.org` | Public project, marketing, documentation, tutorials, videos, downloads, releases, changelog, roadmap, community, and self-hosting |
-| `apiarylens.app` | Interactive demo and hosted application; optional SaaS later |
+| `apiarylens.app` | Public synthetic demo; possible future managed application or SaaS entry point |
 | `apiarylens.dev` | Developer portal, APIs, integrations, SDKs, plugins, architecture, contributor resources, and development tooling |
 | `apiarylens.com` | Reserved for future commercial or company use; redirects to `.org` for now |
 
@@ -288,10 +289,10 @@ remain the shared connected foundation for Windows, PWA, and later mobile client
 
 ADRs 0016 through 0021 accept Electron packaging, external-browser native
 authentication, the supervised standalone service, journaled connected migration,
-shared client boundaries, and independent release compatibility. Their Windows and
-shared-core scope is implemented in Public Preview 3, with exact installed-package
-and migration evidence. Production signing remains a GA gate; native iOS/Android
-implementation remains deferred.
+shared client boundaries, and independent release compatibility. They define the
+planned Windows and shared-core direction. Experimental code and evidence do not
+constitute a released Windows product. Native iOS/Android implementation remains
+deferred.
 
 ### iPhone App Store Client
 

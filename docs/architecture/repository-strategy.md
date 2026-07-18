@@ -92,7 +92,7 @@ The hosted-property repository deploys a versioned ApiaryLens release with
 environment-safe configuration and demo content. It does not fork or duplicate the
 application engine. A future SaaS service may use the domain, while sensitive
 production infrastructure can remain in a separate private repository.
-The hosted PWA/demo frontend deploys through Cloudflare, but the API and data
+The public synthetic demo frontend deploys through Cloudflare, but the API and data
 services remain portable and may run outside Cloudflare.
 
 ### `apiarylens.dev`

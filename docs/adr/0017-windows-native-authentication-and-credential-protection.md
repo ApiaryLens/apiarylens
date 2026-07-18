@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted and implemented for Public Preview
+Accepted design; experimental implementation exists but is not an end-user release
 
 ## Date
 
@@ -268,7 +268,7 @@ This ADR may move to Accepted only after:
    are synchronized.
 
 The owner subsequently authorized implementation and the accepted design is included
-in Public Preview 3. This acceptance does not authorize a Stable or GA claim;
+in experimental builds. This acceptance does not authorize a Preview, Stable, or GA claim;
 production signing remains a separate GA gate.
 
 ## Revisit conditions

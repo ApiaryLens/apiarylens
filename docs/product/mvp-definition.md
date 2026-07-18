@@ -224,9 +224,10 @@ The deployment order follows
 
 ### 10. Scout Bee MVP
 
-Scout Bee is a completed MVP product component, not only a research spike or
-proof-of-concept script. Its MVP scope is deliberately limited to the deployment
-targets needed to prove the product.
+Scout Bee is a required separately released deployment component, not only a
+research spike or proof-of-concept script. It is coming soon and is not part of the
+current Preview 1 end-user offering. Its scope is deliberately limited to the
+deployment targets needed to prove the product.
 
 Required automated targets:
 
@@ -334,7 +335,7 @@ required lifecycle is defined in
 - `apiarylens.dev` publishes the versioned OpenAPI contract, schemas, developer
   changelog, compatibility policy, and integration migration guidance
 - The PWA provides a Version and Build view linked to the matching release notes
-- Scout Bee provides version discovery, compatibility and prerequisite checks,
+- Scout Bee must provide version discovery, compatibility and prerequisite checks,
   verified backup-before-update, migration progress, health checks, resume,
   application rollback, full-restore guidance, and sanitized diagnostics for its
   supported targets

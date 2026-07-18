@@ -2,24 +2,24 @@
 
 ## Status and authority
 
-This is the implemented design baseline for Scout Bee Preview 4. The
+This is the accepted design baseline for Scout Bee. The
 repository split is accepted by [ADR 0014](../adr/0014-scout-bee-separate-repository-and-release.md).
 The executor security boundary in [ADR 0011](../adr/0011-scout-bee-and-deployment-execution.md)
-still applies. The project owner approved implementation on 2026-07-17, the
-repository transition is complete, and Preview 4 is independently published with
-exact Product Preview 3 compatibility. Production signing remains a GA gate.
+still applies. The repository transition is complete, but Scout Bee is not currently
+offered as an end-user download. It will be versioned and released independently
+when the deployment bootloader is ready.
 
 Scout Bee is not an ApiaryLens product client. It is the separately installed and
-released lifecycle application for acquiring, installing, updating, repairing,
-diagnosing, backing up, restoring, rolling back, and removing ApiaryLens clients
-and deployments.
+released deployment application for acquiring, installing, updating, repairing,
+diagnosing, backing up, restoring, rolling back, and removing ApiaryLens backend
+and optional web deployments.
 
 ## Required outcomes
 
 - A family Windows user can install Scout and manage ApiaryLens without installing
   Go, Node, WSL, Docker, or a Linux shell.
-- Windows Scout can manage the local Windows client, Cloudflare, or a remote Linux
-  target over SSH. The target may be a Hyper-V VM, home server, mini-PC, or cloud
+- Windows Scout can manage Cloudflare or a remote Linux target over SSH. The target
+  may be a Hyper-V VM, home server, mini-PC, or cloud
   VM; the user is not expected to type Linux commands.
 - Linux users receive a versioned archive containing one executable and a concise
   README.
@@ -65,7 +65,7 @@ copy of product source or deployment credentials.
 | Release resolver | Channel discovery, compatibility selection, immutable manifest acquisition, verification, and cache management |
 | Plan engine | Generates and validates the versioned secret-free `apiarylens-deployment.json` contract |
 | Lifecycle engine | Install, update, repair, backup, restore, rollback, uninstall, resume, and health verification state machines |
-| Adapter boundary | Local Windows, Cloudflare, remote Compose over SSH, and advanced export implementations |
+| Adapter boundary | Cloudflare, remote Compose over SSH, and advanced export implementations |
 | Exporter | Plan, artifact lock, verification record, redacted summary, and provider-neutral CI instructions |
 
 The packaged executable serves the embedded UI on a random loopback port. It binds
@@ -125,14 +125,12 @@ the family flow.
 
 ## Guided plan generation
 
-The user chooses one of four outcomes:
+The user chooses one of three outcomes:
 
-1. **Windows standalone** — install/manage the local Windows client and embedded
-   private service.
-2. **Family Cloud** — deploy a connected backend, optionally deploy the web
-   frontend, and connect an existing or newly installed Windows client.
-3. **Own hardware or cloud VM** — manage a compatible Linux target over SSH.
-4. **Advanced export** — validate and export an immutable plan/lock without applying
+1. **Family Cloud** — deploy a connected backend and optionally deploy the web
+   frontend.
+2. **Own hardware or cloud VM** — manage a compatible Linux target over SSH.
+3. **Advanced export** — validate and export an immutable plan/lock without applying
    it locally.
 
 Scout explains availability, ownership, likely cost, prerequisites, backup
@@ -145,22 +143,6 @@ The plan schema rejects unknown properties, embedded secret-like fields, floatin
 versions, relative remote target paths, public HTTP, no-auth network exposure, and
 unsupported contract combinations. A plan identity is deterministic across
 equivalent non-secret inputs.
-
-## Windows client adapter
-
-The local Windows adapter installs or updates only signed artifacts selected by the
-verified lock. It owns prerequisite remediation, application registration, data
-directory permissions, service/process supervision, local firewall expectations,
-health checks, and uninstall choices.
-
-For standalone installations it verifies a backup before any data-changing update,
-applies migrations once, starts the loopback-only service, verifies data/media
-counts, and activates the client atomically. Keep-data uninstall preserves a clear
-restore/reinstall path; permanent removal requires an explicit destructive choice.
-
-For connected mode Scout imports a secret-free connection profile into the current
-Windows installation. It never writes deployment credentials or a user's remote
-session token into that profile.
 
 ## Remote Linux over SSH adapter
 

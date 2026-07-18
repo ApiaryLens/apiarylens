@@ -92,19 +92,20 @@ provider.
 
 ## Scout Bee Bootstrapper
 
-`Scout Bee` is the working name for the completed MVP guided ApiaryLens deployment
-planner and bootstrapper. It is not a separate edition of the product. Its MVP
+`Scout Bee` is the accepted name for the separately versioned guided ApiaryLens
+deployment planner and bootstrapper. It is coming soon and is not a separate edition
+of the product. Its MVP
 target adapters and acceptance boundary are defined in the
 [MVP Definition and UAT Contract](../product/mvp-definition.md).
 
 Accepted MVP responsibilities:
 
 - Ask a small set of plain-language questions
-- Ask whether ApiaryLens will be used only on this device, by other devices on a
-  private network, or remotely over the internet
+- Ask whether the backend and optional web frontend will run in Cloudflare or on a
+  Linux machine controlled by the user
 - Recommend a deployment profile
 - Run preflight checks
-- Install or update the selected local/server profile
+- Install or update the selected backend and optional web server profile
 - Configure storage, ports, backups, and optional remote access
 - Display recovery and diagnostic information
 - Produce a secret-free, versioned `apiarylens-deployment.json` plan
@@ -113,13 +114,13 @@ Accepted MVP responsibilities:
 - Generate strong secrets and refuse no-auth/non-loopback, default-credential, or
   public-HTTP combinations
 
-Scout Bee uses an embedded React interface and a Go loopback executor. Packaging,
+Scout Bee will use an embedded React interface and a Go loopback executor. Packaging,
 signing, and cross-platform builds follow ADR 0011; the plan schema and target
 adapters are verified during implementation.
 Scout Bee must consume the same versioned deployment schema used by automation; it
 must not hide an unrelated deployment implementation behind its UI.
 
-Scout Bee also owns the guided MVP update journey for its supported targets:
+Scout Bee will own the guided update journey for its supported deployment targets:
 discover an explicit release, show impact and compatibility, preflight, verify a
 backup, stage exact artifacts, run migrations, activate, verify health, and either
 commit or recover. Direct operator procedures remain supported so the bootstrapper
@@ -142,7 +143,7 @@ and portability consequences.
 
 | Experience | Purpose | Timing |
 |---|---|---|
-| Public demo at `apiarylens.app` | Cloudflare-hosted PWA frontend connected to safe, resettable demo services | Early |
+| Public demo at `apiarylens.app` | Cloudflare-hosted synthetic demo using safe, resettable sample records | Available in Preview 1 |
 | Installable device-only personal PWA | Begin without operating a server | Post-MVP P1 research |
 | Scout Bee guided deployment | Complete MVP deployment experience for the Hyper-V Compose UAT VM and Cloudflare, with Azure Compose conditional for the first checkpoint | MVP required |
 | Docker Compose on personally controlled hardware | Complete local server on a laptop, mini-PC, home server, supported NAS, or local VM | First self-hosted server target |

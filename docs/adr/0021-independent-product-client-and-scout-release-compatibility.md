@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted and implemented for Public Preview
+Accepted design; compatibility policy is not yet an end-user release commitment
 
 ## Date
 

@@ -1,22 +1,17 @@
 # MVP Release Gate Checklist
 
-**Release:** 0.1.0-preview.3
+**Release:** 0.1.0-preview.1
 
 **Date:** 2026-07-17
 
-**Status:** Public Preview scope accepted; GA signing and Version 1.1 extended
-accessibility work remain deferred
+**Status:** Public Preview 1 available; later Windows and Scout Bee work is not an
+end-user release
 
-Public Preview 3 is the current corrective acceptance release. It includes the
-Windows standalone client, automatic synchronization, PWA/media reliability fixes,
-backend-only deployment choice, and Scout Bee Preview 4 compatibility. It is
-published with exact checksums and independent attestations. The Windows Preview
-executables are explicitly unsigned; signing remains a GA gate. Preview is not GA or a stable
-release: features and workflows may change, updates may arrive frequently (sometimes
-multiple times per day), and users must keep backups rather than relying on this
-product as the sole copy of irreplaceable data. All non-deferred Public Preview work
-is accepted. Deferred Stable/GA and Version 1.1 work is labeled below and does not
-hold the Preview release open.
+Public Preview 1 is the current evaluation release. It includes the PWA and supported
+Cloudflare and Docker Compose paths. Preview is not GA or stable: features and
+workflows may change, updates may arrive frequently, and users must keep backups.
+Rows below that reference later Windows or Scout Bee builds are development evidence,
+not current end-user release claims.
 
 ## Pre-Deploy
 
@@ -131,8 +126,8 @@ hold the Preview release open.
 - [x] Record the dated Cloudflare quota/cost baseline and planning assumptions.
 - [x] Record install/runtime evidence and all Public Preview evidence links. Extended
       physical-device measurements remain in the Version 1.1 support matrix.
-- [x] Publish Preview 3 release notes, changelog, support window, known limitations,
-      checksums, and recovery guidance.
+- [x] Record internal Preview 3 engineering notes, checksums, and recovery evidence.
+      Preview 3 was not published as an end-user release.
 - [x] Record project-owner authorization of the implementation and Public Preview
       release. Stable/GA approval remains separate and is not claimed.
 
