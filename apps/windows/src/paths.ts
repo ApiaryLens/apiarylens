@@ -12,6 +12,9 @@ export type WindowsDataPaths = {
   backups: string;
   migration: string;
   migrationJournal: string;
+  updates: string;
+  updateLedger: string;
+  installSourceMarker: string;
 };
 
 export function createWindowsDataPaths(userDataPath: string): WindowsDataPaths {
@@ -30,6 +33,9 @@ export function createWindowsDataPaths(userDataPath: string): WindowsDataPaths {
     backups: join(root, 'backups'),
     migration: join(root, 'migration'),
     migrationJournal: join(root, 'migration', 'standalone-to-connected.v1.sqlite'),
+    updates: join(root, 'updates'),
+    updateLedger: join(root, 'updates', 'update-ledger.v1.jsonl'),
+    installSourceMarker: join(root, 'updates', 'install-source.v1.json'),
   } satisfies WindowsDataPaths;
 
   for (const directory of [
@@ -41,6 +47,7 @@ export function createWindowsDataPaths(userDataPath: string): WindowsDataPaths {
     paths.logs,
     paths.backups,
     paths.migration,
+    paths.updates,
   ]) {
     mkdirSync(directory, { recursive: true, mode: 0o700 });
   }

@@ -57,6 +57,8 @@ import {
   recoverAuthorityCutover,
   runStandaloneToConnectedMigration,
 } from './standalone-migration.js';
+import { parsePackageManagerArgument, writeInstallSourceMarker } from './install-source.js';
+import { UpdateLedger, reconcileObservedVersion } from './update-ledger.js';
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -129,6 +131,19 @@ async function start(): Promise<void> {
   const userData = app.getPath('userData');
   mkdirSync(userData, { recursive: true, mode: 0o700 });
   const paths = createWindowsDataPaths(userData);
+  // ADR 0025: a packaged installer forwards --package-manager=<source>; the
+  // marker it produces names the single steady-state update apply owner.
+  const forwardedInstallSource = parsePackageManagerArgument(process.argv);
+  if (forwardedInstallSource) {
+    writeInstallSourceMarker(paths.installSourceMarker, forwardedInstallSource);
+  }
+  // Whoever applied the last update (app, winget, or Chocolatey), the ledger
+  // records the observed version transition before anything else runs.
+  reconcileObservedVersion(
+    new UpdateLedger(paths.updateLedger),
+    app.getVersion(),
+    paths.installSourceMarker,
+  );
   const lifecycleRequestArgument = process.argv.find((argument) =>
     argument.startsWith('--desktop-lifecycle-request='),
   );
