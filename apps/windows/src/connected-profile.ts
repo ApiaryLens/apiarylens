@@ -182,6 +182,83 @@ export function removeConnectionProfile(path: string): void {
   rmSync(resolve(path), { force: true });
 }
 
+export function describeConnectionProfile(
+  profile: WindowsConnectionProfile,
+): Array<[label: string, value: string]> {
+  const provisioningSourceLabels = {
+    scout: 'Scout Bee',
+    manual: 'Manual export',
+    ci: 'Continuous integration',
+  } as const;
+  return [
+    ['Family server', profile.displayName],
+    ['Server address', profile.backendUrl],
+    ['Deployment profile', profile.deploymentProfile === 'cloudflare' ? 'Cloudflare' : 'Compose'],
+    ['Profile source', provisioningSourceLabels[profile.provisioningSource]],
+    ['Profile created', new Date(profile.createdAt).toLocaleString()],
+    ['Product version', profile.compatibility.productVersion],
+    ['API contract', profile.compatibility.apiContract],
+    ['Sync contract', String(profile.compatibility.syncContract)],
+    ['Database migration', profile.compatibility.databaseMigration],
+  ];
+}
+
+export function compareBackendIdentity(
+  profile: WindowsConnectionProfile,
+  body: { status?: unknown; build?: Partial<BuildIdentity> },
+): string[] {
+  const build = body.build;
+  if (body.status !== 'ok' || !build) return ['The server did not report a healthy identity'];
+  const mismatches: string[] = [];
+  const expect = (
+    label: string,
+    expected: string | number,
+    observed: string | number | undefined,
+  ) => {
+    if (observed !== expected)
+      mismatches.push(
+        `${label}: profile requires ${expected}, server reports ${observed ?? 'nothing'}`,
+      );
+  };
+  expect('Product', 'ApiaryLens', build.product);
+  expect('Deployment profile', profile.deploymentProfile, build.deploymentProfile);
+  expect('Product version', profile.compatibility.productVersion, build.productVersion);
+  expect('API contract', profile.compatibility.apiContract, build.apiContract);
+  expect('Sync contract', profile.compatibility.syncContract, build.syncContract);
+  expect('Database migration', profile.compatibility.databaseMigration, build.databaseMigration);
+  return mismatches;
+}
+
+export type ConnectedIdentityCheck =
+  | { state: 'matched'; build: BuildIdentity }
+  | { state: 'mismatch'; problems: string[] }
+  | { state: 'unreachable'; message: string };
+
+export async function checkConnectedBackend(
+  profile: WindowsConnectionProfile,
+): Promise<ConnectedIdentityCheck> {
+  let body: { status?: unknown; build?: Partial<BuildIdentity> };
+  try {
+    const response = await fetch(`${profile.backendUrl}/health`, {
+      cache: 'no-store',
+      redirect: 'error',
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!response.ok || new URL(response.url).origin !== profile.backendUrl)
+      return { state: 'unreachable', message: 'Connected backend health verification failed' };
+    body = (await response.json()) as { status?: unknown; build?: Partial<BuildIdentity> };
+  } catch (error) {
+    return {
+      state: 'unreachable',
+      message:
+        error instanceof Error && error.message ? error.message : 'The server could not be reached',
+    };
+  }
+  const problems = compareBackendIdentity(profile, body);
+  if (problems.length > 0) return { state: 'mismatch', problems };
+  return { state: 'matched', build: body.build as BuildIdentity };
+}
+
 export async function verifyConnectedBackend(
   profile: WindowsConnectionProfile,
 ): Promise<BuildIdentity> {
@@ -193,17 +270,7 @@ export async function verifyConnectedBackend(
   if (!response.ok || new URL(response.url).origin !== profile.backendUrl)
     throw new Error('Connected backend health verification failed');
   const body = (await response.json()) as { status?: unknown; build?: Partial<BuildIdentity> };
-  const build = body.build;
-  if (
-    body.status !== 'ok' ||
-    !build ||
-    build.product !== 'ApiaryLens' ||
-    build.deploymentProfile !== profile.deploymentProfile ||
-    build.productVersion !== profile.compatibility.productVersion ||
-    build.apiContract !== profile.compatibility.apiContract ||
-    build.syncContract !== profile.compatibility.syncContract ||
-    build.databaseMigration !== profile.compatibility.databaseMigration
-  )
+  if (compareBackendIdentity(profile, body).length > 0)
     throw new Error('Connected backend does not match the imported compatibility lock');
-  return build as BuildIdentity;
+  return body.build as BuildIdentity;
 }

@@ -8,6 +8,8 @@ export function ResourcePage({
   records,
   form,
   titleField = 'name',
+  toolbar,
+  emptyText,
   onEdit,
   onArchive,
 }: {
@@ -16,6 +18,8 @@ export function ResourcePage({
   records: LocalResource[];
   form: React.ReactNode;
   titleField?: string;
+  toolbar?: React.ReactNode;
+  emptyText?: string;
   onEdit?: (record: LocalResource) => void;
   onArchive?: (record: LocalResource, archive: boolean) => void;
 }) {
@@ -34,8 +38,9 @@ export function ResourcePage({
         </section>
         <section className="card">
           <h2>Saved</h2>
+          {toolbar}
           {records.length === 0 ? (
-            <Empty text={`No ${title.toLowerCase()} yet.`} />
+            <Empty text={emptyText ?? `No ${title.toLowerCase()} yet.`} />
           ) : (
             <RecordList
               records={records}

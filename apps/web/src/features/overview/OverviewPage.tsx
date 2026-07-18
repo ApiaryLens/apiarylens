@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type LocalResource } from '../../db.js';
 import { useResources } from '../../local/use-resources.js';
-import type { Page } from '../../navigation.js';
+import type { PageRequest } from '../../navigation.js';
 import { Empty } from '../../components/Empty.js';
 
 export function Dashboard({
@@ -9,7 +9,7 @@ export function Dashboard({
   onNavigate,
 }: {
   organizationId: string;
-  onNavigate: (page: Page) => void;
+  onNavigate: (request: PageRequest) => void;
 }) {
   const apiaries = useResources(organizationId, 'apiary');
   const hives = useResources(organizationId, 'hive');
@@ -36,7 +36,7 @@ export function Dashboard({
         <button
           className="metric metric-link"
           type="button"
-          onClick={() => onNavigate('hives')}
+          onClick={() => onNavigate({ page: 'hives', hiveStatus: 'active' })}
           aria-label="View active hives"
         >
           <strong>{hives.filter((hive) => hive.data.status === 'active').length}</strong>
@@ -45,7 +45,7 @@ export function Dashboard({
         <button
           className="metric metric-link"
           type="button"
-          onClick={() => onNavigate('apiaries')}
+          onClick={() => onNavigate({ page: 'apiaries' })}
           aria-label="View apiaries"
         >
           <strong>{apiaries.length}</strong>
@@ -54,7 +54,16 @@ export function Dashboard({
         <button
           className="metric metric-link"
           type="button"
-          onClick={() => onNavigate('care')}
+          onClick={() => onNavigate({ page: 'inspections' })}
+          aria-label="View inspections"
+        >
+          <strong>{inspections.length}</strong>
+          <span>Inspections</span>
+        </button>
+        <button
+          className="metric metric-link"
+          type="button"
+          onClick={() => onNavigate({ page: 'care', careView: 'open-follow-ups' })}
           aria-label="View open follow-ups"
         >
           <strong>{openFollowUps.length}</strong>
@@ -77,12 +86,19 @@ export function Dashboard({
                 const inspection = latestByHive.get(hive.id);
                 return (
                   <li key={hive.id}>
-                    <strong>{String(hive.data.name)}</strong>
-                    <span>
-                      {inspection
-                        ? `${new Date(String(inspection.data.inspectedAt)).toLocaleString()} · ${String(inspection.data.state)}`
-                        : 'No inspection recorded yet'}
-                    </span>
+                    <button
+                      type="button"
+                      className="dashboard-list-link"
+                      onClick={() => onNavigate({ page: 'inspections', hiveId: hive.id })}
+                      aria-label={`View inspections for ${String(hive.data.name)}`}
+                    >
+                      <strong>{String(hive.data.name)}</strong>
+                      <span>
+                        {inspection
+                          ? `${new Date(String(inspection.data.inspectedAt)).toLocaleString()} · ${String(inspection.data.state)}`
+                          : 'No inspection recorded yet'}
+                      </span>
+                    </button>
                   </li>
                 );
               })}
@@ -101,13 +117,20 @@ export function Dashboard({
               )
               .map((item) => (
                 <li key={item.key}>
-                  <strong>{String(item.data.description)}</strong>
-                  <span>
-                    {item.data.dueDate
-                      ? `Due ${new Date(`${item.data.dueDate}T12:00:00`).toLocaleDateString()}`
-                      : 'No due date'}{' '}
-                    · {item.syncState}
-                  </span>
+                  <button
+                    type="button"
+                    className="dashboard-list-link"
+                    onClick={() => onNavigate({ page: 'care', careView: 'open-follow-ups' })}
+                    aria-label={`View follow-up: ${String(item.data.description)}`}
+                  >
+                    <strong>{String(item.data.description)}</strong>
+                    <span>
+                      {item.data.dueDate
+                        ? `Due ${new Date(`${item.data.dueDate}T12:00:00`).toLocaleDateString()}`
+                        : 'No due date'}{' '}
+                      · {item.syncState}
+                    </span>
+                  </button>
                 </li>
               ))}
           </ul>

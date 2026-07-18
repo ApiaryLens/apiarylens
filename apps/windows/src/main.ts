@@ -46,11 +46,14 @@ import {
   shouldInjectControlHeader,
 } from './window-policy.js';
 import {
+  checkConnectedBackend,
+  describeConnectionProfile,
   loadSavedConnectionProfile,
   readConnectionProfile,
   removeConnectionProfile,
   saveConnectionProfile,
   verifyConnectedBackend,
+  type WindowsConnectionProfile,
 } from './connected-profile.js';
 import {
   activateStagedStandaloneData,
@@ -146,8 +149,20 @@ function secureWindow(
   return window;
 }
 
+type FirstRunConnectedPreview = {
+  status: 'preview';
+  profile: Array<[label: string, value: string]>;
+  identity:
+    | { state: 'matched'; productVersion: string; deploymentProfile: string }
+    | { state: 'mismatch'; problems: string[] }
+    | { state: 'unreachable'; message: string };
+};
+
 type FirstRunChoiceResult =
-  { status: 'ok' } | { status: 'canceled' } | { status: 'error'; message: string };
+  | { status: 'ok' }
+  | { status: 'canceled' }
+  | { status: 'error'; message: string }
+  | FirstRunConnectedPreview;
 
 /**
  * Clean-profile first launch (WIN-028): before any service starts or any data
@@ -193,19 +208,29 @@ function presentFirstRunChooser(
   window.webContents.on('will-attach-webview', (event) => event.preventDefault());
   return new Promise((resolveChoice) => {
     let settled = false;
+    // The picker/preview/confirm steps are separate renderer round-trips, so
+    // the parsed profile a preview described is held here and re-verified on
+    // confirm — the renderer never supplies profile content itself.
+    let previewedProfile: WindowsConnectionProfile | undefined;
     const settle = (value: 'disconnected' | 'connected' | 'quit'): void => {
       if (settled) return;
       settled = true;
       ipcMain.removeHandler('apiarylens:first-run-choose');
+      ipcMain.removeHandler('apiarylens:first-run-connect-confirm');
+      ipcMain.removeHandler('apiarylens:first-run-connect-discard');
       resolveChoice(value);
+    };
+    const assertChooserSender = (event: Electron.IpcMainInvokeEvent): void => {
+      if (event.sender !== window.webContents) {
+        throw new Error('Untrusted renderer requested a first-run choice');
+      }
     };
     ipcMain.handle(
       'apiarylens:first-run-choose',
       async (event, untrustedChoice: unknown): Promise<FirstRunChoiceResult> => {
-        if (event.sender !== window.webContents) {
-          throw new Error('Untrusted renderer requested a first-run choice');
-        }
+        assertChooserSender(event);
         if (untrustedChoice === 'disconnected') {
+          previewedProfile = undefined;
           saveWindowsModeChoice(modePath, 'disconnected');
           settle('disconnected');
           // The window stays open (hidden) until the product window exists so
@@ -214,6 +239,7 @@ function presentFirstRunChooser(
           return { status: 'ok' };
         }
         if (untrustedChoice === 'connected') {
+          previewedProfile = undefined;
           const selected = await dialog.showOpenDialog(window, {
             title: 'Select your ApiaryLens connection profile',
             filters: [{ name: 'ApiaryLens connection profile', extensions: ['json'] }],
@@ -221,26 +247,64 @@ function presentFirstRunChooser(
           });
           const selectedPath = selected.filePaths[0];
           if (selected.canceled || !selectedPath) return { status: 'canceled' };
+          let imported: WindowsConnectionProfile;
           try {
-            const imported = readConnectionProfile(selectedPath);
-            await verifyConnectedBackend(imported);
-            saveConnectionProfile(profilePath, imported);
-            saveWindowsModeChoice(modePath, 'connected');
+            imported = readConnectionProfile(selectedPath);
           } catch (error) {
             return {
               status: 'error',
-              message: `ApiaryLens could not connect with that profile: ${
-                error instanceof Error ? error.message : 'unknown connection error'
+              message: `ApiaryLens could not read that profile: ${
+                error instanceof Error ? error.message : 'unknown profile error'
               }`,
             };
           }
-          settle('connected');
-          window.hide();
-          return { status: 'ok' };
+          const identity = await checkConnectedBackend(imported);
+          if (identity.state === 'matched') previewedProfile = imported;
+          return {
+            status: 'preview',
+            profile: describeConnectionProfile(imported),
+            identity:
+              identity.state === 'matched'
+                ? {
+                    state: 'matched',
+                    productVersion: identity.build.productVersion,
+                    deploymentProfile: identity.build.deploymentProfile,
+                  }
+                : identity.state === 'mismatch'
+                  ? { state: 'mismatch', problems: identity.problems }
+                  : { state: 'unreachable', message: identity.message },
+          };
         }
         throw new Error('Unknown first-run choice');
       },
     );
+    ipcMain.handle(
+      'apiarylens:first-run-connect-confirm',
+      async (event): Promise<FirstRunChoiceResult> => {
+        assertChooserSender(event);
+        const confirmed = previewedProfile;
+        if (!confirmed) throw new Error('No verified connection profile is awaiting confirmation');
+        try {
+          await verifyConnectedBackend(confirmed);
+          saveConnectionProfile(profilePath, confirmed);
+          saveWindowsModeChoice(modePath, 'connected');
+        } catch (error) {
+          return {
+            status: 'error',
+            message: `ApiaryLens could not connect with that profile: ${
+              error instanceof Error ? error.message : 'unknown connection error'
+            }`,
+          };
+        }
+        settle('connected');
+        window.hide();
+        return { status: 'ok' };
+      },
+    );
+    ipcMain.handle('apiarylens:first-run-connect-discard', (event): void => {
+      assertChooserSender(event);
+      previewedProfile = undefined;
+    });
     window.on('closed', () => {
       if (firstRunWindow === window) firstRunWindow = undefined;
       settle('quit');
@@ -603,11 +667,15 @@ async function start(): Promise<void> {
       if (selected.canceled || !selectedPath) return { status: 'canceled' };
       const profile = readConnectionProfile(selectedPath);
       await verifyConnectedBackend(profile);
+      const profileSummary = describeConnectionProfile(profile)
+        .map(([label, value]) => `${label}: ${value}`)
+        .join('\n');
       const confirmation = await dialog.showMessageBox(primaryWindow, {
         type: 'warning',
         title: 'Connect this Windows apiary?',
         message: 'ApiaryLens will copy and verify your standalone records before connecting.',
         detail:
+          `${profileSummary}\n\nThe server's identity matches this profile's compatibility lock.\n\n` +
           'Your standalone database remains intact and a verified recovery backup is retained. Sign in as the target family owner in the next window. The authority switch occurs only after every record and photo reconciles.',
         buttons: ['Cancel', 'Sign in and migrate'],
         defaultId: 0,

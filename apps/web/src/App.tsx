@@ -14,7 +14,7 @@ import {
   synchronize,
 } from './db.js';
 import { OnlineSyncScheduler, type SyncTrigger } from './sync-scheduler.js';
-import type { Page } from './navigation.js';
+import type { PageRequest } from './navigation.js';
 import type { ActiveSession } from './session.js';
 import { AuthScreen } from './features/auth/AuthScreen.js';
 import { RecoveryCodes } from './features/auth/RecoveryCodes.js';
@@ -24,6 +24,8 @@ import { Hives } from './features/hives/HivesPage.js';
 import { Inspections } from './features/inspections/InspectionsPage.js';
 import { CareRecords } from './features/care/CarePage.js';
 import { VersionView } from './features/account/AccountPage.js';
+import { GlossaryContext } from './features/glossary/glossary-context.js';
+import { GlossaryPanel } from './features/glossary/GlossaryPanel.js';
 
 // Inside the Windows standalone shell the backend is an embedded loopback
 // service, so external connectivity (navigator.onLine) must never gate the
@@ -36,7 +38,8 @@ export function App() {
   const [bootstrapAvailable, setBootstrapAvailable] = useState(false);
   const [bootstrapTokenRequired, setBootstrapTokenRequired] = useState(false);
   const [offline, setOffline] = useState(desktopStandalone ? false : !navigator.onLine);
-  const [page, setPage] = useState<Page>('dashboard');
+  const [pageRequest, setPageRequest] = useState<PageRequest>({ page: 'dashboard' });
+  const [glossary, setGlossary] = useState<{ open: boolean; termId?: string }>({ open: false });
   const [notice, setNotice] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
@@ -236,12 +239,13 @@ export function App() {
     );
   }
 
+  const page = pageRequest.page;
   return (
     <div className="app-shell">
       <header className="topbar">
         <div>
           <span className="eyebrow">ApiaryLens</span>
-          <button className="account-link" onClick={() => setPage('version')}>
+          <button className="account-link" onClick={() => setPageRequest({ page: 'version' })}>
             {session.organization.name}
           </button>
         </div>
@@ -249,6 +253,13 @@ export function App() {
           <span className={`connectivity ${offline ? 'offline' : ''}`}>
             {offline ? 'Offline' : 'Online'}
           </span>
+          <button
+            className="button secondary"
+            onClick={() => setGlossary({ open: true })}
+            aria-haspopup="dialog"
+          >
+            Glossary
+          </button>
           <button
             className="button secondary"
             onClick={() => void sync()}
@@ -288,46 +299,62 @@ export function App() {
         <RecoveryCodes codes={recoveryCodes} onSaved={() => setRecoveryCodes([])} />
       )}
 
-      <main className="content">
-        {page === 'dashboard' && (
-          <Dashboard organizationId={session.organization.id} onNavigate={setPage} />
-        )}
-        {page === 'apiaries' && (
-          <Apiaries
-            organizationId={session.organization.id}
-            onNotice={setNotice}
-            canWrite={session.membership.role !== 'viewer'}
-          />
-        )}
-        {page === 'hives' && (
-          <Hives
-            organizationId={session.organization.id}
-            onNotice={setNotice}
-            canWrite={session.membership.role !== 'viewer'}
-          />
-        )}
-        {page === 'inspections' && (
-          <Inspections
-            organizationId={session.organization.id}
-            onNotice={setNotice}
-            canWrite={session.membership.role !== 'viewer'}
-          />
-        )}
-        {page === 'care' && (
-          <CareRecords
-            organizationId={session.organization.id}
-            onNotice={setNotice}
-            canWrite={session.membership.role !== 'viewer'}
-          />
-        )}
-        {page === 'version' && (
-          <VersionView
-            session={session}
-            onSignOut={() => void signOut()}
-            onClear={() => void clearLocalWorkspace().then(() => location.reload())}
-          />
-        )}
-      </main>
+      <GlossaryContext.Provider
+        value={{
+          open: (termId?: string) => setGlossary({ open: true, ...(termId ? { termId } : {}) }),
+        }}
+      >
+        <main className="content">
+          {page === 'dashboard' && (
+            <Dashboard organizationId={session.organization.id} onNavigate={setPageRequest} />
+          )}
+          {page === 'apiaries' && (
+            <Apiaries
+              organizationId={session.organization.id}
+              onNotice={setNotice}
+              canWrite={session.membership.role !== 'viewer'}
+            />
+          )}
+          {page === 'hives' && (
+            <Hives
+              organizationId={session.organization.id}
+              onNotice={setNotice}
+              canWrite={session.membership.role !== 'viewer'}
+              {...(pageRequest.hiveStatus ? { initialStatusFilter: pageRequest.hiveStatus } : {})}
+            />
+          )}
+          {page === 'inspections' && (
+            <Inspections
+              organizationId={session.organization.id}
+              onNotice={setNotice}
+              canWrite={session.membership.role !== 'viewer'}
+              {...(pageRequest.hiveId ? { initialHiveId: pageRequest.hiveId } : {})}
+            />
+          )}
+          {page === 'care' && (
+            <CareRecords
+              organizationId={session.organization.id}
+              onNotice={setNotice}
+              canWrite={session.membership.role !== 'viewer'}
+              {...(pageRequest.careView ? { initialView: pageRequest.careView } : {})}
+            />
+          )}
+          {page === 'version' && (
+            <VersionView
+              session={session}
+              onSignOut={() => void signOut()}
+              onClear={() => void clearLocalWorkspace().then(() => location.reload())}
+            />
+          )}
+        </main>
+      </GlossaryContext.Provider>
+
+      {glossary.open && (
+        <GlossaryPanel
+          {...(glossary.termId ? { initialTermId: glossary.termId } : {})}
+          onClose={() => setGlossary({ open: false })}
+        />
+      )}
 
       <nav className="bottom-nav" aria-label="Primary navigation">
         {(
@@ -343,7 +370,7 @@ export function App() {
             key={target}
             className={page === target ? 'active' : ''}
             aria-current={page === target ? 'page' : undefined}
-            onClick={() => setPage(target)}
+            onClick={() => setPageRequest({ page: target })}
           >
             {label}
           </button>

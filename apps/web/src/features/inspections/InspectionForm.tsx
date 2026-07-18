@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { queueCreate, queueUpdate, stageImage, type LocalResource } from '../../db.js';
 import { readManualWeatherSnapshot } from '../../weather-fields.js';
 import { fieldChoices } from '../../field-intelligence.js';
+import { GlossaryLink } from '../glossary/GlossaryLink.js';
 import { toLocalDateTime } from './format.js';
 
 export function InspectionForm({
@@ -146,7 +147,7 @@ export function InspectionForm({
         />
       </div>
       <label>
-        Brood condition
+        Brood condition <GlossaryLink term="brood" label="Brood" />
         <input
           name="broodCondition"
           list="inspection-brood-options"
@@ -159,7 +160,7 @@ export function InspectionForm({
         </datalist>
       </label>
       <label>
-        Stores
+        Stores <GlossaryLink term="stores" label="Stores" />
         <input
           name="stores"
           list="inspection-stores-options"

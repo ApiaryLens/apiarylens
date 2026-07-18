@@ -1,20 +1,30 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { queueCreate, queueUpdate, type LocalResource } from '../../db.js';
 import { useResources } from '../../local/use-resources.js';
+import type { HiveStatusFilter } from '../../navigation.js';
 import { Empty } from '../../components/Empty.js';
 import { QuickForm } from '../../components/QuickForm.js';
 import { RecordEditor } from '../../components/RecordEditor.js';
 import { RecordList } from '../../components/RecordList.js';
 import { ResourcePage } from '../../components/ResourcePage.js';
+import { filterHivesByStatus } from '../record-filters.js';
 import type { FormProps } from '../types.js';
 import { EquipmentStackBuilder } from './EquipmentStackBuilder.js';
 import { HiveTimeline } from './HiveTimeline.js';
 import { historyDate } from './hive-history.js';
 import { QueenForm } from './QueenForm.js';
 
-export function Hives({ organizationId, onNotice, canWrite = true }: FormProps) {
+export function Hives({
+  organizationId,
+  onNotice,
+  canWrite = true,
+  initialStatusFilter,
+}: FormProps & { initialStatusFilter?: HiveStatusFilter }) {
   const records = useResources(organizationId, 'hive');
   const [editing, setEditing] = useState<LocalResource>();
+  const [statusFilter, setStatusFilter] = useState<HiveStatusFilter>(initialStatusFilter ?? 'all');
+  useEffect(() => setStatusFilter(initialStatusFilter ?? 'all'), [initialStatusFilter]);
+  const visibleRecords = filterHivesByStatus(records, statusFilter);
   const apiaries = useResources(organizationId, 'apiary');
   const form = !canWrite ? (
     <Empty text="Viewer access is read-only." />
@@ -83,8 +93,30 @@ export function Hives({ organizationId, onNotice, canWrite = true }: FormProps) 
       <ResourcePage
         title="Hives"
         description="Colonies and their current status."
-        records={records}
+        records={visibleRecords}
         form={form}
+        {...(records.length > 0
+          ? {
+              toolbar: (
+                <label className="record-filter">
+                  Show
+                  <select
+                    value={statusFilter}
+                    onChange={(event) =>
+                      setStatusFilter(event.currentTarget.value as HiveStatusFilter)
+                    }
+                  >
+                    <option value="all">All hives</option>
+                    <option value="active">Active hives</option>
+                    <option value="archived">Archived hives</option>
+                  </select>
+                </label>
+              ),
+            }
+          : {})}
+        {...(statusFilter !== 'all'
+          ? { emptyText: `No ${statusFilter} hives match this filter.` }
+          : {})}
         {...(canWrite
           ? {
               onEdit: (record: LocalResource) => setEditing(record),
