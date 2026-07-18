@@ -45,6 +45,9 @@ jobs:
           pnpm audit --audit-level high
           pnpm release:verify
 
+      - name: Verify the release build is reproducible (SEC-001 / WIN-031)
+        run: pnpm release:reproducible
+
   containers:
     runs-on: ubuntu-latest
     timeout-minutes: 25
