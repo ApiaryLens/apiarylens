@@ -68,4 +68,27 @@ describe('product release workflow wiring', () => {
     expect(workflow).not.toContain('--clobber');
     expect(workflow).not.toContain('gh release edit');
   });
+
+  it('generates the compatibility manifest only after every artifact list mutation', () => {
+    // Supply-chain assembly appends SBOM, license, and provenance entries to
+    // the release manifest; a compatibility manifest generated earlier would
+    // leave them unbound and fail release:verify before staging.
+    const buildOrder = [
+      'pnpm release:artifacts',
+      'pnpm release:airgap',
+      'pnpm release:supply-chain',
+      'pnpm release:compatibility',
+      'pnpm release:verify',
+    ].map((command) => workflow.indexOf(command));
+    expect(buildOrder.every((index) => index >= 0)).toBe(true);
+    expect([...buildOrder].sort((a, b) => a - b)).toEqual(buildOrder);
+    // The Windows job mutates the manifest again (windows artifacts), so it
+    // must regenerate the compatibility manifest before its own verify.
+    const finalize = workflow.indexOf('node scripts/finalize-windows-release.mjs');
+    const windowsRegenerate = workflow.indexOf('pnpm release:compatibility', finalize);
+    const windowsVerify = workflow.indexOf('pnpm release:verify', finalize);
+    expect(finalize).toBeGreaterThan(-1);
+    expect(windowsRegenerate).toBeGreaterThan(finalize);
+    expect(windowsVerify).toBeGreaterThan(windowsRegenerate);
+  });
 });

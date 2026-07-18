@@ -125,10 +125,12 @@ Steps 1–4 above on the connected machine, then on the host:
 12. **Commit or recover** — on success the `current` symlink moves and the
     ledger records `committed`; the previous release directory and images
     are retained for the rollback window. On activation or verification
-    failure the previous release is re-activated automatically
-    (`rolled-back`); if the migration was schema-incompatible with the
-    previous release, restore the pre-update backup with `restore.sh`
-    instead.
+    failure the script compares the applied migration head with the head
+    the previous release shipped: while they are equal the previous release
+    is re-activated automatically (`rolled-back`); after a schema advance
+    the previous code is never run against the newer database — the
+    pre-update backup is restored automatically instead (`restored`, after
+    a scratch-volume restore test proves it restorable).
 
 All of it in one command:
 

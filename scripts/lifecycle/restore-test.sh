@@ -53,7 +53,7 @@ cleanup() { docker volume rm -f "$scratch" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 docker volume create "$scratch" >/dev/null
 docker run --rm --network none -v "$scratch:/data" -v "$backup:/backup:ro" \
-  "$helper" sh -c 'tar xzf /backup/data.tar.gz -C /data'
+  "$helper" sh -c 'tar xzf /backup/data.tar.gz -C /data && chown -R 10001:10001 /data'
 docker run --rm --network none -v "$scratch:/data:ro" "apiarylens-api:$version" node -e '
   const { DatabaseSync } = require("node:sqlite");
   const db = new DatabaseSync("/data/apiarylens.sqlite", { readOnly: true });
@@ -70,5 +70,14 @@ docker run --rm --network none -v "$scratch:/data:ro" "apiarylens-api:$version" 
   console.log(JSON.stringify({ integrity: "ok", migrationHead: rows.at(-1).version }));
   db.close();
 ' || al_die 65 "Restore test failed: the backup did not restore to a healthy database"
+
+# Migration compatibility: run the release's one-shot migration entrypoint
+# against the scratch copy. It validates every ledger row (checksum, order,
+# unknown-ahead) against the embedded history and proves this release can
+# carry the backup forward — all without touching the live volume.
+docker run --rm --network none -v "$scratch:/data" \
+  -e APIARYLENS_DATABASE=/data/apiarylens.sqlite \
+  "apiarylens-api:$version" node dist/migrate.js ||
+  al_die 65 "Restore test failed: the backup's migration ledger is not compatible with release $version"
 
 al_note "Restore test passed for $backup"

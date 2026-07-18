@@ -1,9 +1,14 @@
 #!/bin/sh
 # Restore the newest (or a named) verified backup into the data volume. This
 # is destructive: it replaces the live database and media, revokes every
-# session (as Scout Bee's restore does), and restarts the deployment.
+# session (as Scout Bee's restore does), and restarts the deployment. The
+# backup is restore-tested on a scratch volume first, so nothing live is
+# stopped or erased for a backup that cannot actually be restored.
 #
-# Usage: restore.sh --target DIR --project NAME [--backup DIR] --yes
+# Usage: restore.sh --target DIR --project NAME [--backup DIR] --yes [--force]
+# --force proceeds past an interrupted-operation ledger state (used by
+# update-airgap.sh recovery, where the interrupted entry is the update
+# being recovered from).
 
 set -eu
 script_dir=$(dirname "$0")
@@ -13,6 +18,7 @@ target=''
 project=apiarylens
 backup=''
 confirmed=false
+force=false
 while [ $# -gt 0 ]; do
   case "$1" in
     --target)
@@ -31,10 +37,14 @@ while [ $# -gt 0 ]; do
       confirmed=true
       shift
       ;;
+    --force)
+      force=true
+      shift
+      ;;
     *) al_die 64 "Unknown argument: $1" ;;
   esac
 done
-[ -n "$target" ] || al_die 64 "Usage: restore.sh --target DIR --project NAME [--backup DIR] --yes"
+[ -n "$target" ] || al_die 64 "Usage: restore.sh --target DIR --project NAME [--backup DIR] --yes [--force]"
 [ "$confirmed" = "true" ] ||
   al_die 64 "restore.sh replaces the live database and media and revokes all sessions; re-run with --yes to confirm"
 
@@ -49,7 +59,12 @@ if [ -z "$backup" ]; then
     sort -nr | head -n 1 | cut -d' ' -f2-)
 fi
 [ -n "$backup" ] && [ -d "$backup" ] || al_die 65 "No backup directory to restore under $target/backups"
-gzip -t "$backup/data.tar.gz" || al_die 65 "Backup archive failed integrity verification: $backup"
+
+# Prove the backup is fully restorable — archive integrity, contents, SQLite
+# integrity, and migration compatibility with this release — on a scratch
+# volume BEFORE the live deployment is stopped or any data is replaced.
+"$script_dir/restore-test.sh" --target "$target" --project "$project" --backup "$backup" ||
+  al_die 65 "Refusing to restore: the backup at $backup failed restorability verification; the live deployment was not touched"
 
 al_compose "$current" down
 if [ -f "$backup/auth-root" ]; then

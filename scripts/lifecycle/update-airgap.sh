@@ -114,23 +114,45 @@ if ! docker run --rm --network none \
   al_die 70 "The one-shot migration failed; the previous release was restarted untouched. Recover with restore.sh --backup $backup_path if the database was left mid-migration"
 fi
 
-# 7. Activate the new release; on failure re-activate the previous one.
+# Recovery for a failed activation or verification. Re-activating the
+# previous release is only safe while the applied migration head still equals
+# the head that release shipped; after a schema advance, old code must never
+# run against the newer database (the exact case rollback.sh refuses), so the
+# pre-update backup is restored instead. The ledger records what actually
+# happened: rolled-back, restored, or recovery-failed.
+previous_head=$(al_release_migration_head "$current_dir")
+recover_failed_activation() {
+  reason=$1
+  rm -f "$target/current.next"
+  applied_head=$(al_migration_head_of_volume "apiarylens-api:$version" 2>/dev/null || true)
+  if [ "$(al_recovery_mode "$previous_head" "$applied_head")" = "reactivate" ]; then
+    if al_compose "$current_dir" up -d --wait; then
+      al_ledger_append update "$from_version" "$version" "$bundle_digest" "$migration_head" "$backup_path" rolled-back
+      al_die 42 "$reason; $from_version was re-activated (migration head $applied_head unchanged)"
+    fi
+    al_note "Re-activating $from_version failed; falling back to restoring the pre-update backup."
+  else
+    al_note "The applied migration head (${applied_head:-unknown}) no longer matches the head $from_version shipped (${previous_head:-unknown}); restoring the pre-update backup instead of running the previous release against a newer database."
+  fi
+  if "$script_dir/restore.sh" --target "$target" --project "$project" --backup "$backup_path" --yes --force; then
+    al_ledger_append update "$from_version" "$version" "$bundle_digest" "$migration_head" "$backup_path" restored
+    al_die 42 "$reason; the pre-update backup at $backup_path was restored and $from_version is active"
+  fi
+  al_ledger_append update "$from_version" "$version" "$bundle_digest" "$migration_head" "$backup_path" recovery-failed
+  al_die 42 "$reason; automatic recovery also failed — restore manually with restore.sh --backup $backup_path"
+}
+
+# 7. Activate the new release; on failure recover per the rules above.
 ln -sfn "$release_dir" "$target/current.next"
 if ! al_compose "$release_dir" up -d --no-build --wait; then
-  rm -f "$target/current.next"
-  al_compose "$current_dir" up -d --wait || true
-  al_ledger_append update "$from_version" "$version" "$bundle_digest" "$migration_head" "$backup_path" rolled-back
-  al_die 42 "Activation of $version failed; $from_version was re-activated. If the migration was schema-incompatible, restore from $backup_path"
+  recover_failed_activation "Activation of $version failed"
 fi
 
-# 8. Verify the running release identity; on failure roll back.
+# 8. Verify the running release identity; on failure recover.
 site_address=$(sed -n 's/^APIARYLENS_SITE_ADDRESS=//p' "$release_dir/docker/.env" | head -n 1)
 https_port=$(sed -n 's/^APIARYLENS_HTTPS_PORT=//p' "$release_dir/docker/.env" | head -n 1)
 if ! al_health_verify "https://${site_address:-localhost}:${https_port:-443}/health" "$version"; then
-  rm -f "$target/current.next"
-  al_compose "$current_dir" up -d --wait || true
-  al_ledger_append update "$from_version" "$version" "$bundle_digest" "$migration_head" "$backup_path" rolled-back
-  al_die 42 "$version started but did not report the expected release identity; $from_version was re-activated. If the migration was schema-incompatible, restore from $backup_path"
+  recover_failed_activation "$version started but did not report the expected release identity"
 fi
 
 # 9. Commit; retain the previous release and images for the rollback window.

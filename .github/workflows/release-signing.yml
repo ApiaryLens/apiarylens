@@ -113,8 +113,8 @@ jobs:
         run: |
           pnpm release:artifacts
           pnpm release:airgap
-          pnpm release:compatibility
           pnpm release:supply-chain
+          pnpm release:compatibility
           pnpm release:verify
 
       - name: Stage exact product subjects

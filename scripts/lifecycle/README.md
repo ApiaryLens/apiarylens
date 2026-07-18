@@ -17,10 +17,10 @@ tree they live in `scripts/lifecycle/`.
 | `verify-bundle.sh --bundle-dir DIR [--target DIR] [--allow-channel-change] [--post-load]` | Verify an extracted air-gap bundle: member checksums, bundle format, update compatibility against the installed release, and (post-load) exact docker image IDs |
 | `load-images.sh --bundle-dir DIR` | `docker load` the bundled images and verify loaded image IDs |
 | `install-airgap.sh --bundle-dir DIR --target DIR [options]` | First install with zero egress: stage, load, migrate (one-shot, `--network none`), activate (`--no-build`, `pull_policy: never`), health-verify, commit |
-| `update-airgap.sh --bundle-dir DIR --target DIR [--allow-channel-change] [--force]` | Transported update: verify, preflight, forced backup, stage, load, migrate, activate, verify, commit or automatic re-activation of the previous release |
+| `update-airgap.sh --bundle-dir DIR --target DIR [--allow-channel-change] [--force]` | Transported update: verify, preflight, forced backup, stage, load, migrate, activate, verify, then commit — or recover: re-activate the previous release while the applied migration head still equals the head it shipped, otherwise restore the pre-update backup automatically |
 | `backup.sh --target DIR --project NAME [--retention N]` | Verified backup of database + media + durable secrets; prints the backup path |
-| `restore-test.sh --target DIR --project NAME [--backup DIR]` | Non-destructive restorability proof: archive integrity, scratch-volume restore, SQLite integrity check, migration-ledger readability |
-| `restore.sh --target DIR --project NAME [--backup DIR] --yes` | Destructive restore of a verified backup; revokes all sessions; restarts and health-verifies |
+| `restore-test.sh --target DIR --project NAME [--backup DIR]` | Non-destructive restorability proof: archive integrity, scratch-volume restore, SQLite integrity check, and a migration-compatibility run of the release's one-shot migration entrypoint against the scratch copy |
+| `restore.sh --target DIR --project NAME [--backup DIR] --yes [--force]` | Destructive restore of a verified backup; the backup is restore-tested on a scratch volume before the live deployment is stopped or any data is replaced; revokes all sessions; restarts and health-verifies |
 | `rollback.sh --target DIR --project NAME [--to VERSION]` | Re-activate the retained previous release, only while the applied migration head equals the head that release shipped |
 | `teardown.sh --target DIR --project NAME [--delete-data --yes-delete-my-data]` | Stop and remove services; keep-data is the default, permanent removal needs the typed confirmation flag |
 
@@ -66,7 +66,7 @@ Windows update ledger, per ADR 0025). One JSON object per line:
   "bundleDigest": "<sha256 of the bundle's bundle-manifest.json>",
   "migrationHead": "0004",
   "backupPath": "/opt/apiarylens/backups/0.1.0-preview.2-20260718T120000Z",
-  "outcome": "staged|committed|migration-failed|activation-failed|verify-failed|rolled-back|rollback-failed|restored|completed|stopped-kept-data"
+  "outcome": "staged|committed|migration-failed|activation-failed|verify-failed|rolled-back|rollback-failed|restored|recovery-failed|completed|stopped-kept-data"
 }
 ```
 
@@ -92,6 +92,12 @@ Refusal rules enforced before any mutation:
   without touching the live volume.
 - Rollback is refused when the applied migration head differs from what the
   previous release shipped; the safe alternative is `restore.sh` from the
-  pre-update backup (ADR 0021 rollback constraint).
+  pre-update backup (ADR 0021 rollback constraint). `update-airgap.sh`
+  applies the same rule to its own failure path: after a failed activation
+  or verification it re-activates the previous release only while the
+  applied head is unchanged, and otherwise restores the pre-update backup
+  (ledger outcome `restored`, or `recovery-failed` if even that fails).
+- A destructive restore never begins until the backup has passed the full
+  scratch-volume restore test, including the migration-compatibility run.
 - Deletion consent is never inferred: keep-data is the default everywhere;
   permanent removal requires `--delete-data --yes-delete-my-data`.

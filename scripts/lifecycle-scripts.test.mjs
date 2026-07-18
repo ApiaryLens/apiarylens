@@ -12,6 +12,10 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const posix = (path) => path.replaceAll('\\', '/');
+// PATH entries must use the /c/... form on Git Bash: a drive-letter colon
+// would split the entry at the colon.
+const msys = (path) =>
+  posix(path).replace(/^([A-Za-z]):\//, (_, drive) => `/${drive.toLowerCase()}/`);
 const lifecycleDir = posix(join(import.meta.dirname, 'lifecycle'));
 const bashAvailable = spawnSync('bash', ['-c', 'true']).status === 0;
 const suite = bashAvailable ? describe : describe.skip;
@@ -227,5 +231,145 @@ suite('offline bundle verifier (G7 hostile fixtures)', () => {
     const result = verifyBundle(writeBundle(), `--target '${root}'`);
     expect(result.status).toBe(0);
     expect(result.stdout).toMatch(/within the supported envelope/);
+  });
+});
+
+suite('activation-failure recovery decision (lib.sh)', () => {
+  const mode = (previous, applied) =>
+    lib(root, `al_recovery_mode '${previous}' '${applied}'`).stdout.trim();
+
+  it('re-activates the previous release only while the applied head is unchanged', () => {
+    expect(mode('0004', '0004')).toBe('reactivate');
+  });
+
+  it('restores the pre-update backup after a schema advance', () => {
+    expect(mode('0004', '0005')).toBe('restore');
+  });
+
+  it('restores when either head is unknown (never runs old code on unproven state)', () => {
+    expect(mode('', '0005')).toBe('restore');
+    expect(mode('0004', '')).toBe('restore');
+    expect(mode('', '')).toBe('restore');
+  });
+
+  it('reads the shipped migration head from release-dir manifests', () => {
+    const releaseDir = join(root, 'release-a');
+    mkdirSync(releaseDir, { recursive: true });
+    writeFileSync(
+      join(releaseDir, 'bundle-manifest.json'),
+      '{\n  "bundleFormat": 1,\n  "migrationHead": "0004"\n}\n',
+    );
+    expect(lib(root, `al_release_migration_head '${posix(releaseDir)}'`).stdout.trim()).toBe(
+      '0004',
+    );
+    const bare = join(root, 'release-b');
+    mkdirSync(bare, { recursive: true });
+    expect(lib(root, `al_release_migration_head '${posix(bare)}'`).stdout.trim()).toBe('');
+  });
+});
+
+suite('restore.sh validates the backup before touching live data', () => {
+  let stubBin;
+  let dockerLog;
+
+  function writeStubs({ migrateExit = 0 } = {}) {
+    stubBin = join(root, 'stub-bin');
+    dockerLog = join(root, 'docker.log');
+    mkdirSync(stubBin, { recursive: true });
+    writeFileSync(
+      join(stubBin, 'docker'),
+      [
+        '#!/bin/sh',
+        `printf 'docker %s\n' "$*" >> '${posix(dockerLog)}'`,
+        'case "$*" in',
+        `  *dist/migrate.js*) exit ${migrateExit} ;;`,
+        'esac',
+        'exit 0',
+        '',
+      ].join('\n'),
+      { mode: 0o755 },
+    );
+    writeFileSync(
+      join(stubBin, 'curl'),
+      [
+        '#!/bin/sh',
+        `printf '{"status":"ok","product":"ApiaryLens","version":"0.1.0-preview.3"}'`,
+        '',
+      ].join('\n'),
+      { mode: 0o755 },
+    );
+  }
+
+  function writeDeployment() {
+    mkdirSync(join(root, 'current', 'docker'), { recursive: true });
+    writeFileSync(
+      join(root, 'current', 'release-identity.json'),
+      '{\n  "product": "ApiaryLens",\n  "productVersion": "0.1.0-preview.3",\n  "channel": "preview"\n}\n',
+    );
+    writeFileSync(
+      join(root, 'current', 'docker', '.env'),
+      'APIARYLENS_SITE_ADDRESS=localhost\nAPIARYLENS_HTTPS_PORT=443\n',
+    );
+    const backup = join(root, 'backups', '0.1.0-preview.3-20260718T000000Z');
+    mkdirSync(backup, { recursive: true });
+    const payload = join(root, 'payload');
+    mkdirSync(payload, { recursive: true });
+    writeFileSync(join(payload, 'apiarylens.sqlite'), 'not-a-real-database');
+    // A relative archive path sidesteps GNU tar treating "C:/..." as a
+    // remote host specification on Windows checkouts.
+    const archived = sh(
+      `cd '${posix(payload)}' && tar czf data.tar.gz apiarylens.sqlite && mv data.tar.gz '${posix(backup)}/data.tar.gz'`,
+    );
+    expect(archived.status).toBe(0);
+    return msys(backup);
+  }
+
+  function runRestore(extra = '') {
+    return sh(
+      `PATH='${msys(stubBin)}':$PATH bash '${lifecycleDir}/restore.sh' ` +
+        `--target '${msys(root)}' --project apiarylens-test --yes ${extra}`,
+    );
+  }
+
+  it('refuses to stop or erase anything when the backup fails the restore test', () => {
+    writeStubs({ migrateExit: 1 });
+    const backup = writeDeployment();
+    const result = runRestore(`--backup '${backup}'`);
+    expect(result.status).toBe(65);
+    expect(result.stderr).toMatch(/live deployment was not touched/);
+    const log = sh(`cat '${posix(dockerLog)}'`).stdout;
+    expect(log).not.toMatch(/compose .* down/);
+    expect(log).not.toMatch(/rm -rf \/data/);
+  });
+
+  it('runs the scratch-volume restore test before the deployment is taken down', () => {
+    writeStubs();
+    const backup = writeDeployment();
+    const result = runRestore(`--backup '${backup}'`);
+    expect(result.status).toBe(0);
+    const log = sh(`cat '${posix(dockerLog)}'`).stdout;
+    const scratchTest = log.indexOf('volume create');
+    const migrateCheck = log.indexOf('dist/migrate.js');
+    const down = log.indexOf(' down');
+    expect(scratchTest).toBeGreaterThan(-1);
+    expect(migrateCheck).toBeGreaterThan(-1);
+    expect(down).toBeGreaterThan(-1);
+    expect(scratchTest).toBeLessThan(down);
+    expect(migrateCheck).toBeLessThan(down);
+  });
+
+  it('refuses an interrupted-operation ledger without --force and proceeds with it', () => {
+    writeStubs();
+    const backup = writeDeployment();
+    const staged = lib(
+      root,
+      'al_ledger_append update 0.1.0-preview.2 0.1.0-preview.3 "" 0004 "" staged',
+    );
+    expect(staged.status).toBe(0);
+    const refused = runRestore(`--backup '${backup}'`);
+    expect(refused.status).toBe(65);
+    expect(refused.stderr).toMatch(/interrupted operation/);
+    const forced = runRestore(`--backup '${backup}' --force`);
+    expect(forced.status).toBe(0);
   });
 });

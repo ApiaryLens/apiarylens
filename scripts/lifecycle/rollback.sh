@@ -61,12 +61,7 @@ release_dir="$target/releases/$to_version"
 
 # Compatibility gate: the previous release's shipped migration head must equal
 # the head currently applied to the data volume.
-previous_head=''
-if [ -f "$release_dir/bundle-manifest.json" ]; then
-  previous_head=$(al_json_get "$release_dir/bundle-manifest.json" migrationHead)
-elif [ -f "$release_dir/compatibility-manifest.json" ]; then
-  previous_head=$(al_json_get "$release_dir/compatibility-manifest.json" head)
-fi
+previous_head=$(al_release_migration_head "$release_dir")
 [ -n "$previous_head" ] ||
   al_die 65 "Release $to_version records no migration head; rollback compatibility cannot be proven — restore from a verified backup instead"
 applied_head=$(al_migration_head_of_volume "apiarylens-api:$current_version")

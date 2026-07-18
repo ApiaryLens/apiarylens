@@ -203,6 +203,33 @@ al_prepare_target() {
   chmod 700 "$target/secrets"
 }
 
+# The migration head a staged release shipped, read from its release-dir
+# manifests; prints nothing when the release records no head.
+al_release_migration_head() {
+  if [ -f "$1/bundle-manifest.json" ]; then
+    al_json_get "$1/bundle-manifest.json" migrationHead
+  elif [ -f "$1/compatibility-manifest.json" ]; then
+    al_json_get "$1/compatibility-manifest.json" head
+  fi
+}
+
+# Decide how to recover after a failed activation or verification: the
+# previous release may be re-activated only while the applied migration head
+# equals the head it shipped (ADR 0021 rollback constraint). Anything else —
+# a schema that moved forward, or a previous release whose head is unknown —
+# must restore the pre-update backup instead of running old code against a
+# newer database. Prints "reactivate" or "restore".
+al_recovery_mode() {
+  al_previous_head=$1
+  al_applied_head=$2
+  if [ -n "$al_previous_head" ] && [ -n "$al_applied_head" ] &&
+    [ "$al_previous_head" = "$al_applied_head" ]; then
+    echo reactivate
+  else
+    echo restore
+  fi
+}
+
 al_migration_head_of_volume() {
   # Read the applied migration head from the deployment's data volume with a
   # one-shot, network-isolated container; prints nothing for an empty volume.
