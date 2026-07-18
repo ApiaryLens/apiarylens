@@ -1,0 +1,19 @@
+# Air-gap override for the offline deployment bundle (OPREM-001 / R4).
+#
+# Removes the build sections and forbids registry pulls so `docker compose`
+# can never reach for a network, even accidentally. The prebuilt images are
+# restored on the host with `docker load` from the bundle's images archive
+# before services are created. Invocation (from the bundle's compose/ tree):
+#
+#   docker compose --env-file .env -f compose.yaml -f compose.airgap.yaml \
+#     up -d --no-build --wait
+#
+# `!reset` requires Docker Compose v2.24.0 or later; `pull_policy: never`
+# requires v2.13.0 or later. The bundle manifest records the tested minimums.
+services:
+  api:
+    build: !reset null
+    pull_policy: never
+  web:
+    build: !reset null
+    pull_policy: never

@@ -64,7 +64,7 @@ jobs:
   product:
     needs: policy
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
       - name: Check out exact immutable revision
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
@@ -112,6 +112,8 @@ jobs:
       - name: Build deployment bundles and supply-chain evidence
         run: |
           pnpm release:artifacts
+          pnpm release:airgap
+          pnpm release:compatibility
           pnpm release:supply-chain
           pnpm release:verify
 
@@ -124,6 +126,7 @@ jobs:
           const root = 'dist/product-release/release';
           mkdirSync(join(root, 'artifacts'), { recursive: true });
           cpSync('release/release-manifest.json', join(root, 'release-manifest.json'));
+          cpSync('release/compatibility-manifest.json', join(root, 'compatibility-manifest.json'));
           for (const artifact of manifest.artifacts) {
             const source = artifact.target === 'release'
               ? join('release', artifact.name)
@@ -248,6 +251,7 @@ jobs:
         run: |
           node scripts/finalize-windows-release.mjs
           node --input-type=module -e "import {readFileSync,writeFileSync} from 'node:fs'; const path='release/apiarylens-windows-signing.json'; const evidence=JSON.parse(readFileSync(path,'utf8')); evidence.releaseCommit=process.env.APIARYLENS_RELEASE_COMMIT; writeFileSync(path, JSON.stringify(evidence,null,2)+'\n');"
+          pnpm release:compatibility
 
       - name: Verify Windows package signatures, hashes, and release identity
         shell: pwsh
@@ -278,6 +282,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force dist/windows-release/release/artifacts | Out-Null
           Copy-Item release/release-manifest.json dist/windows-release/release/
+          Copy-Item release/compatibility-manifest.json dist/windows-release/release/
           Copy-Item release/apiarylens-windows-signing.json dist/windows-release/release/
           Copy-Item release/artifacts/windows dist/windows-release/release/artifacts/ -Recurse
 
@@ -319,10 +324,12 @@ jobs:
         run: |
           mkdir -p dist/publish
           cp dist/merge/release/release-manifest.json dist/publish/
+          cp dist/merge/release/compatibility-manifest.json dist/publish/
           cp dist/merge/release/apiarylens-*.json dist/publish/
           cp dist/merge/release/apiarylens-*.md dist/publish/
           cp dist/merge/release/apiarylens-*.jsonl dist/publish/
           cp dist/merge/release/artifacts/*.tar.gz dist/publish/
+          cp dist/merge/release/artifacts/*.tar dist/publish/
           cp dist/merge/release/artifacts/windows/windows-package.json dist/publish/
           cp dist/merge/release/artifacts/windows/artifacts/* dist/publish/
           (cd dist/publish && sha256sum * > SHA256SUMS)

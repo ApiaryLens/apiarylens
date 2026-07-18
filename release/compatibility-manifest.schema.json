@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://apiarylens.dev/schemas/compatibility-manifest-v1.json",
+  "title": "ApiaryLens compatibility manifest",
+  "description": "Canonical release compatibility manifest (ADR 0021) binding exact artifacts, contract identifiers, migration history, upgrade and rollback constraints, and the ADR 0025 lifecycle verb-ownership matrix.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifestKind",
+    "manifestSchemaVersion",
+    "product",
+    "releaseKind",
+    "productVersion",
+    "channel",
+    "supportStatus",
+    "sourceCommit",
+    "buildTime",
+    "contracts",
+    "migration",
+    "upgrade",
+    "rollback",
+    "channelPolicy",
+    "verbOwnership",
+    "artifacts",
+    "revokedArtifacts",
+    "knownIssues",
+    "documentation"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "manifestKind": { "const": "product-compatibility" },
+    "manifestSchemaVersion": { "const": 1 },
+    "product": { "const": "ApiaryLens" },
+    "releaseKind": { "const": "product" },
+    "productVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "channel": { "enum": ["development", "preview", "release-candidate", "stable"] },
+    "supportStatus": { "enum": ["supported", "superseded", "revoked"] },
+    "sourceCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "buildTime": { "type": "string", "minLength": 1 },
+    "contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["api", "sync", "databaseMigration", "deploymentPlan", "export", "localStore"],
+      "properties": {
+        "api": { "type": "string" },
+        "sync": { "type": "integer", "minimum": 1 },
+        "databaseMigration": { "type": "string" },
+        "deploymentPlan": { "type": "integer", "minimum": 1 },
+        "export": { "type": "integer", "minimum": 1 },
+        "localStore": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["head", "historyDigest", "history"],
+      "properties": {
+        "head": { "type": "string", "pattern": "^[0-9]{4}$" },
+        "historyDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "history": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["version", "sha256"],
+            "properties": {
+              "version": { "type": "string", "pattern": "^[0-9]{4}$" },
+              "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+            }
+          }
+        }
+      }
+    },
+    "upgrade": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimumDirectUpgradeSource", "requiresBackupBeforeUpdate", "backupFormat"],
+      "properties": {
+        "minimumDirectUpgradeSource": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+        },
+        "requiresBackupBeforeUpdate": { "const": true },
+        "backupFormat": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowedWhenMigrationHeadUnchanged",
+        "irreversibleTransitions",
+        "restoreRequiresBackupFormat"
+      ],
+      "properties": {
+        "allowedWhenMigrationHeadUnchanged": { "type": "boolean" },
+        "irreversibleTransitions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["fromVersion", "reason"],
+            "properties": {
+              "fromVersion": { "type": "string" },
+              "reason": { "type": "string" }
+            }
+          }
+        },
+        "restoreRequiresBackupFormat": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "channelPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default", "previewOptIn", "releaseCandidateOptIn"],
+      "properties": {
+        "default": { "const": "stable" },
+        "previewOptIn": { "const": "explicit" },
+        "releaseCandidateOptIn": { "const": "explicit" }
+      }
+    },
+    "verbOwnership": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["installChannel", "firstInstall", "steadyStateApply", "repair", "uninstall"],
+        "properties": {
+          "installChannel": { "type": "string", "minLength": 1 },
+          "firstInstall": { "type": "string", "minLength": 1 },
+          "steadyStateApply": { "type": "string", "minLength": 1 },
+          "repair": { "type": "string", "minLength": 1 },
+          "uninstall": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "kind", "target", "url", "sha256", "bytes"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "kind": { "type": "string", "minLength": 1 },
+          "target": { "type": "string", "minLength": 1 },
+          "url": { "type": "string", "format": "uri", "pattern": "^https://" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "bytes": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "revokedArtifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "sha256", "reason"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "knownIssues": { "type": "array", "items": { "type": "string" } },
+    "documentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["releaseNotes", "updateLifecycle"],
+      "properties": {
+        "releaseNotes": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "updateLifecycle": { "type": "string", "format": "uri", "pattern": "^https://" }
+      }
+    }
+  }
+}

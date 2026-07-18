@@ -1,0 +1,241 @@
+name: Air-gap lifecycle verification
+
+# OPREM-001 gap G10: prove the offline bundle installs, updates, rolls back,
+# and restores on a host whose containers have no network egress. The uplink
+# is dropped in the DOCKER-USER chain before any lifecycle step runs, and the
+# drop counter must not grow during the whole exercise.
+
+on:
+  pull_request:
+    paths:
+      - docker/**
+      - scripts/**
+      - apps/api/**
+      - packages/database/**
+      - packages/contracts/**
+      - release/**
+      - .github/workflows/airgap-verification.yml
+  push:
+    branches: [main]
+    paths:
+      - docker/**
+      - scripts/**
+      - apps/api/**
+      - packages/database/**
+      - packages/contracts/**
+      - release/**
+      - .github/workflows/airgap-verification.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: airgap-verification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  airgap-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PROJECT: apiarylens-e2e
+    steps:
+      - name: Check out immutable revision
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+
+      - name: Configure Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+
+      - name: Install locked dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Build the release air-gap bundle (connected side)
+        run: pnpm release:airgap
+
+      - name: Build a genuine next-version bundle for the transported update
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          next="${version}.1"
+          echo "NEXT_VERSION=$next" >> "$GITHUB_ENV"
+          NEXT_VERSION="$next" node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const next = process.env.NEXT_VERSION;
+          const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+          pkg.version = next;
+          writeFileSync('package.json', `${JSON.stringify(pkg, null, 2)}\n`);
+          const manifest = JSON.parse(readFileSync('release/release-manifest.json', 'utf8'));
+          manifest.productVersion = next;
+          writeFileSync('release/release-manifest.json', `${JSON.stringify(manifest, null, 2)}\n`);
+          const buildPath = 'packages/contracts/src/build.ts';
+          writeFileSync(
+            buildPath,
+            readFileSync(buildPath, 'utf8').replace(/PRODUCT_VERSION = '[^']+'/, `PRODUCT_VERSION = '${next}'`),
+          );
+          NODE
+          pnpm release:airgap
+          mkdir -p "$RUNNER_TEMP/stash"
+          cp "release/artifacts/$(ls release/artifacts | grep "^apiarylens-$next-airgap-.*\.tar$")" "$RUNNER_TEMP/stash/"
+          git checkout -- package.json release/release-manifest.json packages/contracts/src/build.ts
+
+      - name: Extract both bundles
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          echo "BASE_VERSION=$version" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/bundle1" "$RUNNER_TEMP/bundle2"
+          tar -xf release/artifacts/apiarylens-"$version"-airgap-*.tar -C "$RUNNER_TEMP/bundle1"
+          tar -xf "$RUNNER_TEMP"/stash/apiarylens-"$NEXT_VERSION"-airgap-*.tar -C "$RUNNER_TEMP/bundle2"
+
+      - name: Reject hostile bundle fixtures (G7)
+        run: |
+          cp -r "$RUNNER_TEMP/bundle1" "$RUNNER_TEMP/hostile"
+          printf 'tampered' >> "$RUNNER_TEMP/hostile/release-identity.json"
+          set +e
+          "$RUNNER_TEMP/hostile/scripts/verify-bundle.sh" --bundle-dir "$RUNNER_TEMP/hostile"
+          tampered_rc=$?
+          rm "$RUNNER_TEMP/hostile/images/"apiarylens-images-*.tar
+          "$RUNNER_TEMP/hostile/scripts/verify-bundle.sh" --bundle-dir "$RUNNER_TEMP/hostile"
+          missing_rc=$?
+          set -e
+          test "$tampered_rc" -eq 65
+          test "$missing_rc" -eq 65
+          "$RUNNER_TEMP/bundle1/scripts/verify-bundle.sh" --bundle-dir "$RUNNER_TEMP/bundle1"
+
+      - name: Block all container egress and record the drop counter baseline
+        run: |
+          uplink="$(ip route show default | awk '{print $5; exit}')"
+          sudo iptables -I DOCKER-USER -o "$uplink" -j DROP
+          if docker run --rm alpine:3.22 sh -c 'wget -q -T 5 -O- http://example.com' 2>/dev/null; then
+            echo 'The egress block did not take effect' >&2
+            exit 1
+          fi
+          baseline="$(sudo iptables -L DOCKER-USER -v -n -x | awk '/DROP/ {print $1; exit}')"
+          echo "UPLINK=$uplink" >> "$GITHUB_ENV"
+          echo "EGRESS_BASELINE=$baseline" >> "$GITHUB_ENV"
+          echo "Egress blocked on $uplink; baseline dropped packets: $baseline"
+
+      - name: Remove every locally built image so only docker load can supply them
+        run: |
+          docker image rm \
+            "apiarylens-api:$BASE_VERSION" "apiarylens-web:$BASE_VERSION" \
+            "apiarylens-api:$NEXT_VERSION" "apiarylens-web:$NEXT_VERSION" \
+            alpine:3.22
+          docker image ls
+
+      - name: Install air-gapped from the bundle (zero egress)
+        run: |
+          "$RUNNER_TEMP/bundle1/scripts/install-airgap.sh" \
+            --bundle-dir "$RUNNER_TEMP/bundle1" --target "$RUNNER_TEMP/apiarylens" \
+            --project "$PROJECT" --site-address localhost --http-port 8080 --https-port 8443
+          curl -k -fsS https://localhost:8443/health
+          curl -k -fsS https://localhost:8443/health | grep -q "\"version\":\"$BASE_VERSION\""
+
+      - name: Verified backup and non-destructive restore test (C4, G5)
+        run: |
+          docker run --rm --network none -v "${PROJECT}_apiarylens_data:/data" alpine:3.22 \
+            sh -c 'echo transported-proof > /data/proof.txt'
+          backup="$("$RUNNER_TEMP/bundle1/scripts/backup.sh" --target "$RUNNER_TEMP/apiarylens" --project "$PROJECT" | tail -n 1)"
+          echo "CLEAN_BACKUP=$backup" >> "$GITHUB_ENV"
+          "$RUNNER_TEMP/bundle1/scripts/restore-test.sh" --target "$RUNNER_TEMP/apiarylens" --project "$PROJECT"
+
+      - name: Refuse a same-version transported update (G6)
+        run: |
+          set +e
+          "$RUNNER_TEMP/bundle1/scripts/update-airgap.sh" \
+            --bundle-dir "$RUNNER_TEMP/bundle1" --target "$RUNNER_TEMP/apiarylens" --project "$PROJECT"
+          rc=$?
+          set -e
+          test "$rc" -eq 65
+
+      - name: Transported update to the next version (runbook steps 5-12)
+        run: |
+          "$RUNNER_TEMP/bundle2/scripts/update-airgap.sh" \
+            --bundle-dir "$RUNNER_TEMP/bundle2" --target "$RUNNER_TEMP/apiarylens" --project "$PROJECT"
+          curl -k -fsS https://localhost:8443/health | grep -q "\"version\":\"$NEXT_VERSION\""
+          tail -n 1 "$RUNNER_TEMP/apiarylens/lifecycle/update-ledger.jsonl" | grep -q '"outcome":"committed"'
+          docker run --rm --network none -v "${PROJECT}_apiarylens_data:/data:ro" alpine:3.22 \
+            sh -c 'grep -q transported-proof /data/proof.txt'
+
+      - name: Roll back to the previous release (C4)
+        run: |
+          "$RUNNER_TEMP/bundle1/scripts/rollback.sh" --target "$RUNNER_TEMP/apiarylens" --project "$PROJECT"
+          curl -k -fsS https://localhost:8443/health | grep -q "\"version\":\"$BASE_VERSION\""
+          tail -n 1 "$RUNNER_TEMP/apiarylens/lifecycle/update-ledger.jsonl" | grep -q '"outcome":"rolled-back"'
+
+      - name: One-shot migration rejects a tampered ledger under --network none (G3)
+        run: |
+          docker run --rm --network none -v "${PROJECT}_apiarylens_data:/data" "apiarylens-api:$BASE_VERSION" node -e '
+            const { DatabaseSync } = require("node:sqlite");
+            const db = new DatabaseSync("/data/apiarylens.sqlite");
+            db.prepare("UPDATE migrations SET checksum = ? WHERE version = ?").run("0".repeat(64), "0004");
+            db.close();
+          '
+          set +e
+          output="$(docker run --rm --network none \
+            -v "${PROJECT}_apiarylens_data:/data" -e APIARYLENS_DATABASE=/data/apiarylens.sqlite \
+            "apiarylens-api:$BASE_VERSION" node dist/migrate.js)"
+          rc=$?
+          set -e
+          echo "$output"
+          test "$rc" -ne 0
+          echo "$output" | grep -q migration_checksum_mismatch
+
+      - name: A transported update over corrupted state fails closed
+        run: |
+          set +e
+          "$RUNNER_TEMP/bundle2/scripts/update-airgap.sh" \
+            --bundle-dir "$RUNNER_TEMP/bundle2" --target "$RUNNER_TEMP/apiarylens" --project "$PROJECT"
+          rc=$?
+          set -e
+          test "$rc" -ne 0
+          if tail -n 1 "$RUNNER_TEMP/apiarylens/lifecycle/update-ledger.jsonl" | grep -q '"outcome":"committed"'; then
+            echo 'A corrupted deployment must never commit an update' >&2
+            exit 1
+          fi
+
+      - name: Restore the verified clean backup and recover (C4)
+        run: |
+          "$RUNNER_TEMP/bundle1/scripts/restore.sh" --target "$RUNNER_TEMP/apiarylens" \
+            --project "$PROJECT" --backup "$CLEAN_BACKUP" --yes
+          curl -k -fsS https://localhost:8443/health | grep -q "\"version\":\"$BASE_VERSION\""
+          docker run --rm --network none -v "${PROJECT}_apiarylens_data:/data:ro" alpine:3.22 \
+            sh -c 'grep -q transported-proof /data/proof.txt'
+
+      - name: Update cleanly after recovery
+        run: |
+          "$RUNNER_TEMP/bundle2/scripts/update-airgap.sh" \
+            --bundle-dir "$RUNNER_TEMP/bundle2" --target "$RUNNER_TEMP/apiarylens" --project "$PROJECT"
+          curl -k -fsS https://localhost:8443/health | grep -q "\"version\":\"$NEXT_VERSION\""
+
+      - name: Assert zero egress attempts across the whole lifecycle (G10)
+        run: |
+          counter="$(sudo iptables -L DOCKER-USER -v -n -x | awk '/DROP/ {print $1; exit}')"
+          echo "Dropped packets: baseline $EGRESS_BASELINE, final $counter"
+          sudo iptables -L DOCKER-USER -v -n -x
+          test "$counter" -eq "$EGRESS_BASELINE"
+
+      - name: Teardown keeps data by default, deletes only with typed consent
+        run: |
+          "$RUNNER_TEMP/bundle1/scripts/teardown.sh" --target "$RUNNER_TEMP/apiarylens" --project "$PROJECT"
+          docker volume inspect "${PROJECT}_apiarylens_data" >/dev/null
+          "$RUNNER_TEMP/bundle1/scripts/teardown.sh" --target "$RUNNER_TEMP/apiarylens" \
+            --project "$PROJECT" --delete-data --yes-delete-my-data
+          if docker volume inspect "${PROJECT}_apiarylens_data" >/dev/null 2>&1; then
+            echo 'The data volume must be removed after confirmed permanent removal' >&2
+            exit 1
+          fi
+          test ! -e "$RUNNER_TEMP/apiarylens"
+
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          docker ps -a || true
+          docker compose -p "$PROJECT" -f "$RUNNER_TEMP/apiarylens/current/docker/compose.yaml" logs --tail 100 || true
+          cat "$RUNNER_TEMP/apiarylens/lifecycle/update-ledger.jsonl" || true
+          sudo iptables -L DOCKER-USER -v -n -x || true

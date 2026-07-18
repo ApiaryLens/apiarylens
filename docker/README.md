@@ -16,7 +16,12 @@ the deployment identity and keeps the self-hosted path available today.
 - 2 vCPU, 4 GiB RAM, and 32 GiB persistent disk recommended for the family profile
 - inbound TCP 80 and 443; TCP 22 restricted to the operator's source address
 - a DNS name whose A/AAAA record resolves to the host
-- outbound HTTPS for image/package retrieval and ACME certificate issuance
+- outbound HTTPS for image/package retrieval and ACME certificate issuance —
+  **not required for the air-gap bundle**: hosts with zero outbound network use
+  the offline deployment bundle and the
+  [air-gap install and transported-update procedure](../docs/deployment/airgap-bundle.md)
+  instead of the build-on-host procedure below (`compose.airgap.yaml` in this
+  directory removes the build sections and sets `pull_policy: never`)
 
 The measured reference deployment used about 55 MiB of quiet container memory, but
 the larger host recommendation leaves room for image builds, updates, backups, and
