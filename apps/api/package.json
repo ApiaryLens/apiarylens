@@ -9,6 +9,11 @@
     "./runtime-app": {
       "types": "./src/app.ts",
       "default": "./dist/app.js"
+    },
+    "./password": {
+      "types": "./src/password.ts",
+      "development": "./src/password.ts",
+      "default": "./dist/password.js"
     }
   },
   "scripts": {

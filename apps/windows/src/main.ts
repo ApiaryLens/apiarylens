@@ -56,6 +56,7 @@ import {
   activateStagedStandaloneData,
   createStandaloneBackup,
   readStandaloneBackup,
+  rebindRestoredDeviceOwner,
   rollbackStandaloneData,
   restoreStandaloneBackupToStaging,
 } from './standalone-backup.js';
@@ -757,6 +758,15 @@ async function start(): Promise<void> {
           stagedStore.database
             .prepare('UPDATE sessions SET revoked_at = ?')
             .run(new Date().toISOString());
+          // A restored no-account apiary must stay silently accessible: rebind
+          // its device-managed owner to this machine's DPAPI credential, since
+          // backups never carry credential files (WIN-028).
+          await rebindRestoredDeviceOwner(
+            stagedStore,
+            paths.deviceOwnerCredential,
+            safeStorage,
+            secrets.authRootSecret,
+          );
         } finally {
           stagedStore.close();
         }

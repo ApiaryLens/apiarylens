@@ -2825,6 +2825,10 @@ function VersionView({
   const [backupWorking, setBackupWorking] = useState(false);
   const [backupMessage, setBackupMessage] = useState('');
   const standaloneBackup = api.standaloneBackupAvailable();
+  // A device-managed owner has no credentials a person could sign back in
+  // with, so offering sign-out would strand the workspace until a restart
+  // re-provisions it (WIN-028).
+  const deviceManaged = api.deviceManagedSession(session);
   useEffect(() => {
     void fetch('/health', { cache: 'no-store' })
       .then((response) => (response.ok ? response.json() : undefined))
@@ -2901,9 +2905,11 @@ function VersionView({
           >
             Beekeeping glossary
           </a>
-          <button className="button secondary" onClick={onSignOut}>
-            Sign out
-          </button>
+          {!deviceManaged && (
+            <button className="button secondary" onClick={onSignOut}>
+              Sign out
+            </button>
+          )}
           <button className="button danger" onClick={onClear}>
             Clear local data
           </button>

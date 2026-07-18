@@ -74,6 +74,16 @@ export const api = {
       throw new Error('Device-managed setup is available only in ApiaryLens for Windows');
     return provision();
   },
+  /**
+   * True when the active session belongs to the hidden device-managed owner of
+   * a no-account disconnected apiary. That owner has no password or recovery
+   * codes a person could ever re-enter, so account-level actions like signing
+   * out must not be offered (WIN-028). The identifier matches the fixed
+   * `deviceOwnerIdentifier` the Windows host provisions.
+   */
+  deviceManagedSession: (view: Pick<SessionView, 'user'>): boolean =>
+    typeof desktopBridge()?.provisionDeviceOwner === 'function' &&
+    view.user.identifier === 'device-owner',
   standaloneBackupAvailable: () => typeof desktopBridge()?.createStandaloneBackup === 'function',
   createStandaloneBackup: async () => {
     const create = desktopBridge()?.createStandaloneBackup;

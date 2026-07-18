@@ -44,6 +44,11 @@ describe('installed PWA shell', () => {
     expect(appSource).toContain('await establish(await api.provisionDeviceOwner())');
   });
 
+  it('never offers sign-out to a device-managed owner who has no credentials to re-enter', () => {
+    expect(appSource).toContain('const deviceManaged = api.deviceManagedSession(session)');
+    expect(appSource).toContain('{!deviceManaged && (');
+  });
+
   it('makes destination overview metrics keyboard-native navigation controls', () => {
     expect(appSource).toContain("onClick={() => onNavigate('hives')}");
     expect(appSource).toContain("onClick={() => onNavigate('apiaries')}");
