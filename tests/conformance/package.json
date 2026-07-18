@@ -1,0 +1,30 @@
+{
+  "name": "@apiarylens/conformance",
+  "version": "0.1.0-preview.3",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Cross-client conformance fixtures: the executable definition of API, sync, authz, and media compatibility across the Cloudflare and Compose/Node backends and the shared client core.",
+  "scripts": {
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@apiarylens/contracts": "workspace:*",
+    "@apiarylens/database": "workspace:*",
+    "@apiarylens/media": "workspace:*",
+    "@apiarylens/server": "workspace:*",
+    "@apiarylens/web": "workspace:*",
+    "@apiarylens/windows": "workspace:*",
+    "@apiarylens/worker": "workspace:*",
+    "fflate": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "fake-indexeddb": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

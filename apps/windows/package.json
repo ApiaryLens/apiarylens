@@ -5,6 +5,16 @@
   "type": "module",
   "license": "Apache-2.0",
   "main": "dist/main.js",
+  "exports": {
+    "./connected-profile": {
+      "types": "./src/connected-profile.ts",
+      "default": "./src/connected-profile.ts"
+    },
+    "./service-contract": {
+      "types": "./src/service-contract.ts",
+      "default": "./src/service-contract.ts"
+    }
+  },
   "scripts": {
     "build": "pnpm --filter @apiarylens/contracts build && pnpm --filter @apiarylens/database build && pnpm --filter @apiarylens/media build && pnpm --filter @apiarylens/server build && pnpm --filter @apiarylens/web build && tsc -p tsconfig.build.json && node -e \"const fs=require('node:fs');for(const name of ['preload.cjs','first-run-preload.cjs','first-run.html'])fs.copyFileSync('src/'+name,'dist/'+name)\"",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",

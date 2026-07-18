@@ -407,7 +407,9 @@ export function createApi(options: ApiOptions) {
       parsed.data,
       c.req.param('id'),
     );
-    return item ? c.json(item) : error(c, 404, 'resource_not_found', 'The record was not found');
+    return item && !item.deletedAt
+      ? c.json(item)
+      : error(c, 404, 'resource_not_found', 'The record was not found');
   });
 
   app.put(

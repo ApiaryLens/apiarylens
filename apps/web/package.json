@@ -4,6 +4,12 @@
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
+  "exports": {
+    "./client-core": {
+      "types": "./src/db.ts",
+      "default": "./src/db.ts"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
