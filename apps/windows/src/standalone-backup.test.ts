@@ -160,9 +160,9 @@ describe('standalone backup archive', () => {
     ).resolves.toBe(true);
     const credential = store.verifyCredentials(deviceOwnerIdentifier);
     store.close();
-    expect(
-      loadDeviceOwnerCredential(paths.deviceOwnerCredential, plaintextProtection),
-    ).toEqual(existing);
+    expect(loadDeviceOwnerCredential(paths.deviceOwnerCredential, plaintextProtection)).toEqual(
+      existing,
+    );
     await expect(
       verifyPassword(existing.password, credential?.passwordHash ?? '', 'this-machine-secret'),
     ).resolves.toBe(true);
