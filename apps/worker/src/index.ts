@@ -620,14 +620,14 @@ app.put('/api/v1/media/:id/content', requireSession, requireCsrf, async (c) => {
     'mediaAsset',
     c.req.param('id'),
   );
-  if (!metadata) return apiError(c, 404, 'media_not_found', 'The media record was not found');
+  if (!metadata || metadata.deletedAt)
+    return apiError(c, 404, 'media_not_found', 'The media record was not found');
   const bytes = await c.req.arrayBuffer();
   if (bytes.byteLength === 0 || bytes.byteLength > 25 * 1024 * 1024)
     return apiError(c, 400, 'media_size_invalid', 'The image size is invalid');
-  if (
-    c.req.header('content-type') !== metadata.mediaType ||
-    (await sha256(bytes)) !== metadata.sha256
-  )
+  if (c.req.header('content-type') !== metadata.mediaType)
+    return apiError(c, 400, 'media_type_mismatch', 'The image type does not match its metadata');
+  if ((await sha256(bytes)) !== metadata.sha256)
     return apiError(c, 400, 'media_integrity_failed', 'The image integrity check failed');
   await c.env.MEDIA.put(mediaKey(c.get('session').organizationId, c.req.param('id')), bytes, {
     httpMetadata: { contentType: String(metadata.mediaType) },
@@ -658,7 +658,8 @@ app.put('/api/v1/media/:id/thumbnail', requireSession, requireCsrf, async (c) =>
     'mediaAsset',
     c.req.param('id'),
   );
-  if (!metadata) return apiError(c, 404, 'media_not_found', 'The media record was not found');
+  if (!metadata || metadata.deletedAt)
+    return apiError(c, 404, 'media_not_found', 'The media record was not found');
   const bytes = await c.req.arrayBuffer();
   if (
     bytes.byteLength === 0 ||
@@ -690,7 +691,8 @@ app.get('/api/v1/media/:id/content', requireSession, async (c) => {
     'mediaAsset',
     c.req.param('id'),
   );
-  if (!metadata) return apiError(c, 404, 'media_not_found', 'The media record was not found');
+  if (!metadata || metadata.deletedAt)
+    return apiError(c, 404, 'media_not_found', 'The media record was not found');
   const thumbnail = c.req.query('variant') === 'thumbnail';
   const object =
     (await c.env.MEDIA.get(
@@ -721,7 +723,8 @@ app.delete('/api/v1/media/:id/content', requireSession, requireCsrf, async (c) =
     'mediaAsset',
     c.req.param('id'),
   );
-  if (!metadata) return apiError(c, 404, 'media_not_found', 'The media record was not found');
+  if (!metadata || metadata.deletedAt)
+    return apiError(c, 404, 'media_not_found', 'The media record was not found');
   await c.env.MEDIA.delete(mediaKey(c.get('session').organizationId, c.req.param('id')));
   await c.env.MEDIA.delete(
     mediaKey(c.get('session').organizationId, c.req.param('id'), 'thumbnail'),
