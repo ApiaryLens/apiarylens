@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { focusableSelector, nextTrapTarget } from './focus-trap.js';
 import { glossaryCategories, type GlossaryEntry } from './glossary-data.js';
 import { glossaryTerm, searchGlossary } from './glossary.js';
 
@@ -10,11 +11,19 @@ export function GlossaryPanel({
   onClose: () => void;
 }) {
   const [query, setQuery] = useState('');
+  const dialogRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const selected = initialTermId ? glossaryTerm(initialTermId) : undefined;
   const results = useMemo(() => searchGlossary(query), [query]);
   const searching = query.trim().length > 0;
+
+  // aria-modal alone does not keep keyboard focus inside the dialog, and the
+  // triggering control must regain focus when the panel closes.
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    return () => opener?.focus();
+  }, []);
 
   useEffect(() => {
     if (!selected) {
@@ -25,6 +34,19 @@ export function GlossaryPanel({
     anchor?.scrollIntoView({ block: 'start' });
     anchor?.focus();
   }, [selected]);
+
+  function trapFocus(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== 'Tab' || !dialogRef.current) return;
+    const focusable = Array.from(
+      dialogRef.current.querySelectorAll<HTMLElement>(focusableSelector),
+    );
+    const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const target = nextTrapTarget(focusable, active, event.shiftKey);
+    if (target) {
+      event.preventDefault();
+      target.focus();
+    }
+  }
 
   const grouped = useMemo(() => {
     const byCategory = new Map<string, GlossaryEntry[]>();
@@ -40,12 +62,17 @@ export function GlossaryPanel({
 
   return (
     <div
+      ref={dialogRef}
       className="modal-backdrop glossary-backdrop"
       role="dialog"
       aria-modal="true"
       aria-labelledby="glossary-title"
       onKeyDown={(event) => {
-        if (event.key === 'Escape') onClose();
+        if (event.key === 'Escape') {
+          onClose();
+          return;
+        }
+        trapFocus(event);
       }}
     >
       <section className="card glossary-panel">

@@ -53,8 +53,8 @@ import {
   removeConnectionProfile,
   saveConnectionProfile,
   verifyConnectedBackend,
-  type WindowsConnectionProfile,
 } from './connected-profile.js';
+import { ConnectedImportSession, type ConnectedImportPreview } from './first-run-import.js';
 import {
   activateStagedStandaloneData,
   createStandaloneBackup,
@@ -149,20 +149,11 @@ function secureWindow(
   return window;
 }
 
-type FirstRunConnectedPreview = {
-  status: 'preview';
-  profile: Array<[label: string, value: string]>;
-  identity:
-    | { state: 'matched'; productVersion: string; deploymentProfile: string }
-    | { state: 'mismatch'; problems: string[] }
-    | { state: 'unreachable'; message: string };
-};
-
 type FirstRunChoiceResult =
   | { status: 'ok' }
   | { status: 'canceled' }
   | { status: 'error'; message: string }
-  | FirstRunConnectedPreview;
+  | ConnectedImportPreview;
 
 /**
  * Clean-profile first launch (WIN-028): before any service starts or any data
@@ -208,10 +199,11 @@ function presentFirstRunChooser(
   window.webContents.on('will-attach-webview', (event) => event.preventDefault());
   return new Promise((resolveChoice) => {
     let settled = false;
-    // The picker/preview/confirm steps are separate renderer round-trips, so
-    // the parsed profile a preview described is held here and re-verified on
-    // confirm — the renderer never supplies profile content itself.
-    let previewedProfile: WindowsConnectionProfile | undefined;
+    const connectedImport = new ConnectedImportSession({
+      readProfile: readConnectionProfile,
+      checkBackend: checkConnectedBackend,
+      describeProfile: describeConnectionProfile,
+    });
     const settle = (value: 'disconnected' | 'connected' | 'quit'): void => {
       if (settled) return;
       settled = true;
@@ -230,7 +222,7 @@ function presentFirstRunChooser(
       async (event, untrustedChoice: unknown): Promise<FirstRunChoiceResult> => {
         assertChooserSender(event);
         if (untrustedChoice === 'disconnected') {
-          previewedProfile = undefined;
+          connectedImport.discard();
           saveWindowsModeChoice(modePath, 'disconnected');
           settle('disconnected');
           // The window stays open (hidden) until the product window exists so
@@ -239,41 +231,15 @@ function presentFirstRunChooser(
           return { status: 'ok' };
         }
         if (untrustedChoice === 'connected') {
-          previewedProfile = undefined;
           const selected = await dialog.showOpenDialog(window, {
             title: 'Select your ApiaryLens connection profile',
             filters: [{ name: 'ApiaryLens connection profile', extensions: ['json'] }],
             properties: ['openFile'],
           });
           const selectedPath = selected.filePaths[0];
-          if (selected.canceled || !selectedPath) return { status: 'canceled' };
-          let imported: WindowsConnectionProfile;
-          try {
-            imported = readConnectionProfile(selectedPath);
-          } catch (error) {
-            return {
-              status: 'error',
-              message: `ApiaryLens could not read that profile: ${
-                error instanceof Error ? error.message : 'unknown profile error'
-              }`,
-            };
-          }
-          const identity = await checkConnectedBackend(imported);
-          if (identity.state === 'matched') previewedProfile = imported;
-          return {
-            status: 'preview',
-            profile: describeConnectionProfile(imported),
-            identity:
-              identity.state === 'matched'
-                ? {
-                    state: 'matched',
-                    productVersion: identity.build.productVersion,
-                    deploymentProfile: identity.build.deploymentProfile,
-                  }
-                : identity.state === 'mismatch'
-                  ? { state: 'mismatch', problems: identity.problems }
-                  : { state: 'unreachable', message: identity.message },
-          };
+          return connectedImport.preview(
+            selected.canceled || !selectedPath ? undefined : selectedPath,
+          );
         }
         throw new Error('Unknown first-run choice');
       },
@@ -282,8 +248,7 @@ function presentFirstRunChooser(
       'apiarylens:first-run-connect-confirm',
       async (event): Promise<FirstRunChoiceResult> => {
         assertChooserSender(event);
-        const confirmed = previewedProfile;
-        if (!confirmed) throw new Error('No verified connection profile is awaiting confirmation');
+        const confirmed = connectedImport.confirm();
         try {
           await verifyConnectedBackend(confirmed);
           saveConnectionProfile(profilePath, confirmed);
@@ -303,7 +268,7 @@ function presentFirstRunChooser(
     );
     ipcMain.handle('apiarylens:first-run-connect-discard', (event): void => {
       assertChooserSender(event);
-      previewedProfile = undefined;
+      connectedImport.discard();
     });
     window.on('closed', () => {
       if (firstRunWindow === window) firstRunWindow = undefined;
