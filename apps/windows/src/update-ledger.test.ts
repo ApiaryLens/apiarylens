@@ -350,7 +350,9 @@ describe('next-launch reconciliation', () => {
       outcome: 'applied',
       appliedBy: 'app',
     });
-    expect(reconcileObservedVersion(ledger, '0.1.0-preview.3', markerPath, catalog)).toBeUndefined();
+    expect(
+      reconcileObservedVersion(ledger, '0.1.0-preview.3', markerPath, catalog),
+    ).toBeUndefined();
 
     writeInstallSourceMarker(markerPath, 'winget');
     const upgraded = reconcileObservedVersion(ledger, '0.1.0-preview.4', markerPath, catalog);
@@ -377,7 +379,9 @@ describe('next-launch reconciliation', () => {
       appliedBy: 'app',
     });
     expect(ledger.installedVersion()).toBe('0.1.0-preview.4');
-    expect(reconcileObservedVersion(ledger, '0.1.0-preview.3', markerPath, catalog)).toBeUndefined();
+    expect(
+      reconcileObservedVersion(ledger, '0.1.0-preview.3', markerPath, catalog),
+    ).toBeUndefined();
     expect(readFileSync(path, 'utf8').trim().split('\n')).toHaveLength(2);
   });
 
