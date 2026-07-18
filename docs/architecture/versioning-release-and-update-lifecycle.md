@@ -370,7 +370,8 @@ waive the update test.
 ## Required Research and ADRs
 
 The independent product/client/Scout version and compatibility decision is proposed
-in [ADR 0021](../adr/0021-independent-product-client-and-scout-release-compatibility.md).
+in ADR 0021, part of the ApiaryLens design record (private, see
+[docs/RELOCATED.md](../RELOCATED.md)).
 
 - Product-version source of truth and release-manifest schema
 - Release automation, change-entry, changelog, and documentation publishing tools
@@ -392,7 +393,7 @@ and backup/restore trust boundaries. These diagrams belong in the dedicated
 ## Related Documents
 
 - [MVP Definition and UAT Contract](../product/mvp-definition.md)
-- [Master Architecture and Design Plan](architecture-design-plan.md)
+- Master Architecture and Design Plan — in the ApiaryLens design record (private, see [docs/RELOCATED.md](../RELOCATED.md))
 - [Installation and Deployment Experience](installation-and-deployment-experience.md)
 - [Deployment Strategy](../deployment/deployment-strategy.md)
 - [Deployment, PWA, and Cost Test Strategy](../testing/deployment-test-strategy.md)

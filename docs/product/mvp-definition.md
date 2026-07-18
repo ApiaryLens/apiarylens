@@ -551,7 +551,7 @@ P1 and future capabilities must not delay an otherwise releasable MVP.
 
 - [Product Brief](product-brief.md)
 - [Product Capability Overview](product-capability-overview.md)
-- [Master Architecture and Design Plan](../architecture/architecture-design-plan.md)
+- Master Architecture and Design Plan — in the ApiaryLens design record (private, see [docs/RELOCATED.md](../RELOCATED.md))
 - [Installation and Deployment Experience](../architecture/installation-and-deployment-experience.md)
 - [Versioning, Release, and Update Lifecycle](../architecture/versioning-release-and-update-lifecycle.md)
 - [Deployment, PWA, and Cost Test Strategy](../testing/deployment-test-strategy.md)

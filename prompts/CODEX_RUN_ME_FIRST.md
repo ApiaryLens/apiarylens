@@ -14,7 +14,7 @@ Read these files first:
 3. docs/00-handoff/PROJECT_CONTEXT.md
 4. docs/00-handoff/COMPLETE_VISIBLE_CHAT_TRANSCRIPT.md
 5. docs/product/product-brief.md
-6. docs/architecture/architecture-design-plan.md
+6. docs/RELOCATED.md (the master architecture design plan moved to the private design record)
 7. docs/roadmap/roadmap.md
 8. tasks/000-ingest-handoff.md
 

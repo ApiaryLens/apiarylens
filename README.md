@@ -7,8 +7,9 @@ This repository is the public product monorepo. The MVP architecture and UAT
 contract are accepted, and implementation began on 2026-07-15. See
 [`AGENTS.md`](AGENTS.md) for the project rules if you're an AI coding agent working
 in this repo.
-The authoritative assembled technical direction is the
-[Master Architecture and Design Plan](docs/architecture/architecture-design-plan.md).
+The authoritative assembled technical direction is the Master Architecture and
+Design Plan in the ApiaryLens design record (private; see
+[docs/RELOCATED.md](docs/RELOCATED.md)).
 The accepted release scope is the
 [MVP Definition and UAT Contract](docs/product/mvp-definition.md).
 The accepted cross-profile versioning and safe-update contract is in
@@ -69,23 +70,18 @@ ADRs 0008 through 0011 accept the MVP implementation below.
 | Scout Bee | Separate React UI and Go loopback executor consuming immutable product releases |
 
 The table describes the current Public Preview 1 artifact. The accepted post-preview
-direction changes the starting experience without rewriting that release history:
+direction changes the starting experience without rewriting that release history.
+Portfolio-wide ADRs 0014–0021 are part of the ApiaryLens design record (private;
+see [docs/RELOCATED.md](docs/RELOCATED.md)):
 
-- [ADR 0014](docs/adr/0014-scout-bee-separate-repository-and-release.md) moved Scout
-  Bee to the separate Apache-2.0 public
+- ADR 0014 moved Scout Bee to the separate Apache-2.0 public
   [`ApiaryLens/scout-bee`](https://github.com/ApiaryLens/scout-bee) repository and
   independent release lifecycle.
-- [ADR 0015](docs/adr/0015-windows-first-client-portfolio.md) makes a signed
-  standalone/connected Windows application the future default family starting point.
-- Proposed [ADR 0016](docs/adr/0016-electron-windows-host-and-package.md),
-  [0017](docs/adr/0017-windows-native-authentication-and-credential-protection.md),
-  [0018](docs/adr/0018-windows-standalone-service-and-local-data-boundary.md),
-  [0019](docs/adr/0019-standalone-to-connected-migration-and-authority-cutover.md),
-  [0020](docs/adr/0020-shared-client-core-and-feature-ui-boundaries.md), and
-  [0021](docs/adr/0021-independent-product-client-and-scout-release-compatibility.md)
-  cover host/package, native authentication, standalone service, migration, shared
-  client, and independent updates. They are not yet accepted and do not authorize
-  product implementation or release claims.
+- ADR 0015 makes a signed standalone/connected Windows application the future
+  default family starting point.
+- Proposed ADRs 0016–0021 cover host/package, native authentication, standalone
+  service, migration, shared client, and independent updates. They are not yet
+  accepted and do not authorize product implementation or release claims.
 
 ## Repository layout
 

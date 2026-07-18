@@ -80,7 +80,7 @@ configuration. Candidate inclusion is not endorsement or a decision to bundle it
 
 ## Outputs
 
-- Research report under `docs/research/`
+- Research report in the ApiaryLens design record's research tree (private, see `docs/RELOCATED.md`)
 - ADR selecting the authentication/session and optional federation architecture
 - Follow-up ADR list for authorization, HTTPS, secrets, and native-client connection
 - Updates to the master plan, deployment schema, test strategy, and Scout Bee design

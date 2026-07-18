@@ -30,6 +30,6 @@ installer exists before the research and ADR gates pass.
 
 ## References
 
-- [ADR 0014](../docs/adr/0014-scout-bee-separate-repository-and-release.md)
-- [ADR 0015](../docs/adr/0015-windows-first-client-portfolio.md)
-- [Detailed deployment design](../docs/deployment/windows-first-client-and-scout-bee.md)
+- ADR 0014 (Scout Bee separate repository and release) — in the ApiaryLens design record (private, see [docs/RELOCATED.md](../docs/RELOCATED.md))
+- ADR 0015 (Windows-first client portfolio) — in the ApiaryLens design record (private, see [docs/RELOCATED.md](../docs/RELOCATED.md))
+- Detailed deployment design (Windows-first client and Scout Bee) — in the ApiaryLens design record (private, see [docs/RELOCATED.md](../docs/RELOCATED.md))

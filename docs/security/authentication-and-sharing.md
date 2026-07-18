@@ -82,7 +82,8 @@ The proposed native client authorization flow uses OAuth 2.0 Authorization Code 
 PKCE through an external user-agent, an ephemeral loopback redirect, and an opaque
 native session owned by the host rather than the renderer. The built-in account path
 and optional OIDC path converge on that ApiaryLens authorization transaction. See
-[ADR 0017](../adr/0017-windows-native-authentication-and-credential-protection.md).
+ADR 0017 in the ApiaryLens design record (private, see
+[docs/RELOCATED.md](../RELOCATED.md)).
 
 ## Organization and Authorization Model
 

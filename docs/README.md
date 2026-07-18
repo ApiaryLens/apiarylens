@@ -3,8 +3,8 @@
 Project documentation, handoff material, architecture notes, and Architecture
 Decision Records (ADRs) for ApiaryLens.
 
-Start with the
-[Master Architecture and Design Plan](architecture/architecture-design-plan.md).
+Start with the Master Architecture and Design Plan in the ApiaryLens design
+record (private; see [RELOCATED.md](RELOCATED.md)).
 It is the authoritative assembled view of the current architecture, accepted
 decisions, active direction, and unresolved work.
 
@@ -19,9 +19,11 @@ single-hive hobby tool toward commercial-apiary scale.
 - `00-handoff/` -- imported project handoff, project context, transcript, manifest,
   and import summary.
 - `adr/` -- initial ADRs and future decision records.
-- `architecture/` -- architecture design plan, feature inventory, repository
-  strategy, version/release/update lifecycle, community gallery/registry
-  considerations, media/AI notes, and related technical planning.
+- `architecture/` -- feature inventory, repository strategy,
+  version/release/update lifecycle, community gallery/registry
+  considerations, media/AI notes, and related technical planning. The master
+  architecture design plan moved to the private design record (see
+  [RELOCATED.md](RELOCATED.md)).
 - `brand/` -- public brand, graphics, asset, licensing, provenance, and publishing guidance.
 - `deployment/` -- self-hosting and deployment strategy notes.
 - `diagrams/` -- Lucidchart catalog and accessible public exports; legacy Mermaid
@@ -29,19 +31,21 @@ single-hive hobby tool toward commercial-apiary scale.
 - `product/` -- accepted authoritative MVP definition and UAT contract, product
   brief, living capability overview, pre-release marketing overview, and longer
   marketing/product narrative docs.
-- `research/` -- time-boxed architecture research and technical spikes.
-- `operator/` -- direct and Scout-assisted operations, backup, restore, update,
-  rollback, diagnostics, and uninstall guidance.
+- `research/` -- redirect only; research spikes moved to the private design
+  record (see [RELOCATED.md](RELOCATED.md)).
+- `operator/` -- redirect only; operator guides moved to the `apiarylens.org`
+  repository (see [RELOCATED.md](RELOCATED.md)).
 - `releases/` -- curated release notes, changelog, limitations, and support windows.
 - `roadmap/` -- product roadmap and gated portfolio execution plan.
-- `security/` -- canonical security architecture, the MVP threat model and
-  [ASVS verification map](security/threat-model-and-asvs.md), and risk register plus
+- `security/` -- canonical security architecture and risk register plus
   authentication, authorization, sharing, privacy, and secure-release design.
+  The MVP threat model and ASVS verification map moved to the private design
+  record (see [RELOCATED.md](RELOCATED.md)).
 - `source-documents/` -- original imported Word, PDF, and Markdown source files.
 - `strategy/` -- domain and project strategy notes.
 - `testing/` -- deployment, PWA, device, offline, recovery, and cost test strategies.
-- `user/` -- installation, offline work, family access, records, media, and recovery
-  guidance for beekeepers.
+- `user/` -- redirect only; user guides moved to the `apiarylens.org` repository
+  (see [RELOCATED.md](RELOCATED.md)).
 
 Use [Troubleshooting](troubleshooting.md) for symptom-based recovery and the
 [MVP release gates](testing/mvp-release-gates.md) for the current evidence-backed

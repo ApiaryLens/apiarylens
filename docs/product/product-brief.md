@@ -82,5 +82,6 @@ boundaries and ADRs.
 
 ApiaryLens moves through foundation, discovery and research, accepted decisions,
 detailed design, implementation, verification, and release. See the
-[Master Architecture and Design Plan](../architecture/architecture-design-plan.md),
-[Execution Plan](../roadmap/execution-plan.md), and [Roadmap](../roadmap/roadmap.md).
+[Execution Plan](../roadmap/execution-plan.md), the [Roadmap](../roadmap/roadmap.md),
+and the Master Architecture and Design Plan in the ApiaryLens design record
+(private, see [docs/RELOCATED.md](../RELOCATED.md)).

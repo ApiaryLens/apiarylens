@@ -169,7 +169,8 @@ validate rather than a replacement for the portable core. Shared contracts,
 conformance tests, export, and migration prevent the profiles from becoming separate
 products.
 
-See [Cloud Free-Tier Deployment Spike](../research/cloud-free-tier-deployment-spike.md).
+See the Cloud Free-Tier Deployment Spike in the ApiaryLens design record
+(private, see [docs/RELOCATED.md](../RELOCATED.md)).
 
 ## Apple Device and Native Roadmap
 

@@ -24,8 +24,8 @@ Selected MVP platform:
 
 The selection considered licensing, offline behavior, accessibility, resource
 footprint, security, Cloudflare/Compose parity, self-hosting, updates, and support.
-See the dated
-[application platform research](../docs/research/2026-07-15-application-platform-and-storage-spike.md).
+See the dated application platform research spike (2026-07-15), part of the
+ApiaryLens design record (private, see [docs/RELOCATED.md](../docs/RELOCATED.md)).
 
 Implementation and release measurements remain required; a failed acceptance gate
 changes the affected profile rather than weakening the accepted principles.

@@ -14,8 +14,8 @@ already exist. The repository currently contains foundation and design material,
 not a working application. The authoritative delivery sequence is the
 [roadmap](../roadmap/roadmap.md); detailed requirements remain in the
 [feature inventory](../architecture/feature-inventory.md), and architectural
-constraints remain in the
-[Master Architecture and Design Plan](../architecture/architecture-design-plan.md).
+constraints remain in the Master Architecture and Design Plan, part of the
+ApiaryLens design record (private, see [docs/RELOCATED.md](../RELOCATED.md)).
 
 ## Product Positioning
 

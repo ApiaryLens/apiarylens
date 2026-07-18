@@ -68,13 +68,15 @@ through [`docs/adr/0011-scout-bee-and-deployment-execution.md`](docs/adr/0011-sc
 - `apps/` — deployable product PWA, Node server, Cloudflare Worker, and Windows client compositions. Scout Bee is maintained in the separate [`ApiaryLens/scout-bee`](https://github.com/ApiaryLens/scout-bee) repository.
 - `packages/` — shared code consumed by multiple apps. Don't create a package for
   something only one app uses.
-- `docs/` — architecture notes and ADRs. Any non-trivial technical decision (stack
-  choice, data model, sync protocol, auth approach) should get an ADR here before
-  being implemented.
-  [`docs/architecture/architecture-design-plan.md`](docs/architecture/architecture-design-plan.md)
-  is the master architecture and design plan. Update it whenever an ADR changes the
-  assembled architecture. Use `docs/research/` for spikes that reduce meaningful
-  uncertainty before a decision.
+- `docs/` — repo-scoped technical notes and ADRs only (decisions about this
+  codebase's internals). Under ADR 0022 (accepted 2026-07-17), portfolio-wide
+  design, master architecture, threat models, research spikes, and cross-repository
+  ADRs (0014 and later) are authoritative in the private `apiarylens-ops`
+  repository's `design/` tree, and user/operator guide source is authoritative in
+  `apiarylens.org` — see [`docs/RELOCATED.md`](docs/RELOCATED.md). A product code
+  change and a change to the product-wide design that authorizes it must be commits
+  to two different repositories; do not reintroduce product-wide design documents
+  here.
 - `tasks/` — working task breakdowns for planned work. If you're an agent picking up a
   larger piece of work, look here first for existing scoping before starting your own.
 - `prompts/` — reusable prompts for driving AI agents on recurring ApiaryLens tasks

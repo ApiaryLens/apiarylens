@@ -3,7 +3,8 @@
 ## Status and authority
 
 This is the accepted design baseline for Scout Bee. The
-repository split is accepted by [ADR 0014](../adr/0014-scout-bee-separate-repository-and-release.md).
+repository split is accepted by ADR 0014, part of the ApiaryLens design record
+(private, see [docs/RELOCATED.md](../RELOCATED.md)).
 The executor security boundary in [ADR 0011](../adr/0011-scout-bee-and-deployment-execution.md)
 still applies. The repository transition is complete, but Scout Bee is not currently
 offered as an end-user download. It will be versioned and released independently

@@ -48,9 +48,13 @@ deployment status is recorded in the master architecture and MVP evidence.
 
 ### `apiarylens`
 
-The main repository is authoritative for product behavior, technical architecture,
-ADRs, source OpenAPI contracts, database migrations, portable deployment templates,
-and versioned immutable product releases. Its workflows build, test, attest, and
+The main repository is authoritative for product behavior, source code, repo-scoped
+ADRs (decisions about this codebase's internals), source OpenAPI contracts, database
+migrations, portable deployment templates, and versioned immutable product releases.
+Under ADR 0022 (accepted 2026-07-17), portfolio-wide design, master architecture,
+threat models, research, and cross-repository ADRs are authoritative in
+`apiarylens-ops` (`design/`), and user/operator documentation source is
+authoritative in `apiarylens.org`; see `docs/RELOCATED.md`. Its workflows build, test, attest, and
 publish; they never deploy a maintainer's or user's environment. It initially owns
 shared approved brand assets and their public provenance and licensing guidance.
 
@@ -70,8 +74,10 @@ a release gate rather than a reason to keep duplicate production source.
 ### `apiarylens-ops`
 
 The private operations repository is authoritative for internal project management,
-private dashboards, cross-repository coordination, internal procedures, and future
-commercial planning. Store secrets in an appropriate secret manager, not in Git.
+private dashboards, cross-repository coordination, internal procedures, future
+commercial planning, and — under ADR 0022 — the portfolio-wide design record:
+product-wide design documents, master architecture, threat models, research spikes,
+and cross-repository ADRs in its `design/` tree. Store secrets in an appropriate secret manager, not in Git.
 
 Do not allow this repository to become an unstructured home for future production
 SaaS infrastructure. Create a dedicated private infrastructure repository when that
@@ -79,9 +85,10 @@ boundary becomes operationally meaningful.
 
 ### `apiarylens.org`
 
-The public project website owns marketing and editorial presentation. It may publish
-or render user and operator documentation whose technical source remains in
-`apiarylens`; content must not be maintained as divergent copies. It consumes
+The public project website owns marketing and editorial presentation and — under
+ADR 0022 (accepted 2026-07-17) — the authoritative source of user and operator
+documentation (`docs/user/`, `docs/operator/`); content must not be maintained as
+divergent copies elsewhere. It consumes
 approved versioned brand assets rather than becoming a second identity source.
 Its official frontend deploys through Cloudflare under
 [ADR 0006](../adr/0006-cloudflare-public-frontends.md).

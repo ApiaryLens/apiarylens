@@ -1,20 +1,6 @@
-# Architecture Research
+# Relocated
 
-Use this folder for time-boxed research spikes that reduce uncertainty before an
-architecture or design decision.
-
-A spike should record:
-
-- The question and why it matters
-- Constraints and success criteria
-- Options investigated
-- Evidence, prototypes, or measurements
-- Security, privacy, offline, self-hosting, licensing, and operational findings
-- Gallery or registry impact when reusable/community assets are involved
-- Recommendation and remaining uncertainty
-- The ADR or design document that will consume the result
-
-Research findings are evidence, not durable decisions. A decision becomes binding
-only when its ADR is accepted and the
-[master architecture and design plan](../architecture/architecture-design-plan.md)
-is updated.
+Research spikes moved to the private `apiarylens-ops` repository (`design/research/`)
+under ADR 0022 (documentation source-of-truth boundaries, accepted 2026-07-17).
+Product-wide design, research, and cross-repository decision records no longer live
+in this code repository.

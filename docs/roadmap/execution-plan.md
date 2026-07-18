@@ -5,8 +5,9 @@
 Active Public Preview 1 delivery sequence. Preview 1 is not GA or a stable release:
 features and workflows may change, updates may arrive frequently (sometimes multiple
 times per day), and preview users must keep backups and exports rather than relying
-on ApiaryLens as the sole copy of irreplaceable records or media. The
-[Master Architecture and Design Plan](../architecture/architecture-design-plan.md)
+on ApiaryLens as the sole copy of irreplaceable records or media. The Master
+Architecture and Design Plan — in the ApiaryLens design record (private, see
+[docs/RELOCATED.md](../RELOCATED.md)) —
 remains authoritative for product architecture; this document controls the order in
 which the portfolio moves from foundation through release.
 

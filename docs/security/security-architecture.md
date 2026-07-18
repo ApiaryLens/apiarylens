@@ -34,8 +34,9 @@ safe supported configuration.
   identity provider is an advanced, optional path.
 
 See [Authentication, Authorization, and Sharing](authentication-and-sharing.md).
-The proposed packaged Windows boundary is reviewed separately in
-[Windows Client Security Boundary and Threat Review](windows-client-threat-model.md).
+The proposed packaged Windows boundary is reviewed separately in the Windows
+Client Security Boundary and Threat Review, part of the ApiaryLens design record
+(private, see [docs/RELOCATED.md](../RELOCATED.md)).
 
 ## Control Areas
 

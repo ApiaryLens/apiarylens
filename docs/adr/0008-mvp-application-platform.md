@@ -82,7 +82,7 @@ profiles.
 
 ## References
 
-- [Application platform research](../research/2026-07-15-application-platform-and-storage-spike.md)
+- Application platform research spike — in the ApiaryLens design record (private, see [docs/RELOCATED.md](../RELOCATED.md))
 - [Hono documentation](https://hono.dev/docs/)
 - [Node.js SQLite documentation](https://nodejs.org/api/sqlite.html)
 - [Vite documentation](https://vite.dev/guide/)

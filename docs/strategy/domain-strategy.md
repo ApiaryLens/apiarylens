@@ -9,8 +9,9 @@ ApiaryLens owns:
 
 The authoritative domain assignment is
 [ADR 0002: Domain Strategy](../adr/0002-domain-strategy.md). The assembled product
-and repository context is maintained in the
-[Master Architecture and Design Plan](../architecture/architecture-design-plan.md).
+and repository context is maintained in the Master Architecture and Design Plan,
+part of the ApiaryLens design record (private, see
+[docs/RELOCATED.md](../RELOCATED.md)).
 
 | Domain | Durable purpose |
 |---|---|

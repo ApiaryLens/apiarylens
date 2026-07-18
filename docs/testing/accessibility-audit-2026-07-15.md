@@ -58,8 +58,10 @@ profiles. The first run found finding 8. After remediation, GitHub Actions run
 reported zero axe A/AA violations, zero undersized targets, no horizontal overflow,
 valid landmarks, visible keyboard focus, and active forced-colors/reduced-motion
 media queries. The detailed interpretation and remaining native-host limitations are
-recorded in
-[`2026-07-16-windows-host-and-package-spike.md`](../research/2026-07-16-windows-host-and-package-spike.md#shared-ui-accessibility-evidence).
+recorded in the Windows host and package spike
+(`2026-07-16-windows-host-and-package-spike.md`, shared UI accessibility
+evidence section), part of the ApiaryLens design record (private, see
+[docs/RELOCATED.md](../RELOCATED.md)).
 
 The later native Electron zoom probe proved why the shared headless profile is not a
 complete host substitute. Once the research package loaded the real relative-base

@@ -123,5 +123,6 @@ portable core to a required provider. See
 - Managed hosted service
 - Commercial/research capacity profiles
 
-Provider-specific work requires research and an ADR. See
-[Cloud Free-Tier Deployment Spike](../research/cloud-free-tier-deployment-spike.md).
+Provider-specific work requires research and an ADR. See the Cloud Free-Tier
+Deployment Spike in the ApiaryLens design record (private, see
+[docs/RELOCATED.md](../RELOCATED.md)).

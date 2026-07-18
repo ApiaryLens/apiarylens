@@ -177,7 +177,7 @@ open item.
 - [ADR 0001: Core Monorepo with Separate Properties and Operations](0001-project-structure.md)
 - [ADR 0006: Cloudflare Hosting for Public Frontends](0006-cloudflare-public-frontends.md)
 - [ADR 0007: Deployment Profile Priority](0007-deployment-profile-priority.md)
-- [Master Architecture and Design Plan](../architecture/architecture-design-plan.md)
+- Master Architecture and Design Plan — in the ApiaryLens design record (private, see [docs/RELOCATED.md](../RELOCATED.md))
 - [Repository Strategy](../architecture/repository-strategy.md)
 - [Deployment Strategy](../deployment/deployment-strategy.md)
 - [Security Architecture](../security/security-architecture.md)
