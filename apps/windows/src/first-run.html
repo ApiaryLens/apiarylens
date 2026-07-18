@@ -103,6 +103,82 @@
       .error.visible {
         display: block;
       }
+      #preview h2 {
+        font-size: 1.3rem;
+        margin-bottom: 0.75rem;
+        outline: none;
+      }
+      .profile-summary {
+        background: #ffffff;
+        border: 1px solid #e8d9b8;
+        border-radius: 0.75rem;
+        padding: 1rem 1.25rem;
+        margin: 0 0 1rem;
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 0.35rem 1rem;
+        font-size: 0.9rem;
+      }
+      .profile-summary dt {
+        color: #6b5a3e;
+      }
+      .profile-summary dd {
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+      .identity-result {
+        border-radius: 0.75rem;
+        padding: 0.9rem 1.1rem;
+        font-size: 0.9rem;
+        line-height: 1.45;
+        margin-bottom: 1rem;
+      }
+      .identity-result.matched {
+        background: #edf6ec;
+        border: 1px solid #b5d3b0;
+        color: #2c521f;
+      }
+      .identity-result.unmatched {
+        background: #fdecea;
+        border: 1px solid #e5b4ac;
+        color: #7a2318;
+      }
+      .identity-result strong {
+        display: block;
+        margin-bottom: 0.3rem;
+      }
+      .identity-result ul {
+        margin: 0.3rem 0 0;
+        padding-left: 1.1rem;
+      }
+      .preview-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+      button.action {
+        font: inherit;
+        border-radius: 0.6rem;
+        padding: 0.65rem 1.1rem;
+        cursor: pointer;
+        border: 1px solid #d99a00;
+        background: #ffffff;
+        color: #3b2f1d;
+      }
+      button.action.primary {
+        background: #d99a00;
+        border-color: #d99a00;
+        color: #ffffff;
+        font-weight: 600;
+      }
+      button.action:disabled {
+        opacity: 0.6;
+        cursor: progress;
+      }
+      button.action:focus-visible {
+        outline: 2px solid #a06b00;
+        outline-offset: 2px;
+      }
     </style>
   </head>
   <body>
@@ -131,32 +207,170 @@
         Choosing &ldquo;Use on this computer&rdquo; keeps ApiaryLens fully working offline forever.
         A computer-only apiary can still join a family server later — your records move with you.
       </p>
+      <section id="preview" hidden aria-labelledby="preview-title">
+        <h2 id="preview-title" tabindex="-1">Review this connection profile</h2>
+        <dl class="profile-summary" id="profile-summary"></dl>
+        <div class="identity-result" id="identity-result" role="status"></div>
+        <div class="preview-actions">
+          <button type="button" class="action primary" id="confirm-connect">
+            Connect and continue
+          </button>
+          <button type="button" class="action" id="choose-different">
+            Choose a different file
+          </button>
+          <button type="button" class="action" id="preview-back">Back</button>
+        </div>
+      </section>
     </main>
     <script>
+      const choicesSection = document.querySelector('.choices');
+      const leadLine = document.querySelector('.lead');
+      const heading = document.querySelector('h1');
+      const footnote = document.querySelector('.footnote');
       const disconnectedButton = document.getElementById('choose-disconnected');
       const connectedButton = document.getElementById('choose-connected');
       const errorLine = document.getElementById('error');
-      async function choose(mode) {
-        disconnectedButton.disabled = true;
-        connectedButton.disabled = true;
+      const previewSection = document.getElementById('preview');
+      const previewTitle = document.getElementById('preview-title');
+      const profileSummary = document.getElementById('profile-summary');
+      const identityResult = document.getElementById('identity-result');
+      const confirmButton = document.getElementById('confirm-connect');
+      const chooseDifferentButton = document.getElementById('choose-different');
+      const backButton = document.getElementById('preview-back');
+
+      function setBusy(busy) {
+        for (const button of [
+          disconnectedButton,
+          connectedButton,
+          confirmButton,
+          chooseDifferentButton,
+          backButton,
+        ]) {
+          button.disabled = busy;
+        }
+      }
+
+      function showError(message) {
+        errorLine.textContent = message;
+        errorLine.classList.add('visible');
+      }
+
+      function clearError() {
         errorLine.classList.remove('visible');
         errorLine.textContent = '';
+      }
+
+      function showChoices() {
+        previewSection.hidden = true;
+        for (const element of [heading, leadLine, choicesSection, footnote]) {
+          element.hidden = false;
+        }
+        connectedButton.focus();
+      }
+
+      function showPreview(result) {
+        for (const element of [heading, leadLine, choicesSection, footnote]) {
+          element.hidden = true;
+        }
+        profileSummary.replaceChildren();
+        for (const [label, value] of result.profile) {
+          const term = document.createElement('dt');
+          term.textContent = label;
+          const detail = document.createElement('dd');
+          detail.textContent = value;
+          profileSummary.append(term, detail);
+        }
+        identityResult.replaceChildren();
+        const summary = document.createElement('strong');
+        identityResult.append(summary);
+        if (result.identity.state === 'matched') {
+          identityResult.className = 'identity-result matched';
+          summary.textContent = 'Server identity verified';
+          const line = document.createElement('span');
+          line.textContent =
+            'The server at this address reports ApiaryLens ' +
+            result.identity.productVersion +
+            ' (' +
+            result.identity.deploymentProfile +
+            '), matching this profile exactly.';
+          identityResult.append(line);
+          confirmButton.hidden = false;
+        } else if (result.identity.state === 'mismatch') {
+          identityResult.className = 'identity-result unmatched';
+          summary.textContent = 'The server does not match this profile';
+          const problems = document.createElement('ul');
+          for (const problem of result.identity.problems) {
+            const item = document.createElement('li');
+            item.textContent = problem;
+            problems.append(item);
+          }
+          identityResult.append(problems);
+          confirmButton.hidden = true;
+        } else {
+          identityResult.className = 'identity-result unmatched';
+          summary.textContent = 'The server could not be reached';
+          const line = document.createElement('span');
+          line.textContent =
+            result.identity.message +
+            ' Check the network connection to your family server and try again.';
+          identityResult.append(line);
+          confirmButton.hidden = true;
+        }
+        previewSection.hidden = false;
+        previewTitle.focus();
+      }
+
+      async function choose(mode) {
+        setBusy(true);
+        clearError();
         try {
           const result = await window.apiaryLensFirstRun.choose(mode);
           if (result && result.status === 'error') {
-            errorLine.textContent = result.message;
-            errorLine.classList.add('visible');
+            showError(result.message);
+            if (!previewSection.hidden) showChoices();
+          } else if (result && result.status === 'preview') {
+            showPreview(result);
+          } else if (result && result.status === 'canceled' && !previewSection.hidden) {
+            previewTitle.focus();
           }
         } catch {
-          errorLine.textContent = 'ApiaryLens could not apply that choice. Please try again.';
-          errorLine.classList.add('visible');
+          showError('ApiaryLens could not apply that choice. Please try again.');
         } finally {
-          disconnectedButton.disabled = false;
-          connectedButton.disabled = false;
+          setBusy(false);
         }
       }
+
+      async function confirmConnect() {
+        setBusy(true);
+        clearError();
+        try {
+          const result = await window.apiaryLensFirstRun.confirmConnect();
+          if (result && result.status === 'error') {
+            showError(result.message);
+            showChoices();
+          }
+        } catch {
+          showError('ApiaryLens could not apply that choice. Please try again.');
+          showChoices();
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function backToChoices() {
+        void window.apiaryLensFirstRun.discardPreview();
+        clearError();
+        showChoices();
+      }
+
       disconnectedButton.addEventListener('click', () => void choose('disconnected'));
       connectedButton.addEventListener('click', () => void choose('connected'));
+      confirmButton.addEventListener('click', () => void confirmConnect());
+      chooseDifferentButton.addEventListener('click', () => void choose('connected'));
+      backButton.addEventListener('click', backToChoices);
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !previewSection.hidden) backToChoices();
+      });
     </script>
   </body>
 </html>

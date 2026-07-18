@@ -3,6 +3,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  checkConnectedBackend,
+  compareBackendIdentity,
+  describeConnectionProfile,
   loadSavedConnectionProfile,
   parseConnectionProfile,
   saveConnectionProfile,
@@ -85,5 +88,76 @@ describe('Windows connected profile', () => {
     expect((await verifyConnectedBackend(profile)).productVersion).toBe('0.1.0-preview.3');
     const mismatch = { ...profile, compatibility: { ...profile.compatibility, syncContract: 2 } };
     await expect(verifyConnectedBackend(mismatch)).rejects.toThrow(/compatibility lock/);
+  });
+
+  it('describes the profile for import preview without inventing secret fields', () => {
+    const rows = describeConnectionProfile(profile);
+    expect(rows).toContainEqual(['Family server', 'Turner family cloud']);
+    expect(rows).toContainEqual(['Server address', 'https://hives.example.test']);
+    expect(rows).toContainEqual(['Deployment profile', 'Cloudflare']);
+    expect(rows).toContainEqual(['Profile source', 'Scout Bee']);
+    expect(rows).toContainEqual(['Sync contract', '1']);
+    expect(JSON.stringify(rows)).not.toMatch(/token|secret|password/i);
+  });
+
+  it('names every identity field that differs from the compatibility lock', () => {
+    const matchingBuild = {
+      product: 'ApiaryLens',
+      productVersion: '0.1.0-preview.3',
+      deploymentProfile: 'cloudflare',
+      apiContract: '1.0',
+      syncContract: 1,
+      databaseMigration: '0004',
+    } as const;
+    expect(compareBackendIdentity(profile, { status: 'ok', build: matchingBuild })).toEqual([]);
+    expect(compareBackendIdentity(profile, { status: 'degraded', build: matchingBuild })).toEqual([
+      'The server did not report a healthy identity',
+    ]);
+    const drifted = compareBackendIdentity(profile, {
+      status: 'ok',
+      build: { ...matchingBuild, productVersion: '0.1.0-preview.2', syncContract: 2 },
+    });
+    expect(drifted).toHaveLength(2);
+    expect(drifted[0]).toContain('profile requires 0.1.0-preview.3');
+    expect(drifted[0]).toContain('server reports 0.1.0-preview.2');
+    expect(drifted[1]).toContain('Sync contract');
+  });
+
+  it('reports matched, mismatch, and unreachable identity checks without throwing', async () => {
+    const respond = (body: unknown) => {
+      const response = new Response(JSON.stringify(body), { status: 200 });
+      Object.defineProperty(response, 'url', { value: `${profile.backendUrl}/health` });
+      return Promise.resolve(response);
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() =>
+        respond({
+          status: 'ok',
+          build: {
+            product: 'ApiaryLens',
+            productVersion: '0.1.0-preview.3',
+            deploymentProfile: 'cloudflare',
+            apiContract: '1.0',
+            syncContract: 1,
+            databaseMigration: '0004',
+          },
+        }),
+      ),
+    );
+    const matched = await checkConnectedBackend(profile);
+    expect(matched.state).toBe('matched');
+    if (matched.state === 'matched') expect(matched.build.productVersion).toBe('0.1.0-preview.3');
+
+    const drifted = { ...profile, compatibility: { ...profile.compatibility, apiContract: '2.0' } };
+    const mismatch = await checkConnectedBackend(drifted);
+    expect(mismatch.state).toBe('mismatch');
+    if (mismatch.state === 'mismatch') {
+      expect(mismatch.problems.some((problem) => problem.includes('API contract'))).toBe(true);
+    }
+
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('fetch failed')));
+    const unreachable = await checkConnectedBackend(profile);
+    expect(unreachable.state).toBe('unreachable');
   });
 });

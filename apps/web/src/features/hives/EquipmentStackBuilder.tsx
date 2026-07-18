@@ -12,6 +12,7 @@ import {
   type EquipmentType,
 } from '../../equipment-stack.js';
 import { Empty } from '../../components/Empty.js';
+import { GlossaryLink } from '../glossary/GlossaryLink.js';
 
 export function EquipmentStackBuilder({
   organizationId,
@@ -149,7 +150,7 @@ export function EquipmentStackBuilder({
           </p>
         )}
         <label>
-          Component type
+          Component type <GlossaryLink term="brood-box" label="Hive components" />
           <select
             value={componentType}
             onChange={(event) => setComponentType(event.currentTarget.value as EquipmentType)}
@@ -190,7 +191,7 @@ export function EquipmentStackBuilder({
         )}
         {isFrameBox(componentType) && (
           <label>
-            Frame count
+            Frame count <GlossaryLink term="frame" label="Frame" />
             <input name="frameCount" type="number" min="1" max="24" defaultValue="10" required />
           </label>
         )}

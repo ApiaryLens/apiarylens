@@ -3,6 +3,7 @@ import type { BuildIdentity } from '@apiarylens/contracts';
 import { api } from '../../api.js';
 import { frontendBuild } from '../../build-identity.js';
 import type { ActiveSession } from '../../session.js';
+import { useGlossary } from '../glossary/glossary-context.js';
 import { FamilyAccess } from './FamilyAccess.js';
 import { SessionTransparency } from './SessionTransparency.js';
 
@@ -19,6 +20,7 @@ export function VersionView({
   const [backupWorking, setBackupWorking] = useState(false);
   const [backupMessage, setBackupMessage] = useState('');
   const standaloneBackup = api.standaloneBackupAvailable();
+  const glossary = useGlossary();
   // A device-managed owner has no credentials a person could sign back in
   // with, so offering sign-out would strand the workspace until a restart
   // re-provisions it (WIN-028).
@@ -93,12 +95,14 @@ export function VersionView({
           >
             Release notes and artifacts
           </a>
-          <a
-            className="button secondary link-button"
-            href="https://apiarylens.org/docs/user/beekeeping-glossary/"
+          <button
+            type="button"
+            className="button secondary"
+            onClick={() => glossary.open()}
+            aria-haspopup="dialog"
           >
             Beekeeping glossary
-          </a>
+          </button>
           {!deviceManaged && (
             <button className="button secondary" onClick={onSignOut}>
               Sign out
