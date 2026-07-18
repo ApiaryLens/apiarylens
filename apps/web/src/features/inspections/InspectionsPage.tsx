@@ -1,16 +1,25 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { LocalResource } from '../../db.js';
 import { useResources } from '../../local/use-resources.js';
 import { Empty } from '../../components/Empty.js';
+import { filterInspectionsByHive } from '../record-filters.js';
 import type { FormProps } from '../types.js';
 import { InspectionForm } from './InspectionForm.js';
 import { InspectionHistory } from './InspectionHistory.js';
 import { MediaGallery } from './MediaGallery.js';
 
-export function Inspections({ organizationId, onNotice, canWrite = true }: FormProps) {
+export function Inspections({
+  organizationId,
+  onNotice,
+  canWrite = true,
+  initialHiveId,
+}: FormProps & { initialHiveId?: string }) {
   const records = useResources(organizationId, 'inspection');
   const hives = useResources(organizationId, 'hive');
   const [editing, setEditing] = useState<LocalResource>();
+  const [hiveFilter, setHiveFilter] = useState(initialHiveId ?? 'all');
+  useEffect(() => setHiveFilter(initialHiveId ?? 'all'), [initialHiveId]);
+  const visibleRecords = filterInspectionsByHive(records, hiveFilter);
   return (
     <>
       <div className="page-heading">
@@ -41,11 +50,29 @@ export function Inspections({ organizationId, onNotice, canWrite = true }: FormP
         </section>
         <section className="card">
           <h2>Inspection history</h2>
+          {records.length > 0 && hives.length > 0 && (
+            <label className="record-filter">
+              Hive
+              <select
+                value={hiveFilter}
+                onChange={(event) => setHiveFilter(event.currentTarget.value)}
+              >
+                <option value="all">All hives</option>
+                {hives.map((hive) => (
+                  <option key={hive.id} value={hive.id}>
+                    {String(hive.data.name)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {records.length === 0 ? (
             <Empty text="No inspections yet." />
+          ) : visibleRecords.length === 0 ? (
+            <Empty text="No inspections recorded for this hive yet." />
           ) : (
             <InspectionHistory
-              records={records}
+              records={visibleRecords}
               hives={hives}
               {...(canWrite ? { onEdit: setEditing } : {})}
             />

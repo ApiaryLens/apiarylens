@@ -2,8 +2,16 @@ import { useState, type FormEvent } from 'react';
 import { queueCreate, type LocalResource } from '../../db.js';
 import { fieldChoices, recentFieldValues } from '../../field-intelligence.js';
 import { SmartTextField } from '../../components/SmartTextField.js';
+import { GlossaryLink } from '../glossary/GlossaryLink.js';
 import type { FormProps } from '../types.js';
 import { careLabel, careTypes, type CareType } from './care-records.js';
+
+const careGlossaryTerms: Partial<Record<CareType, string>> = {
+  miteCount: 'varroa-mite',
+  feedingEvent: 'sugar-syrup',
+  treatmentEvent: 'withdrawal-period',
+  harvest: 'honey-harvest',
+};
 
 export function CareForm({
   organizationId,
@@ -81,7 +89,10 @@ export function CareForm({
         </p>
       )}
       <label>
-        Record type
+        Record type{' '}
+        {careGlossaryTerms[kind] && (
+          <GlossaryLink term={careGlossaryTerms[kind]} label={careLabel(kind)} />
+        )}
         <select value={kind} onChange={(event) => setKind(event.target.value as CareType)}>
           {careTypes.map((type) => (
             <option key={type} value={type}>
@@ -115,7 +126,7 @@ function CareFields({ kind, records }: { kind: CareType; records: LocalResource[
     return (
       <>
         <label>
-          Method
+          Method <GlossaryLink term="alcohol-wash" label="Mite count methods" />
           <select name="method">
             <option value="alcohol_wash">Alcohol wash</option>
             <option value="sugar_roll">Sugar roll</option>

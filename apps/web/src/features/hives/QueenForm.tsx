@@ -5,6 +5,7 @@ import {
   queenColorForYear,
   type QueenIdentifierKind,
 } from '../../queen-fields.js';
+import { GlossaryLink } from '../glossary/GlossaryLink.js';
 
 export function QueenForm({
   hives,
@@ -110,7 +111,9 @@ export function QueenForm({
         <input name="identifierValue" required maxLength={90} />
       </label>
       <fieldset>
-        <legend>Mark recorded by</legend>
+        <legend>
+          Mark recorded by <GlossaryLink term="queen-marking" label="Queen marking colors" />
+        </legend>
         <label>
           <input
             type="radio"

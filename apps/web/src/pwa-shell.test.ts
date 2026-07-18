@@ -58,10 +58,17 @@ describe('installed PWA shell', () => {
   });
 
   it('makes destination overview metrics keyboard-native navigation controls', () => {
-    expect(overviewSource).toContain("onClick={() => onNavigate('hives')}");
-    expect(overviewSource).toContain("onClick={() => onNavigate('apiaries')}");
-    expect(overviewSource).toContain("onClick={() => onNavigate('care')}");
+    expect(overviewSource).toContain(
+      "onClick={() => onNavigate({ page: 'hives', hiveStatus: 'active' })}",
+    );
+    expect(overviewSource).toContain("onClick={() => onNavigate({ page: 'apiaries' })}");
+    expect(overviewSource).toContain("onClick={() => onNavigate({ page: 'inspections' })}");
+    expect(overviewSource).toContain(
+      "onClick={() => onNavigate({ page: 'care', careView: 'open-follow-ups' })}",
+    );
     expect(overviewSource).toContain('className="metric metric-link"');
+    // The pending-sync block is status-only and must stay non-interactive.
+    expect(overviewSource).toContain('<article className="metric pending">');
   });
 
   it('blocks update activation while local records or media are pending', () => {
