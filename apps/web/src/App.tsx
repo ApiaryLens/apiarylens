@@ -41,6 +41,10 @@ import { fieldChoices, mergeFieldChoices, recentFieldValues } from './field-inte
 
 type Page = 'dashboard' | 'apiaries' | 'hives' | 'inspections' | 'care' | 'version';
 type ActiveSession = Omit<SessionView, 'csrfToken'> & { csrfToken: string | undefined };
+// Inside the Windows standalone shell the backend is an embedded loopback
+// service, so external connectivity (navigator.onLine) must never gate the
+// launch, synchronization, or onboarding paths (WIN-028).
+const desktopStandalone = api.desktopStandalone();
 const frontendBuild = createBuildIdentity({
   deploymentProfile:
     (import.meta.env.VITE_DEPLOYMENT_PROFILE as BuildIdentity['deploymentProfile'] | undefined) ??
@@ -55,7 +59,7 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [bootstrapAvailable, setBootstrapAvailable] = useState(false);
   const [bootstrapTokenRequired, setBootstrapTokenRequired] = useState(false);
-  const [offline, setOffline] = useState(!navigator.onLine);
+  const [offline, setOffline] = useState(desktopStandalone ? false : !navigator.onLine);
   const [page, setPage] = useState<Page>('dashboard');
   const [notice, setNotice] = useState('');
   const [syncing, setSyncing] = useState(false);
@@ -83,7 +87,7 @@ export function App() {
       return 'Synchronization complete.';
     };
     const scheduler = new OnlineSyncScheduler({
-      isOnline: () => navigator.onLine,
+      isOnline: () => desktopStandalone || navigator.onLine,
       synchronize: async (signal) => {
         let active = sessionRef.current;
         if (!active?.csrfToken) {
@@ -131,7 +135,9 @@ export function App() {
       setOffline(false);
       void scheduler.request('reconnect');
     };
-    const offlineHandler = () => setOffline(true);
+    const offlineHandler = () => {
+      if (!desktopStandalone) setOffline(true);
+    };
     const resume = () => {
       if (document.visibilityState === 'visible') void scheduler.request('resume');
     };
@@ -174,7 +180,7 @@ export function App() {
         // network refresh must never hold the cached app behind the launch gate.
         setLoading(false);
       }
-      if (!navigator.onLine) {
+      if (!navigator.onLine && !desktopStandalone) {
         setOffline(true);
         return;
       }
@@ -182,8 +188,21 @@ export function App() {
       await cacheSession(active);
       sessionRef.current = active;
       setSession(active);
-      if (navigator.onLine) void scheduler.request('open');
+      if (desktopStandalone || navigator.onLine) void scheduler.request('open');
     } catch {
+      // Disconnected Windows onboarding: the host provisions and signs in a
+      // device-managed owner, so a clean install reaches the hive workspace
+      // with zero account creation and zero network access. When the host
+      // declines (a person-created account exists), the standard
+      // authentication screen appears instead.
+      if (api.deviceOwnerProvisioningAvailable()) {
+        try {
+          await establish(await api.provisionDeviceOwner());
+          return;
+        } catch {
+          // Fall through to the standard authentication screen.
+        }
+      }
       try {
         const status = await api.bootstrapStatus();
         setBootstrapAvailable(status.available);

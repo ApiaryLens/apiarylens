@@ -4,6 +4,14 @@ This workspace is the production composition root for the Windows-first ApiaryLe
 client. It is no longer an empty placeholder. The current implementation provides:
 
 - a single-instance Electron host with a sandboxed, context-isolated renderer;
+- a first-run mode chooser on a clean profile (ADR 0015): "Use on this computer"
+  starts the disconnected standalone apiary with zero accounts and zero network,
+  while "Connect to my family's ApiaryLens" imports and verifies a connection
+  profile in-app; the persisted choice lives in `windows-mode.v1.json` and
+  pre-chooser installs adopt the mode their existing data implies;
+- device-managed disconnected onboarding: the host generates and DPAPI-protects a
+  `device-owner` credential, bootstraps or silently re-signs-in that owner against
+  the loopback service, and never shows account, password, or recovery-code UI;
 - the existing React product UI served from a private supervised local service;
 - the portable ApiaryLens API, SQLite store, migrations, and filesystem media adapter;
 - an operating-system-assigned IPv4 loopback port with a per-launch control capability;

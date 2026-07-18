@@ -7,6 +7,28 @@ export function isTrustedRendererUrl(candidate: string, endpoint: string): boole
   }
 }
 
+/**
+ * The first-run mode chooser may show exactly one packaged local page and
+ * nothing else — no loopback service, no remote origin, no other file. This
+ * guarantees the chooser itself performs zero network access.
+ */
+export function isTrustedFirstRunUrl(candidate: string, chooserPageUrl: string): boolean {
+  try {
+    const url = new URL(candidate);
+    const expected = new URL(chooserPageUrl);
+    return (
+      url.protocol === 'file:' &&
+      expected.protocol === 'file:' &&
+      url.href === expected.href &&
+      !url.search &&
+      !url.username &&
+      !url.password
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function isTrustedConnectedRendererUrl(candidate: string, endpoint: string): boolean {
   try {
     const url = new URL(candidate);

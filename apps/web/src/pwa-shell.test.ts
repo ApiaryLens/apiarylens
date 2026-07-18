@@ -33,7 +33,15 @@ describe('installed PWA shell', () => {
     expect(cachedWorkspace).toBeGreaterThan(cachedSession);
     expect(launchGateDismissed).toBeGreaterThan(cachedWorkspace);
     expect(launchGateDismissed).toBeLessThan(networkSession);
-    expect(appSource).toContain('if (!navigator.onLine)');
+    expect(appSource).toContain('if (!navigator.onLine && !desktopStandalone)');
+  });
+
+  it('never gates the Windows standalone shell behind external connectivity', () => {
+    expect(appSource).toContain('const desktopStandalone = api.desktopStandalone()');
+    expect(appSource).toContain('isOnline: () => desktopStandalone || navigator.onLine');
+    expect(appSource).toContain('desktopStandalone ? false : !navigator.onLine');
+    expect(appSource).toContain('api.deviceOwnerProvisioningAvailable()');
+    expect(appSource).toContain('await establish(await api.provisionDeviceOwner())');
   });
 
   it('makes destination overview metrics keyboard-native navigation controls', () => {

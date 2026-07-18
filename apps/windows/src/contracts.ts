@@ -44,6 +44,15 @@ export type DesktopMigrationResult =
 export type DesktopBridge = {
   runtimeStatus(): Promise<DesktopRuntimeStatus>;
   bootstrapOwner(input: DesktopBootstrapInput): Promise<DesktopBootstrapSession>;
+  /**
+   * Disconnected-mode onboarding and silent re-authentication. The Windows
+   * host owns a generated device credential, so a disconnected apiary reaches
+   * a working session with zero account creation and zero network access.
+   * Recovery codes are never returned — there is no password for a person to
+   * lose. Throws when the standalone owner is a person-created account; the
+   * renderer then falls back to the standard sign-in screen.
+   */
+  provisionDeviceOwner(): Promise<SessionView>;
   createStandaloneBackup(): Promise<DesktopBackupResult>;
   restoreStandaloneBackup(): Promise<DesktopRestoreResult>;
   migrateStandaloneToConnected(): Promise<DesktopMigrationResult>;

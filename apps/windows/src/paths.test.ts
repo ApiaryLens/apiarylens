@@ -1,9 +1,15 @@
-import { mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createWindowsDataPaths } from './paths.js';
-import { loadOrCreateStandaloneSecrets, type SecretProtection } from './protected-secrets.js';
+import {
+  deviceOwnerIdentifier,
+  loadDeviceOwnerCredential,
+  loadOrCreateDeviceOwnerCredential,
+  loadOrCreateStandaloneSecrets,
+  type SecretProtection,
+} from './protected-secrets.js';
 
 const temporaryRoots: string[] = [];
 afterEach(() => {
@@ -39,6 +45,44 @@ describe('Windows per-user state', () => {
     expect(loadOrCreateStandaloneSecrets(paths.protectedSecrets, reversibleProtection)).toEqual(
       first,
     );
+  });
+
+  it('creates the device-managed owner credential once and never persists plaintext', () => {
+    const root = mkdtempSync(join(tmpdir(), 'apiarylens-windows-device-owner-'));
+    temporaryRoots.push(root);
+    const paths = createWindowsDataPaths(root);
+    expect(loadDeviceOwnerCredential(paths.deviceOwnerCredential, reversibleProtection)).toBe(
+      undefined,
+    );
+    const first = loadOrCreateDeviceOwnerCredential(
+      paths.deviceOwnerCredential,
+      reversibleProtection,
+    );
+    expect(first.identifier).toBe(deviceOwnerIdentifier);
+    expect(first.password.length).toBeGreaterThanOrEqual(32);
+    const persisted = readFileSync(paths.deviceOwnerCredential);
+    expect(persisted.toString('utf8')).not.toContain(first.password);
+    expect(
+      loadOrCreateDeviceOwnerCredential(paths.deviceOwnerCredential, reversibleProtection),
+    ).toEqual(first);
+    expect(loadDeviceOwnerCredential(paths.deviceOwnerCredential, reversibleProtection)).toEqual(
+      first,
+    );
+  });
+
+  it('rejects a tampered device-owner credential instead of using it', () => {
+    const root = mkdtempSync(join(tmpdir(), 'apiarylens-windows-device-owner-invalid-'));
+    temporaryRoots.push(root);
+    const paths = createWindowsDataPaths(root);
+    writeFileSync(
+      paths.deviceOwnerCredential,
+      reversibleProtection.encryptString(
+        JSON.stringify({ version: 1, identifier: 'someone-else', password: 'x'.repeat(40) }),
+      ),
+    );
+    expect(() =>
+      loadDeviceOwnerCredential(paths.deviceOwnerCredential, reversibleProtection),
+    ).toThrow('device-owner credential state is invalid');
   });
 
   it('fails closed when operating-system protection is unavailable', () => {
