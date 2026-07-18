@@ -1,0 +1,3 @@
+# Lifecycle shell scripts run on Linux hosts and ship inside release
+# bundles; they must stay LF regardless of the checkout platform.
+*.sh text eol=lf

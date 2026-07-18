@@ -63,7 +63,7 @@
             ]
           },
           "target": {
-            "enum": ["cloudflare", "compose", "windows-amd64", "windows-x64", "release"]
+            "enum": ["cloudflare", "compose", "airgap", "windows-amd64", "windows-x64", "release"]
           },
           "url": { "type": "string", "format": "uri", "pattern": "^https://" },
           "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
