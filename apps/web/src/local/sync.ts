@@ -1,0 +1,257 @@
+import type { ResourceType, SyncOperationResult } from '@apiarylens/contracts';
+import { recordKey, serverRecord } from '../core/server-record.js';
+import { isRetryableSyncError, SyncRequestError } from '../core/sync-errors.js';
+import { db } from './database.js';
+import type { OutboxItem } from './types.js';
+
+export async function synchronize(
+  organizationId: string,
+  csrfToken: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  let rejectedTotal = 0;
+  while (true) {
+    const batch = await nextPushBatch(organizationId);
+    if (batch.length === 0) break;
+    signal?.throwIfAborted();
+    await Promise.all(
+      batch.map((item) =>
+        db.resources.update(recordKey(organizationId, item.entityType, item.entityId), {
+          syncState: 'synchronizing',
+        }),
+      ),
+    );
+    let results: SyncOperationResult[];
+    try {
+      const response = await fetch('/api/v1/sync/push', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json', 'x-csrf-token': csrfToken },
+        body: JSON.stringify({ syncContractVersion: 1, operations: batch }),
+        ...(signal ? { signal } : {}),
+      });
+      if (!response.ok) throw new SyncRequestError('Push', response.status);
+      const body = (await response.json()) as { results: SyncOperationResult[] };
+      results = body.results;
+      const expected = new Set(batch.map((item) => item.operationId));
+      if (
+        results.length !== batch.length ||
+        results.some((result) => !expected.delete(result.operationId)) ||
+        expected.size > 0
+      ) {
+        throw new SyncRequestError(
+          'Push response',
+          502,
+          'The server returned an incomplete synchronization result.',
+        );
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Synchronization failed';
+      await db.transaction('rw', db.resources, db.outbox, async () => {
+        for (const item of batch) {
+          await db.outbox.update(item.key, { attempts: item.attempts + 1, lastError: message });
+          await db.resources.update(recordKey(organizationId, item.entityType, item.entityId), {
+            // A network, expired-session, throttling, or server outage leaves the
+            // durable operation safely queued. "failed" is reserved for a
+            // permanent server rejection that needs user attention.
+            syncState: isRetryableSyncError(error) ? 'pending' : 'failed',
+          });
+        }
+      });
+      throw error;
+    }
+    rejectedTotal += await applyPushResults(organizationId, results);
+  }
+  if (rejectedTotal > 0) {
+    throw new SyncRequestError(
+      'Push operation',
+      422,
+      `${rejectedTotal} saved item${rejectedTotal === 1 ? '' : 's'} need attention before synchronizing.`,
+    );
+  }
+
+  await uploadStagedMedia(organizationId, csrfToken, signal);
+  await pullAllChanges(organizationId, signal);
+}
+
+async function nextPushBatch(organizationId: string): Promise<OutboxItem[]> {
+  const candidates = await db.outbox.orderBy('queuedAt').toArray();
+  const batch: OutboxItem[] = [];
+  for (const item of candidates) {
+    // Older Preview databases did not persist organizationId on the outbox
+    // item. Resolve those operations through their organization-scoped local
+    // record instead of ever submitting another family's queued work.
+    const localRecord = await db.resources.get(
+      recordKey(organizationId, item.entityType, item.entityId),
+    );
+    const belongsToOrganization =
+      item.organizationId === organizationId ||
+      (item.organizationId === undefined && localRecord !== undefined);
+    if (
+      belongsToOrganization &&
+      localRecord !== undefined &&
+      localRecord.syncState !== 'failed' &&
+      localRecord.syncState !== 'conflicted'
+    ) {
+      batch.push(item);
+    }
+    if (batch.length === 100) break;
+  }
+  return batch;
+}
+
+async function pullAllChanges(organizationId: string, signal?: AbortSignal): Promise<void> {
+  const cursorKey = `syncCursor:${organizationId}`;
+  let cursor = ((await db.settings.get(cursorKey))?.value as string | undefined) ?? '0';
+  while (true) {
+    signal?.throwIfAborted();
+    const pull = await fetch(`/api/v1/sync/pull?cursor=${encodeURIComponent(cursor)}&limit=250`, {
+      credentials: 'same-origin',
+      ...(signal ? { signal } : {}),
+    });
+    if (!pull.ok) throw new SyncRequestError('Pull', pull.status);
+    const body = (await pull.json()) as {
+      changes: Array<{
+        entityType: ResourceType;
+        entityId: string;
+        action: 'upsert' | 'delete';
+        value: Record<string, unknown> | null;
+      }>;
+      nextCursor: string;
+      hasMore?: boolean;
+      fullResyncRequired?: boolean;
+    };
+    if (body.fullResyncRequired) {
+      throw new SyncRequestError(
+        'Pull',
+        409,
+        'The server requires a full resynchronization before more changes can be applied.',
+      );
+    }
+    await db.transaction('rw', db.resources, db.settings, async () => {
+      for (const change of body.changes) {
+        const key = recordKey(organizationId, change.entityType, change.entityId);
+        const current = await db.resources.get(key);
+        const hasUnsynchronizedLocalValue =
+          current !== undefined && current.syncState !== 'synchronized';
+        if (hasUnsynchronizedLocalValue) continue;
+        if (change.action === 'delete') {
+          await db.resources.delete(key);
+        } else if (change.value) {
+          await db.resources.put(serverRecord(change.entityType, change.value));
+        }
+      }
+      await db.settings.put({ key: cursorKey, value: body.nextCursor });
+    });
+    if (!body.hasMore) return;
+    if (body.nextCursor === cursor) {
+      throw new SyncRequestError(
+        'Pull response',
+        502,
+        'The server returned more changes without advancing the synchronization cursor.',
+      );
+    }
+    cursor = body.nextCursor;
+  }
+}
+
+async function uploadStagedMedia(
+  organizationId: string,
+  csrfToken: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  const staged = await db.media
+    .where('organizationId')
+    .equals(organizationId)
+    .filter((item) => item.state === 'staged' || item.state === 'failed')
+    .toArray();
+  for (const item of staged) {
+    await db.media.update(item.id, { state: 'uploading', lastError: '' });
+    try {
+      const response = await fetch(`/api/v1/media/${item.id}/content`, {
+        method: 'PUT',
+        credentials: 'same-origin',
+        headers: { 'content-type': item.blob.type, 'x-csrf-token': csrfToken },
+        body: item.blob,
+        ...(signal ? { signal } : {}),
+      });
+      if (!response.ok) {
+        const detail = (await response.json().catch(() => undefined)) as
+          { message?: string } | undefined;
+        throw new SyncRequestError('Image upload', response.status, detail?.message);
+      }
+      const value = (await response.json()) as Record<string, unknown>;
+      if (item.thumbnail) {
+        const thumbnailResponse = await fetch(`/api/v1/media/${item.id}/thumbnail`, {
+          method: 'PUT',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'image/jpeg', 'x-csrf-token': csrfToken },
+          body: item.thumbnail,
+          ...(signal ? { signal } : {}),
+        });
+        if (!thumbnailResponse.ok) {
+          const detail = (await thumbnailResponse.json().catch(() => undefined)) as
+            { message?: string } | undefined;
+          throw new SyncRequestError('Thumbnail upload', thumbnailResponse.status, detail?.message);
+        }
+      }
+      await db.transaction('rw', db.media, db.resources, async () => {
+        await db.media.update(item.id, { state: 'ready', lastError: '' });
+        if (typeof value.organizationId === 'string')
+          await db.resources.put(serverRecord('mediaAsset', value));
+        else {
+          const key = recordKey(organizationId, 'mediaAsset', item.id);
+          const current = await db.resources.get(key);
+          if (current)
+            await db.resources.put({
+              ...current,
+              syncState: 'synchronized',
+              data: { ...current.data, state: 'ready' },
+            });
+        }
+      });
+    } catch (error) {
+      await db.media.update(item.id, {
+        state: isRetryableSyncError(error) ? 'staged' : 'failed',
+        lastError: error instanceof Error ? error.message : 'Image upload failed',
+      });
+      throw error;
+    }
+  }
+}
+
+async function applyPushResults(
+  organizationId: string,
+  results: SyncOperationResult[],
+): Promise<number> {
+  let rejected = 0;
+  await db.transaction('rw', db.resources, db.outbox, async () => {
+    for (const result of results) {
+      const key = recordKey(organizationId, result.entityType, result.entityId);
+      if ((result.status === 'accepted' || result.status === 'duplicate') && result.serverValue) {
+        await db.resources.put(serverRecord(result.entityType, result.serverValue));
+        await db.outbox.delete(result.operationId);
+      } else if (result.status === 'conflict') {
+        if (result.serverValue && result.clientValue) {
+          await db.resources.update(key, {
+            syncState: 'conflicted',
+            conflict: { serverValue: result.serverValue, clientValue: result.clientValue },
+          });
+        } else {
+          await db.resources.update(key, { syncState: 'conflicted' });
+        }
+      } else {
+        rejected += 1;
+        await db.resources.update(key, { syncState: 'failed' });
+        const operation = await db.outbox.get(result.operationId);
+        if (operation) {
+          await db.outbox.update(operation.key, {
+            attempts: operation.attempts + 1,
+            lastError: 'The server rejected this saved item.',
+          });
+        }
+      }
+    }
+  });
+  return rejected;
+}

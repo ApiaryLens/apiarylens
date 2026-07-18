@@ -3,6 +3,14 @@ import { describe, expect, it } from 'vitest';
 
 const serviceWorker = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8');
 const appSource = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+const accountSource = readFileSync(
+  new URL('./features/account/AccountPage.tsx', import.meta.url),
+  'utf8',
+);
+const overviewSource = readFileSync(
+  new URL('./features/overview/OverviewPage.tsx', import.meta.url),
+  'utf8',
+);
 const manifest = JSON.parse(
   readFileSync(new URL('../public/manifest.webmanifest', import.meta.url), 'utf8'),
 ) as { start_url: string; scope: string; icons: Array<{ src: string }> };
@@ -45,15 +53,15 @@ describe('installed PWA shell', () => {
   });
 
   it('never offers sign-out to a device-managed owner who has no credentials to re-enter', () => {
-    expect(appSource).toContain('const deviceManaged = api.deviceManagedSession(session)');
-    expect(appSource).toContain('{!deviceManaged && (');
+    expect(accountSource).toContain('const deviceManaged = api.deviceManagedSession(session)');
+    expect(accountSource).toContain('{!deviceManaged && (');
   });
 
   it('makes destination overview metrics keyboard-native navigation controls', () => {
-    expect(appSource).toContain("onClick={() => onNavigate('hives')}");
-    expect(appSource).toContain("onClick={() => onNavigate('apiaries')}");
-    expect(appSource).toContain("onClick={() => onNavigate('care')}");
-    expect(appSource).toContain('className="metric metric-link"');
+    expect(overviewSource).toContain("onClick={() => onNavigate('hives')}");
+    expect(overviewSource).toContain("onClick={() => onNavigate('apiaries')}");
+    expect(overviewSource).toContain("onClick={() => onNavigate('care')}");
+    expect(overviewSource).toContain('className="metric metric-link"');
   });
 
   it('blocks update activation while local records or media are pending', () => {
