@@ -1,6 +1,9 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "apiarylens-family",
+  // CF-001: pin the ApiaryLens Cloudflare account so deploys fail loudly
+  // instead of following whatever account the ambient token resolves to.
+  "account_id": "5d8be56e19f1f800b8e482a449472dd9",
   "main": "src/index.ts",
   "compatibility_date": "2026-07-15",
   "compatibility_flags": ["nodejs_compat"],
