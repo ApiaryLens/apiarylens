@@ -21,6 +21,31 @@ describe('product release workflow wiring', () => {
     expect(workflow).toContain('apiarylens-windows-signing.json');
   });
 
+  it('signs stable Setup bytes through SignPath and rehashes manifests after signing', () => {
+    expect(workflow).toContain('signpath/github-action-submit-signing-request');
+    expect(workflow).toContain('SIGNPATH_API_TOKEN');
+    expect(workflow).toContain('SIGNPATH_ORGANIZATION_ID');
+    expect(workflow).toContain('wait-for-completion: true');
+    expect(workflow).toContain('node scripts/apply-signed-windows-setup.mjs');
+    expect(workflow).not.toContain('WINDOWS_CERTIFICATE_PFX_BASE64');
+    // The signed round trip must finish before manifests are finalized so the
+    // published hashes describe signed bytes.
+    expect(workflow.indexOf('apply-signed-windows-setup.mjs')).toBeLessThan(
+      workflow.indexOf('node scripts/finalize-windows-release.mjs'),
+    );
+  });
+
+  it('keeps package-manager submission jobs hard-disabled until GV4', () => {
+    expect(workflow).toContain('winget-submission:');
+    expect(workflow).toContain('chocolatey-submission:');
+    expect(workflow).toContain('GV4 gate:');
+    const disabledGates = workflow.match(/if: \$\{\{ false \}\}/g) ?? [];
+    expect(disabledGates.length).toBeGreaterThanOrEqual(2);
+    expect(workflow).toContain('komac update ApiaryLens.ApiaryLens');
+    expect(workflow).toContain('choco push');
+    expect(workflow).not.toContain('wingetcreate');
+  });
+
   it('builds, attests, publishes, downloads, and verifies every subject', () => {
     for (const expected of [
       'pnpm release:artifacts',
