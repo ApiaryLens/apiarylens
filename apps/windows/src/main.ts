@@ -1,7 +1,7 @@
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import {
   app,
   BrowserWindow,
@@ -11,7 +11,11 @@ import {
   session,
   type OnBeforeSendHeadersListenerDetails,
 } from 'electron';
-import { bootstrapRequestSchema, createBuildIdentity } from '@apiarylens/contracts';
+import {
+  bootstrapRequestSchema,
+  createBuildIdentity,
+  type SessionView,
+} from '@apiarylens/contracts';
 import { SqliteStore } from '@apiarylens/database';
 import { FilesystemMediaStore } from '@apiarylens/media';
 import {
@@ -22,12 +26,22 @@ import {
   type DesktopRuntimeStatus,
   type DesktopMigrationResult,
 } from './contracts.js';
+import {
+  readWindowsModeChoice,
+  resolveWindowsStartupMode,
+  saveWindowsModeChoice,
+} from './first-run.js';
 import { createWindowsDataPaths } from './paths.js';
-import { loadOrCreateStandaloneSecrets } from './protected-secrets.js';
+import {
+  loadDeviceOwnerCredential,
+  loadOrCreateDeviceOwnerCredential,
+  loadOrCreateStandaloneSecrets,
+} from './protected-secrets.js';
 import { desktopControlHeader } from './service-contract.js';
 import { ServiceSupervisor } from './service-supervisor.js';
 import {
   isTrustedConnectedRendererUrl,
+  isTrustedFirstRunUrl,
   isTrustedRendererUrl,
   shouldInjectControlHeader,
 } from './window-policy.js';
@@ -42,6 +56,7 @@ import {
   activateStagedStandaloneData,
   createStandaloneBackup,
   readStandaloneBackup,
+  rebindRestoredDeviceOwner,
   rollbackStandaloneData,
   restoreStandaloneBackupToStaging,
 } from './standalone-backup.js';
@@ -73,6 +88,7 @@ const serviceScript = join(currentDirectory, 'service.js');
 const webRoot = resolve(currentDirectory, '..', '..', 'web', 'dist');
 const trustedWebContents = new Set<number>();
 let primaryWindow: BrowserWindow | undefined;
+let firstRunWindow: BrowserWindow | undefined;
 let supervisor: ServiceSupervisor | undefined;
 let shutdownStarted = false;
 let desktopMaintenanceRunning = false;
@@ -130,6 +146,116 @@ function secureWindow(
   return window;
 }
 
+type FirstRunChoiceResult =
+  { status: 'ok' } | { status: 'canceled' } | { status: 'error'; message: string };
+
+/**
+ * Clean-profile first launch (WIN-028): before any service starts or any data
+ * is created, present the two supported modes from ADR 0015. The chooser is a
+ * packaged local page — it performs zero network access itself. Only choosing
+ * "Connect my family" reaches the network, and only to verify the imported
+ * connection profile against its backend.
+ */
+function presentFirstRunChooser(
+  modePath: string,
+  profilePath: string,
+): Promise<'disconnected' | 'connected' | 'quit'> {
+  const chooserPage = join(currentDirectory, 'first-run.html');
+  const chooserPageUrl = pathToFileURL(chooserPage).href;
+  const chooserSession = session.fromPartition('apiarylens-first-run');
+  chooserSession.setPermissionRequestHandler((_webContents, _permission, callback) =>
+    callback(false),
+  );
+  const window = new BrowserWindow({
+    width: 760,
+    height: 640,
+    minWidth: 320,
+    minHeight: 480,
+    show: false,
+    backgroundColor: '#fffaf0',
+    webPreferences: {
+      preload: join(currentDirectory, 'first-run-preload.cjs'),
+      partition: 'apiarylens-first-run',
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+      webSecurity: true,
+      devTools: false,
+      spellcheck: false,
+    },
+  });
+  firstRunWindow = window;
+  window.setMenuBarVisibility(false);
+  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  window.webContents.on('will-navigate', (event, navigationUrl) => {
+    if (!isTrustedFirstRunUrl(navigationUrl, chooserPageUrl)) event.preventDefault();
+  });
+  window.webContents.on('will-attach-webview', (event) => event.preventDefault());
+  return new Promise((resolveChoice) => {
+    let settled = false;
+    const settle = (value: 'disconnected' | 'connected' | 'quit'): void => {
+      if (settled) return;
+      settled = true;
+      ipcMain.removeHandler('apiarylens:first-run-choose');
+      resolveChoice(value);
+    };
+    ipcMain.handle(
+      'apiarylens:first-run-choose',
+      async (event, untrustedChoice: unknown): Promise<FirstRunChoiceResult> => {
+        if (event.sender !== window.webContents) {
+          throw new Error('Untrusted renderer requested a first-run choice');
+        }
+        if (untrustedChoice === 'disconnected') {
+          saveWindowsModeChoice(modePath, 'disconnected');
+          settle('disconnected');
+          // The window stays open (hidden) until the product window exists so
+          // closing it never triggers window-all-closed shutdown.
+          window.hide();
+          return { status: 'ok' };
+        }
+        if (untrustedChoice === 'connected') {
+          const selected = await dialog.showOpenDialog(window, {
+            title: 'Select your ApiaryLens connection profile',
+            filters: [{ name: 'ApiaryLens connection profile', extensions: ['json'] }],
+            properties: ['openFile'],
+          });
+          const selectedPath = selected.filePaths[0];
+          if (selected.canceled || !selectedPath) return { status: 'canceled' };
+          try {
+            const imported = readConnectionProfile(selectedPath);
+            await verifyConnectedBackend(imported);
+            saveConnectionProfile(profilePath, imported);
+            saveWindowsModeChoice(modePath, 'connected');
+          } catch (error) {
+            return {
+              status: 'error',
+              message: `ApiaryLens could not connect with that profile: ${
+                error instanceof Error ? error.message : 'unknown connection error'
+              }`,
+            };
+          }
+          settle('connected');
+          window.hide();
+          return { status: 'ok' };
+        }
+        throw new Error('Unknown first-run choice');
+      },
+    );
+    window.on('closed', () => {
+      if (firstRunWindow === window) firstRunWindow = undefined;
+      settle('quit');
+    });
+    window.once('ready-to-show', () => window.show());
+    void window.loadFile(chooserPage);
+  });
+}
+
+function dismissFirstRunChooser(): void {
+  const window = firstRunWindow;
+  firstRunWindow = undefined;
+  if (window && !window.isDestroyed()) window.destroy();
+}
+
 async function start(): Promise<void> {
   app.setName('ApiaryLens');
   app.setAccessibilitySupportEnabled(true);
@@ -173,16 +299,17 @@ async function start(): Promise<void> {
     argument.startsWith('--desktop-lifecycle-evidence='),
   );
   const profilePath = resolve(userData, 'connection-profile.v1.json');
-  if (
-    !lifecycleRequestArgument &&
-    !lifecycleEvidenceArgument &&
-    process.argv.includes('--desktop-standalone')
-  )
+  const modePath = resolve(userData, 'windows-mode.v1.json');
+  const headlessLifecycle = Boolean(lifecycleRequestArgument || lifecycleEvidenceArgument);
+  const smokeArgument = process.argv.find((argument) => argument.startsWith('--desktop-smoke='));
+  if (!headlessLifecycle && process.argv.includes('--desktop-standalone')) {
     removeConnectionProfile(profilePath);
+    saveWindowsModeChoice(modePath, 'disconnected');
+  }
   const profileArgument = process.argv.find((argument) =>
     argument.startsWith('--desktop-profile='),
   );
-  if ((lifecycleRequestArgument || lifecycleEvidenceArgument) && profileArgument)
+  if (headlessLifecycle && profileArgument)
     throw new Error('Headless lifecycle cannot import a connected profile');
   if (profileArgument && process.argv.includes('--desktop-standalone'))
     throw new Error('Choose either connected profile import or standalone mode, not both');
@@ -190,6 +317,27 @@ async function start(): Promise<void> {
     const imported = readConnectionProfile(profileArgument.slice('--desktop-profile='.length));
     await verifyConnectedBackend(imported);
     saveConnectionProfile(profilePath, imported);
+    saveWindowsModeChoice(modePath, 'connected');
+  }
+  if (!headlessLifecycle && !smokeArgument) {
+    const savedMode = readWindowsModeChoice(modePath);
+    const startupMode = resolveWindowsStartupMode({
+      savedMode,
+      connectionProfileExists: existsSync(profilePath),
+      standaloneDataExists: existsSync(paths.database) || existsSync(paths.protectedSecrets),
+    });
+    if (startupMode === 'chooser') {
+      const choice = await presentFirstRunChooser(modePath, profilePath);
+      if (choice === 'quit') {
+        shutdownStarted = true;
+        app.quit();
+        return;
+      }
+    } else if (savedMode !== startupMode) {
+      // Installs that predate the mode record adopt the mode their existing
+      // data implies instead of re-entering onboarding.
+      saveWindowsModeChoice(modePath, startupMode);
+    }
   }
   const connection =
     lifecycleRequestArgument || lifecycleEvidenceArgument
@@ -208,6 +356,7 @@ async function start(): Promise<void> {
     // IndexedDB, service workers, and the offline outbox stay in this isolated partition.
     primaryWindow = secureWindow(connection.backendUrl, true, 'connected');
     await primaryWindow.loadURL(connection.backendUrl);
+    dismissFirstRunChooser();
     return;
   }
   const secrets = loadOrCreateStandaloneSecrets(paths.protectedSecrets, safeStorage);
@@ -271,7 +420,6 @@ async function start(): Promise<void> {
     }
   }
   const running = await supervisor.start();
-  const smokeArgument = process.argv.find((argument) => argument.startsWith('--desktop-smoke='));
   const desktopSession = session.fromPartition('persist:apiarylens-windows');
   desktopSession.webRequest.onBeforeSendHeaders(
     { urls: ['http://127.0.0.1:*/*'] },
@@ -377,6 +525,68 @@ async function start(): Promise<void> {
       return body as DesktopBootstrapSession;
     },
   );
+  ipcMain.handle('apiarylens:provision-device-owner', async (event): Promise<SessionView> => {
+    assertTrustedSender(event);
+    const active = supervisor?.running;
+    if (!active) throw new Error('Standalone service is unavailable');
+    const controlHeaders = {
+      [desktopControlHeader]: active.controlToken,
+      origin: active.endpoint,
+    };
+    const statusResponse = await desktopSession.fetch(
+      `${active.endpoint}/api/v1/bootstrap/status`,
+      {
+        headers: controlHeaders,
+      },
+    );
+    const status = (await statusResponse.json().catch(() => undefined)) as
+      { available?: unknown } | undefined;
+    if (!statusResponse.ok || typeof status?.available !== 'boolean') {
+      throw new Error('Standalone service did not report bootstrap status');
+    }
+    if (status.available) {
+      // Clean disconnected apiary: create the device-managed owner. The person
+      // never sees an account, a password, or the recovery codes — the
+      // credential lives DPAPI-protected beside the other standalone secrets.
+      const owner = loadOrCreateDeviceOwnerCredential(paths.deviceOwnerCredential, safeStorage);
+      const created = await desktopSession.fetch(`${active.endpoint}/api/v1/bootstrap`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...controlHeaders },
+        body: JSON.stringify({
+          identifier: owner.identifier,
+          displayName: 'Beekeeper',
+          password: owner.password,
+          organizationName: 'My apiary',
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          bootstrapToken: secrets.bootstrapToken,
+        }),
+      });
+      const body = (await created.json().catch(() => undefined)) as
+        (SessionView & { recoveryCodes?: string[] }) | { message?: string } | undefined;
+      if (!created.ok || !body || !('user' in body)) {
+        throw new Error(
+          body && 'message' in body && body.message ? body.message : 'Device setup failed',
+        );
+      }
+      const { recoveryCodes: _deviceManaged, ...view } = body;
+      return view;
+    }
+    // An owner already exists. Only a device-managed credential may sign in
+    // silently; a person-created account keeps the standard sign-in screen.
+    const owner = loadDeviceOwnerCredential(paths.deviceOwnerCredential, safeStorage);
+    if (!owner) throw new Error('This apiary uses a signed-in account');
+    const signedIn = await desktopSession.fetch(`${active.endpoint}/api/v1/auth/sign-in`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...controlHeaders },
+      body: JSON.stringify({ identifier: owner.identifier, password: owner.password }),
+    });
+    const sessionBody = (await signedIn.json().catch(() => undefined)) as
+      SessionView | { message?: string } | undefined;
+    if (!signedIn.ok || !sessionBody || !('user' in sessionBody)) {
+      throw new Error('This apiary uses a signed-in account');
+    }
+    return sessionBody;
+  });
   ipcMain.handle(
     'apiarylens:migrate-standalone-to-connected',
     async (event): Promise<DesktopMigrationResult> => {
@@ -585,6 +795,15 @@ async function start(): Promise<void> {
           stagedStore.database
             .prepare('UPDATE sessions SET revoked_at = ?')
             .run(new Date().toISOString());
+          // A restored no-account apiary must stay silently accessible: rebind
+          // its device-managed owner to this machine's DPAPI credential, since
+          // backups never carry credential files (WIN-028).
+          await rebindRestoredDeviceOwner(
+            stagedStore,
+            paths.deviceOwnerCredential,
+            safeStorage,
+            secrets.authRootSecret,
+          );
         } finally {
           stagedStore.close();
         }
@@ -630,6 +849,7 @@ async function start(): Promise<void> {
 
   primaryWindow = secureWindow(running.endpoint, !smokeArgument);
   await primaryWindow.loadURL(running.endpoint);
+  dismissFirstRunChooser();
   if (smokeArgument) {
     const evidencePath = resolve(smokeArgument.slice('--desktop-smoke='.length));
     const unauthorized = await fetch(`${running.endpoint}/health`);

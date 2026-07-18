@@ -10,6 +10,7 @@ type DesktopBootstrapBridge = {
     organizationName: string;
     timezone: string;
   }): Promise<BootstrapSession>;
+  provisionDeviceOwner?(): Promise<SessionView>;
   createStandaloneBackup?(): Promise<
     { status: 'canceled' } | { status: 'saved'; path: string; createdAt: string; files: number }
   >;
@@ -59,6 +60,30 @@ async function noContent(url: string, init?: RequestInit): Promise<void> {
 }
 
 export const api = {
+  /**
+   * True inside the Windows standalone (disconnected-capable) shell, where the
+   * embedded loopback service is always reachable regardless of what
+   * `navigator.onLine` reports about external connectivity.
+   */
+  desktopStandalone: () => Boolean(desktopBridge()),
+  deviceOwnerProvisioningAvailable: () =>
+    typeof desktopBridge()?.provisionDeviceOwner === 'function',
+  provisionDeviceOwner: async (): Promise<SessionView> => {
+    const provision = desktopBridge()?.provisionDeviceOwner;
+    if (!provision)
+      throw new Error('Device-managed setup is available only in ApiaryLens for Windows');
+    return provision();
+  },
+  /**
+   * True when the active session belongs to the hidden device-managed owner of
+   * a no-account disconnected apiary. That owner has no password or recovery
+   * codes a person could ever re-enter, so account-level actions like signing
+   * out must not be offered (WIN-028). The identifier matches the fixed
+   * `deviceOwnerIdentifier` the Windows host provisions.
+   */
+  deviceManagedSession: (view: Pick<SessionView, 'user'>): boolean =>
+    typeof desktopBridge()?.provisionDeviceOwner === 'function' &&
+    view.user.identifier === 'device-owner',
   standaloneBackupAvailable: () => typeof desktopBridge()?.createStandaloneBackup === 'function',
   createStandaloneBackup: async () => {
     const create = desktopBridge()?.createStandaloneBackup;

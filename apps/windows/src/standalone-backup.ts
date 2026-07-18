@@ -10,7 +10,14 @@ import {
 } from 'node:fs';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
+import { hashPassword } from '@apiarylens/server/password';
+import type { SqliteStore } from '@apiarylens/database';
 import type { WindowsDataPaths } from './paths.js';
+import {
+  deviceOwnerIdentifier,
+  loadOrCreateDeviceOwnerCredential,
+  type SecretProtection,
+} from './protected-secrets.js';
 
 const magic = Buffer.from('APIARYLENS-BACKUP-V1\n', 'ascii');
 const maxArchiveBytes = 2 * 1024 * 1024 * 1024;
@@ -191,4 +198,31 @@ export function activateStagedStandaloneData(
 export function rollbackStandaloneData(currentData: string, rollbackData: string): void {
   rmSync(currentData, { recursive: true, force: true });
   renameSync(rollbackData, currentData);
+}
+
+/**
+ * Backups deliberately carry only `data/` — never DPAPI-protected credentials,
+ * which cannot leave the Windows profile that minted them. When a no-account
+ * standalone backup is restored on a fresh profile or replacement PC, the
+ * restored database still holds its hidden device-managed owner, but this
+ * machine's `device-owner.v1.bin` is either absent or belongs to a different
+ * apiary, so silent sign-in would fail and the person — who was never shown a
+ * password or recovery codes — would be locked out (WIN-028). Before cutover,
+ * rebind the restored owner to this machine's device credential by rewriting
+ * its password hash under the local auth root secret.
+ */
+export async function rebindRestoredDeviceOwner(
+  stagedStore: SqliteStore,
+  deviceOwnerCredentialPath: string,
+  protection: SecretProtection,
+  authRootSecret: string,
+): Promise<boolean> {
+  const restoredOwner = stagedStore.verifyCredentials(deviceOwnerIdentifier);
+  if (!restoredOwner) return false;
+  const local = loadOrCreateDeviceOwnerCredential(deviceOwnerCredentialPath, protection);
+  stagedStore.updatePasswordHash(
+    restoredOwner.userId,
+    await hashPassword(local.password, authRootSecret),
+  );
+  return true;
 }

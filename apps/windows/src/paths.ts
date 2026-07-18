@@ -8,6 +8,7 @@ export type WindowsDataPaths = {
   runtime: string;
   readiness: string;
   protectedSecrets: string;
+  deviceOwnerCredential: string;
   logs: string;
   backups: string;
   migration: string;
@@ -29,6 +30,7 @@ export function createWindowsDataPaths(userDataPath: string): WindowsDataPaths {
     runtime: join(root, 'runtime'),
     readiness: join(root, 'runtime', 'service-ready.json'),
     protectedSecrets: join(root, 'credentials', 'standalone.v1.bin'),
+    deviceOwnerCredential: join(root, 'credentials', 'device-owner.v1.bin'),
     logs: join(root, 'logs'),
     backups: join(root, 'backups'),
     migration: join(root, 'migration'),

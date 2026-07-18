@@ -1,17 +1,31 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { afterEach, describe, expect, it } from 'vitest';
 import { SqliteStore } from '@apiarylens/database';
+import { hashPassword, verifyPassword } from '@apiarylens/server/password';
 import { createWindowsDataPaths } from './paths.js';
+import {
+  deviceOwnerIdentifier,
+  loadDeviceOwnerCredential,
+  loadOrCreateDeviceOwnerCredential,
+  type SecretProtection,
+} from './protected-secrets.js';
 import {
   activateStagedStandaloneData,
   createStandaloneBackup,
   readStandaloneBackup,
+  rebindRestoredDeviceOwner,
   rollbackStandaloneData,
   restoreStandaloneBackupToStaging,
 } from './standalone-backup.js';
+
+const plaintextProtection: SecretProtection = {
+  isEncryptionAvailable: () => true,
+  encryptString: (value) => Buffer.from(value, 'utf8'),
+  decryptString: (value) => value.toString('utf8'),
+};
 
 describe('standalone backup archive', () => {
   const roots: string[] = [];
@@ -84,5 +98,101 @@ describe('standalone backup archive', () => {
 
     rollbackStandaloneData(current, rollback);
     expect(readFileSync(join(current, 'identity.txt'), 'utf8')).toBe('before');
+  });
+
+  it('rebinds a restored device-managed owner to the local machine credential', async () => {
+    const root = join(tmpdir(), `apiarylens-rebind-${crypto.randomUUID()}`);
+    roots.push(root);
+    const paths = createWindowsDataPaths(root);
+    // The backup originated on another PC: its owner hash used that machine's
+    // auth root secret and its DPAPI credential file never left that profile.
+    const store = new SqliteStore(paths.database, { authRootSecret: 'old-machine-secret' });
+    store.bootstrap({
+      identifier: deviceOwnerIdentifier,
+      displayName: 'Beekeeper',
+      passwordHash: await hashPassword('password-from-the-old-machine', 'old-machine-secret'),
+      organizationName: 'My apiary',
+      timezone: 'UTC',
+    });
+
+    const rebound = await rebindRestoredDeviceOwner(
+      store,
+      paths.deviceOwnerCredential,
+      plaintextProtection,
+      'new-machine-secret',
+    );
+    expect(rebound).toBe(true);
+
+    const local = loadDeviceOwnerCredential(paths.deviceOwnerCredential, plaintextProtection);
+    const credential = store.verifyCredentials(deviceOwnerIdentifier);
+    store.close();
+    expect(local).toBeDefined();
+    expect(credential).toBeDefined();
+    await expect(
+      verifyPassword(local?.password ?? '', credential?.passwordHash ?? '', 'new-machine-secret'),
+    ).resolves.toBe(true);
+  });
+
+  it('reuses an existing local device credential when rebinding a restored owner', async () => {
+    const root = join(tmpdir(), `apiarylens-rebind-existing-${crypto.randomUUID()}`);
+    roots.push(root);
+    const paths = createWindowsDataPaths(root);
+    const existing = loadOrCreateDeviceOwnerCredential(
+      paths.deviceOwnerCredential,
+      plaintextProtection,
+    );
+    const store = new SqliteStore(paths.database, { authRootSecret: 'this-machine-secret' });
+    store.bootstrap({
+      identifier: deviceOwnerIdentifier,
+      displayName: 'Beekeeper',
+      passwordHash: await hashPassword('password-from-the-old-machine', 'old-machine-secret'),
+      organizationName: 'My apiary',
+      timezone: 'UTC',
+    });
+
+    await expect(
+      rebindRestoredDeviceOwner(
+        store,
+        paths.deviceOwnerCredential,
+        plaintextProtection,
+        'this-machine-secret',
+      ),
+    ).resolves.toBe(true);
+    const credential = store.verifyCredentials(deviceOwnerIdentifier);
+    store.close();
+    expect(loadDeviceOwnerCredential(paths.deviceOwnerCredential, plaintextProtection)).toEqual(
+      existing,
+    );
+    await expect(
+      verifyPassword(existing.password, credential?.passwordHash ?? '', 'this-machine-secret'),
+    ).resolves.toBe(true);
+  });
+
+  it('leaves person-created accounts untouched when a backup has no device owner', async () => {
+    const root = join(tmpdir(), `apiarylens-rebind-none-${crypto.randomUUID()}`);
+    roots.push(root);
+    const paths = createWindowsDataPaths(root);
+    const store = new SqliteStore(paths.database, { authRootSecret: 'this-machine-secret' });
+    const personHash = await hashPassword('a-real-person-password', 'this-machine-secret');
+    store.bootstrap({
+      identifier: 'ella@example.org',
+      displayName: 'Ella',
+      passwordHash: personHash,
+      organizationName: 'Meadow apiary',
+      timezone: 'UTC',
+    });
+
+    await expect(
+      rebindRestoredDeviceOwner(
+        store,
+        paths.deviceOwnerCredential,
+        plaintextProtection,
+        'this-machine-secret',
+      ),
+    ).resolves.toBe(false);
+    const credential = store.verifyCredentials('ella@example.org');
+    store.close();
+    expect(existsSync(paths.deviceOwnerCredential)).toBe(false);
+    expect(credential?.passwordHash).toBe(personHash);
   });
 });

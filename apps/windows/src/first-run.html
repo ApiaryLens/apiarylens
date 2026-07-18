@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
+    />
+    <title>Welcome to ApiaryLens</title>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      body {
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        background: #fffaf0;
+        color: #3b2f1d;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1.5rem;
+      }
+      main {
+        width: 100%;
+        max-width: 40rem;
+      }
+      .eyebrow {
+        display: block;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #a06b00;
+        margin-bottom: 0.5rem;
+      }
+      h1 {
+        font-size: 1.6rem;
+        line-height: 1.25;
+        margin-bottom: 0.5rem;
+      }
+      .lead {
+        color: #6b5a3e;
+        margin-bottom: 1.5rem;
+      }
+      .choices {
+        display: grid;
+        gap: 1rem;
+      }
+      button.choice {
+        text-align: left;
+        font: inherit;
+        color: inherit;
+        background: #ffffff;
+        border: 1px solid #e8d9b8;
+        border-radius: 0.75rem;
+        padding: 1.1rem 1.25rem;
+        cursor: pointer;
+        display: block;
+        width: 100%;
+      }
+      button.choice:hover,
+      button.choice:focus-visible {
+        border-color: #d99a00;
+        outline: 2px solid #d99a00;
+        outline-offset: 1px;
+      }
+      button.choice:disabled {
+        opacity: 0.6;
+        cursor: progress;
+      }
+      button.choice strong {
+        display: block;
+        font-size: 1.05rem;
+        margin-bottom: 0.3rem;
+      }
+      button.choice span {
+        color: #6b5a3e;
+        font-size: 0.9rem;
+        line-height: 1.45;
+      }
+      .footnote {
+        margin-top: 1.25rem;
+        color: #6b5a3e;
+        font-size: 0.85rem;
+        line-height: 1.45;
+      }
+      .error {
+        display: none;
+        margin-top: 1rem;
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        background: #fdecea;
+        border: 1px solid #e5b4ac;
+        color: #7a2318;
+        font-size: 0.9rem;
+        line-height: 1.45;
+      }
+      .error.visible {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="eyebrow">ApiaryLens</span>
+      <h1>How will you use ApiaryLens on this computer?</h1>
+      <p class="lead">You can change your mind later without losing any records.</p>
+      <div class="choices">
+        <button type="button" class="choice" id="choose-disconnected" autofocus>
+          <strong>Use on this computer</strong>
+          <span>
+            Everything stays on this PC. No account, no password, no sign-in, and no internet
+            connection — ever. Start keeping hive records right away.
+          </span>
+        </button>
+        <button type="button" class="choice" id="choose-connected">
+          <strong>Connect to my family&rsquo;s ApiaryLens</strong>
+          <span>
+            Pick the connection profile file from your family&rsquo;s ApiaryLens server, then sign
+            in there. Requires a network connection to that server.
+          </span>
+        </button>
+      </div>
+      <p class="error" id="error" role="alert"></p>
+      <p class="footnote">
+        Choosing &ldquo;Use on this computer&rdquo; keeps ApiaryLens fully working offline forever.
+        A computer-only apiary can still join a family server later — your records move with you.
+      </p>
+    </main>
+    <script>
+      const disconnectedButton = document.getElementById('choose-disconnected');
+      const connectedButton = document.getElementById('choose-connected');
+      const errorLine = document.getElementById('error');
+      async function choose(mode) {
+        disconnectedButton.disabled = true;
+        connectedButton.disabled = true;
+        errorLine.classList.remove('visible');
+        errorLine.textContent = '';
+        try {
+          const result = await window.apiaryLensFirstRun.choose(mode);
+          if (result && result.status === 'error') {
+            errorLine.textContent = result.message;
+            errorLine.classList.add('visible');
+          }
+        } catch {
+          errorLine.textContent = 'ApiaryLens could not apply that choice. Please try again.';
+          errorLine.classList.add('visible');
+        } finally {
+          disconnectedButton.disabled = false;
+          connectedButton.disabled = false;
+        }
+      }
+      disconnectedButton.addEventListener('click', () => void choose('disconnected'));
+      connectedButton.addEventListener('click', () => void choose('connected'));
+    </script>
+  </body>
+</html>

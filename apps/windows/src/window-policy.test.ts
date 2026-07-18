@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   isTrustedConnectedRendererUrl,
+  isTrustedFirstRunUrl,
   isTrustedRendererUrl,
   shouldInjectControlHeader,
 } from './window-policy.js';
@@ -25,6 +26,18 @@ describe('Windows renderer boundary', () => {
     credentialedOrigin.username = 'user';
     credentialedOrigin.password = 'secret';
     expect(isTrustedConnectedRendererUrl(credentialedOrigin.href, connected)).toBe(false);
+  });
+
+  it('confines the first-run chooser to its exact packaged page', () => {
+    const chooser = 'file:///C:/Program%20Files/ApiaryLens/resources/dist/first-run.html';
+    expect(isTrustedFirstRunUrl(chooser, chooser)).toBe(true);
+    expect(isTrustedFirstRunUrl(`${chooser}#detail`, chooser)).toBe(false);
+    expect(isTrustedFirstRunUrl(`${chooser}?next=1`, chooser)).toBe(false);
+    expect(isTrustedFirstRunUrl('file:///C:/other/page.html', chooser)).toBe(false);
+    expect(isTrustedFirstRunUrl(endpoint, chooser)).toBe(false);
+    expect(isTrustedFirstRunUrl('https://apiarylens.example/', chooser)).toBe(false);
+    expect(isTrustedFirstRunUrl('data:text/html,untrusted', chooser)).toBe(false);
+    expect(isTrustedFirstRunUrl(chooser, endpoint)).toBe(false);
   });
 
   it('injects process authority only for a registered trusted webContents', () => {
