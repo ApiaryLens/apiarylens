@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { BuildIdentity } from '@apiarylens/contracts';
 import { api } from '../../api.js';
-import { frontendBuild } from '../../build-identity.js';
+import { frontendBuild, windowsPackageLabel } from '../../build-identity.js';
 import type { ActiveSession } from '../../session.js';
 import { useGlossary } from '../glossary/glossary-context.js';
 import { FamilyAccess } from './FamilyAccess.js';
@@ -49,6 +49,17 @@ export function VersionView({
             <span>
               Not yet GA. Features and workflows may change, updates may arrive frequently, and
               current backups are required.
+            </span>
+          </div>
+        )}
+        {windowsPackageLabel && (
+          <div className="preview-notice" role="note">
+            <strong>{windowsPackageLabel}</strong>
+            <span>
+              This Windows preview build is not Authenticode signed, so Windows SmartScreen and
+              Defender warn that it comes from an unverified publisher. That warning is accurate.
+              Only install a copy whose SHA-256 you verified against the published release
+              checksums.
             </span>
           </div>
         )}

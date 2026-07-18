@@ -179,6 +179,11 @@ jobs:
 
       - name: Build Windows package (unsigned; SignPath signs after packaging)
         shell: pwsh
+        env:
+          # Design v2 §4.3(a): the resolved signing mode is passed into the
+          # package build so an unsigned Preview bakes the UNSIGNED-PREVIEW
+          # label into the packaged app UI, not just the Setup filename.
+          APIARYLENS_WINDOWS_SIGNING_MODE: ${{ needs.policy.outputs.signing_mode }}
         run: |
           # ADR 0026 (C1): the Squirrel package is always built unsigned here.
           # On the 'signed' policy branch the Setup bytes are signed by
@@ -368,7 +373,9 @@ jobs:
           fi
           warning=""
           if [[ "$SIGNING_MODE" == "unsigned-preview" ]]; then
-            warning=$'## Unsigned Preview warning\n\n`ApiaryLensSetup-UNSIGNED-PREVIEW.exe` is intentionally not Authenticode signed. This exception was explicitly selected for this exact Preview run. Verify `SHA256SUMS` and the GitHub artifact attestation before testing. RC and Stable releases cannot use this exception.'
+            # Design v2 §4.3(d): state the SmartScreen prompt honestly and do
+            # not instruct users that bypassing it is "safe".
+            warning=$'## Unsigned Preview warning\n\n`ApiaryLensSetup-UNSIGNED-PREVIEW.exe` is intentionally not Authenticode signed. This exception was explicitly selected for this exact Preview run. RC and Stable releases cannot use this exception.\n\nBecause the installer is unsigned, Windows SmartScreen will warn that it is from an unknown publisher, and Microsoft Defender may flag the download. Those warnings are accurate: Windows cannot verify who published this file, and continuing past them is not safe on trust alone. Before running the installer, verify the download yourself: check its SHA-256 against `SHA256SUMS` (`Get-FileHash`) and verify the GitHub artifact attestation (`gh attestation verify`). If you have not verified the file, do not bypass the SmartScreen prompt. Preview builds are for testing with data you can afford to lose; keep current backups.'
           fi
           gh release create "$EXACT_TAG" dist/publish/* \
             --verify-tag --prerelease --latest=false --generate-notes \
