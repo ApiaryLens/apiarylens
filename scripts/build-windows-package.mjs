@@ -13,6 +13,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
+import { readTreeText } from './release-archive.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const requireFromWindows = createRequire(join(root, 'apps', 'windows', 'package.json'));
@@ -45,8 +46,31 @@ const runPnpm = (args, options = {}) => {
   return run('corepack', ['pnpm', ...args], options);
 };
 
+// Design v2 §4.3(a): when the release workflow resolves an unsigned Preview,
+// the UI packaged into the Windows app must carry the UNSIGNED-PREVIEW label,
+// not just the Setup filename. The label text is baked into the web bundle
+// through a Vite build-time value; apps/web never contains the token as a
+// source literal, so finding it in the built bundle proves the bake happened
+// and ordinary (non-release) and signed builds never show it.
+const windowsSigningMode = process.env.APIARYLENS_WINDOWS_SIGNING_MODE;
+const unsignedPreviewLabel = 'UNSIGNED-PREVIEW';
+if (windowsSigningMode === 'unsigned-preview') {
+  process.env.VITE_WINDOWS_PACKAGE_LABEL = unsignedPreviewLabel;
+}
+
 runPnpm(['--filter', '@apiarylens/windows', 'run', 'clean']);
 runPnpm(['--filter', '@apiarylens/windows', 'run', 'build']);
+
+if (windowsSigningMode === 'unsigned-preview') {
+  const webBundle = await readTreeText(join(root, 'apps', 'web', 'dist'), (name) =>
+    name.endsWith('.js'),
+  );
+  if (!webBundle.includes(unsignedPreviewLabel)) {
+    throw new Error(
+      'Unsigned Preview packaging requires the UNSIGNED-PREVIEW label baked into the web UI bundle.',
+    );
+  }
+}
 runPnpm([
   '--config.node-linker=hoisted',
   '--filter',

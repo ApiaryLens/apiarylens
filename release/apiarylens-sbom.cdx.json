@@ -1,13 +1,13 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:deefba79-18e3-451f-b5d8-106d1068db27",
+  "serialNumber": "urn:uuid:ccc3b117-c930-48c1-9db7-d4f67e737a0d",
   "version": 1,
   "metadata": {
     "component": {
       "type": "application",
       "name": "ApiaryLens",
-      "version": "0.1.0-preview.3"
+      "version": "0.1.0-preview.4"
     },
     "properties": [
       {
@@ -57,9 +57,9 @@
     },
     {
       "type": "library",
-      "name": "@cloudflare/workerd-linux-64",
+      "name": "@cloudflare/workerd-windows-64",
       "version": "1.20260708.1",
-      "purl": "pkg:npm/@cloudflare%2Fworkerd-linux-64@1.20260708.1",
+      "purl": "pkg:npm/@cloudflare%2Fworkerd-windows-64@1.20260708.1",
       "licenses": [
         {
           "license": {
@@ -283,9 +283,9 @@
     },
     {
       "type": "library",
-      "name": "@esbuild/linux-x64",
+      "name": "@esbuild/win32-x64",
       "version": "0.28.1",
-      "purl": "pkg:npm/@esbuild%2Flinux-x64@0.28.1",
+      "purl": "pkg:npm/@esbuild%2Fwin32-x64@0.28.1",
       "licenses": [
         {
           "license": {
@@ -340,33 +340,12 @@
     },
     {
       "type": "library",
-      "name": "@img/sharp-libvips-linux-x64",
-      "version": "1.2.4",
-      "purl": "pkg:npm/@img%2Fsharp-libvips-linux-x64@1.2.4",
-      "licenses": [
-        {
-          "license": {
-            "id": "LGPL-3.0-or-later"
-          }
-        }
-      ],
-      "externalReferences": [
-        {
-          "type": "website",
-          "url": "https://sharp.pixelplumbing.com"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "@img/sharp-linux-x64",
+      "name": "@img/sharp-win32-x64",
       "version": "0.34.5",
-      "purl": "pkg:npm/@img%2Fsharp-linux-x64@0.34.5",
+      "purl": "pkg:npm/@img%2Fsharp-win32-x64@0.34.5",
       "licenses": [
         {
-          "license": {
-            "id": "Apache-2.0"
-          }
+          "expression": "Apache-2.0 AND LGPL-3.0-or-later"
         }
       ],
       "externalReferences": [
@@ -587,9 +566,9 @@
     },
     {
       "type": "library",
-      "name": "@rolldown/binding-linux-x64-gnu",
+      "name": "@rolldown/binding-win32-x64-msvc",
       "version": "1.1.5",
-      "purl": "pkg:npm/@rolldown%2Fbinding-linux-x64-gnu@1.1.5",
+      "purl": "pkg:npm/@rolldown%2Fbinding-win32-x64-msvc@1.1.5",
       "licenses": [
         {
           "license": {
@@ -929,9 +908,9 @@
     },
     {
       "type": "library",
-      "name": "@typescript/typescript-linux-x64",
+      "name": "@typescript/typescript-win32-x64",
       "version": "7.0.2",
-      "purl": "pkg:npm/@typescript%2Ftypescript-linux-x64@7.0.2",
+      "purl": "pkg:npm/@typescript%2Ftypescript-win32-x64@7.0.2",
       "licenses": [
         {
           "license": {
@@ -3038,9 +3017,9 @@
     },
     {
       "type": "library",
-      "name": "lightningcss-linux-x64-gnu",
+      "name": "lightningcss-win32-x64-msvc",
       "version": "1.32.0",
-      "purl": "pkg:npm/lightningcss-linux-x64-gnu@1.32.0",
+      "purl": "pkg:npm/lightningcss-win32-x64-msvc@1.32.0",
       "licenses": [
         {
           "license": {

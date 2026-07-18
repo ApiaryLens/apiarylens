@@ -21,6 +21,27 @@ describe('product release workflow wiring', () => {
     expect(workflow).toContain('apiarylens-windows-signing.json');
   });
 
+  it('bakes the UNSIGNED-PREVIEW label into the packaged app UI (Design v2 4.3a)', () => {
+    // The package build step must receive the resolved signing mode so
+    // scripts/build-windows-package.mjs can bake the UI label; the finalize
+    // step reuses the same variable for the filename and evidence record.
+    const occurrences =
+      workflow.match(
+        /APIARYLENS_WINDOWS_SIGNING_MODE: \$\{\{ needs\.policy\.outputs\.signing_mode \}\}/g,
+      ) ?? [];
+    expect(occurrences.length).toBeGreaterThanOrEqual(2);
+    expect(workflow.indexOf('APIARYLENS_WINDOWS_SIGNING_MODE')).toBeLessThan(
+      workflow.indexOf('pnpm release:windows'),
+    );
+  });
+
+  it('states the SmartScreen prompt honestly without calling bypass safe (Design v2 4.3d)', () => {
+    expect(workflow).toContain('SmartScreen');
+    expect(workflow).toContain('not safe on trust alone');
+    expect(workflow).toContain('If you have not verified the file, do not bypass');
+    expect(workflow).not.toMatch(/safe to (bypass|ignore|click through)/i);
+  });
+
   it('signs stable Setup bytes through SignPath and rehashes manifests after signing', () => {
     expect(workflow).toContain('signpath/github-action-submit-signing-request');
     expect(workflow).toContain('SIGNPATH_API_TOKEN');

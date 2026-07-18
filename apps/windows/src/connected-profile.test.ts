@@ -24,7 +24,7 @@ const profile: WindowsConnectionProfile = {
   provisioningSource: 'scout',
   createdAt: '2026-07-17T16:00:00.000Z',
   compatibility: {
-    productVersion: '0.1.0-preview.3',
+    productVersion: '0.1.0-preview.4',
     apiContract: '1.0',
     syncContract: 1,
     databaseMigration: '0004',
@@ -72,7 +72,7 @@ describe('Windows connected profile', () => {
             status: 'ok',
             build: {
               product: 'ApiaryLens',
-              productVersion: '0.1.0-preview.3',
+              productVersion: '0.1.0-preview.4',
               deploymentProfile: 'cloudflare',
               apiContract: '1.0',
               syncContract: 1,
@@ -85,7 +85,7 @@ describe('Windows connected profile', () => {
         return Promise.resolve(response);
       }),
     );
-    expect((await verifyConnectedBackend(profile)).productVersion).toBe('0.1.0-preview.3');
+    expect((await verifyConnectedBackend(profile)).productVersion).toBe('0.1.0-preview.4');
     const mismatch = { ...profile, compatibility: { ...profile.compatibility, syncContract: 2 } };
     await expect(verifyConnectedBackend(mismatch)).rejects.toThrow(/compatibility lock/);
   });
@@ -103,7 +103,7 @@ describe('Windows connected profile', () => {
   it('names every identity field that differs from the compatibility lock', () => {
     const matchingBuild = {
       product: 'ApiaryLens',
-      productVersion: '0.1.0-preview.3',
+      productVersion: '0.1.0-preview.4',
       deploymentProfile: 'cloudflare',
       apiContract: '1.0',
       syncContract: 1,
@@ -118,7 +118,7 @@ describe('Windows connected profile', () => {
       build: { ...matchingBuild, productVersion: '0.1.0-preview.2', syncContract: 2 },
     });
     expect(drifted).toHaveLength(2);
-    expect(drifted[0]).toContain('profile requires 0.1.0-preview.3');
+    expect(drifted[0]).toContain('profile requires 0.1.0-preview.4');
     expect(drifted[0]).toContain('server reports 0.1.0-preview.2');
     expect(drifted[1]).toContain('Sync contract');
   });
@@ -136,7 +136,7 @@ describe('Windows connected profile', () => {
           status: 'ok',
           build: {
             product: 'ApiaryLens',
-            productVersion: '0.1.0-preview.3',
+            productVersion: '0.1.0-preview.4',
             deploymentProfile: 'cloudflare',
             apiContract: '1.0',
             syncContract: 1,
@@ -147,7 +147,7 @@ describe('Windows connected profile', () => {
     );
     const matched = await checkConnectedBackend(profile);
     expect(matched.state).toBe('matched');
-    if (matched.state === 'matched') expect(matched.build.productVersion).toBe('0.1.0-preview.3');
+    if (matched.state === 'matched') expect(matched.build.productVersion).toBe('0.1.0-preview.4');
 
     const drifted = { ...profile, compatibility: { ...profile.compatibility, apiContract: '2.0' } };
     const mismatch = await checkConnectedBackend(drifted);

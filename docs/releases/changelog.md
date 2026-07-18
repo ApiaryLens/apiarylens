@@ -2,13 +2,25 @@
 
 ## Unreleased
 
-- Continued offline relaunch, automatic synchronization, media reliability, family
-  administration, hive equipment, weather-entry, and accessibility work for a
-  future Preview update.
-- Continued standalone Windows application research and implementation. It is not
-  currently an end-user release.
 - Continued separately versioned Scout Bee deployment-bootloader work. It is not
   currently an end-user release.
+
+## 0.1.0-preview.4 — 2026-07-18
+
+First release offering the standalone Windows desktop application as a
+downloadable preview artifact. The Windows Setup is intentionally unsigned and
+ships under the accepted unsigned-preview conditions: the filename and the app
+UI carry `UNSIGNED-PREVIEW`, SHA-256 checksums are published beside the
+download, every subject carries a Sigstore keyless attestation, the SmartScreen
+warning is documented honestly, and release-candidate/stable channels remain
+fail-closed on real signatures.
+
+Also includes the air-gapped Compose bundle with offline lifecycle scripts, the
+machine-verified compatibility manifest, the cross-client conformance suite,
+the decomposed web client with profile import preview and the offline glossary,
+and the SignPath-ready release pipeline. See the
+[Preview 4 release notes](0.1.0-preview.4.md) for verification steps and the
+honest SmartScreen guidance.
 
 ## 0.1.0-preview.1 — 2026-07-16
 

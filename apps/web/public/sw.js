@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'apiarylens-shell-';
-const CACHE = `${CACHE_PREFIX}0.1.0-preview.3-r1`;
+const CACHE = `${CACHE_PREFIX}0.1.0-preview.4-r1`;
 const BASE = new URL('./', self.registration.scope);
 const SHELL = [
   BASE.pathname,
