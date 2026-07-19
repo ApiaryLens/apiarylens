@@ -19,10 +19,18 @@ describe('About page data', () => {
 
   it('builds release links for the running build version', () => {
     const links = releaseLinks('0.1.0-preview.6');
+    // Owner UAT fix (2026-07-19): the primary link must be a page the docs
+    // site actually publishes. Per-version pages are allowlist-gated on
+    // apiarylens.org (and `/releases/<version>/` never was a page), so the
+    // always-published changelog route is pinned here; the GitHub release tag
+    // stays as the always-valid per-version fallback.
     expect(links.map((link) => link.href)).toEqual([
-      'https://apiarylens.org/releases/0.1.0-preview.6/',
+      'https://apiarylens.org/docs/releases/changelog/',
       'https://github.com/ApiaryLens/apiarylens/releases/tag/v0.1.0-preview.6',
     ]);
+    for (const link of links) {
+      expect(link.href).not.toMatch(/apiarylens\.org\/releases\//);
+    }
     for (const link of links) {
       expect(link.label.length).toBeGreaterThan(0);
       expect(link.detail.length).toBeGreaterThan(0);

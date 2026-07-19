@@ -114,11 +114,17 @@ export function VersionView({
           </dd>
         </dl>
         <div className="button-row">
+          {/* Owner UAT fix (2026-07-19): the version-interpolated
+              `/releases/<version>/` route has no page on apiarylens.org (the
+              worker only redirects windows artifact paths), and per-version
+              docs pages are allowlist-gated. The changelog route is always
+              published, and each entry links on to the full per-build notes
+              and the GitHub release with its artifacts. */}
           <a
             className="button secondary link-button"
-            href={`https://apiarylens.org/releases/${frontendBuild.productVersion}/`}
+            href="https://apiarylens.org/docs/releases/changelog/"
           >
-            Release notes and artifacts
+            Release notes and changelog
           </a>
           <button
             type="button"

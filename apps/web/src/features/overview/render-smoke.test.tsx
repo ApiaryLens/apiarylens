@@ -91,6 +91,11 @@ describe('About page rendering', () => {
     expect(html).toContain('About ApiaryLens');
     expect(html).toContain('Preview 1');
     expect(html).toContain('https://apiarylens.org/docs/');
+    // Owner UAT fix (2026-07-19): release notes must point at the
+    // always-published changelog route — the version-interpolated
+    // `apiarylens.org/releases/<version>/` route has no page.
+    expect(html).toContain('https://apiarylens.org/docs/releases/changelog/');
+    expect(html).not.toContain('https://apiarylens.org/releases/');
     expect(html).toContain('github.com/ApiaryLens/apiarylens/releases');
     expect(html).toContain('Open the beekeeping glossary');
   });
