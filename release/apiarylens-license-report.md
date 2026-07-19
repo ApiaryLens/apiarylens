@@ -9,13 +9,13 @@ must still be reviewed separately.
 | Declared license expression | Packages |
 |---|---:|
 | (MIT OR CC0-1.0) | 1 |
-| Apache-2.0 | 15 |
-| Apache-2.0 AND LGPL-3.0-or-later | 1 |
+| Apache-2.0 | 16 |
 | BSD-2-Clause | 8 |
 | BSD-3-Clause | 5 |
 | CC-BY-3.0 | 1 |
 | CC0-1.0 | 2 |
 | ISC | 21 |
+| LGPL-3.0-or-later | 1 |
 | MIT | 216 |
 | MIT OR Apache-2.0 | 4 |
 | MPL-2.0 | 2 |
