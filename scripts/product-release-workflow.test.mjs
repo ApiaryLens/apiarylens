@@ -129,9 +129,12 @@ describe('product release workflow wiring', () => {
     // while carrying 8c43e5f bytes from a dirty local build; each of these
     // pins guards one link of that broken chain.
     expect(workflow).toContain('manifest.sourceCommit = process.env.RELEASE_COMMIT');
-    expect(workflow).toContain(
-      'git merge-base --is-ancestor "$committed_commit" "$RELEASE_COMMIT"',
-    );
+    // The committed prep pin is validated for shape only: squash merges
+    // discard prep-branch commits, so requiring it to resolve or to be an
+    // ancestor of the tagged commit would block every corrective tag run
+    // (codex P1 on PR 93).
+    expect(workflow).toContain(String.raw`echo "$committed_commit" | grep -Eq '^[0-9a-f]{40}$'`);
+    expect(workflow).not.toContain('git merge-base --is-ancestor "$committed_commit"');
     expect(workflow).toContain(
       'Verify the built identity binds to the exact release commit (issue 92)',
     );

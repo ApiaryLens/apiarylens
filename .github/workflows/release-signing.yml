@@ -110,14 +110,19 @@ jobs:
           # PREP-time build; a tag run builds from the tagged commit, so
           # keeping the committed value would publish artifacts whose claimed
           # identity is not the commit they were built from (preview.5
-          # claimed 1f348e0 while carrying 8c43e5f bytes). Sanity-check the
-          # committed pin (a real ancestor commit), then rebind sourceCommit
-          # to the exact release commit this job checked out; every artifact,
-          # bundle identity, and /health record downstream inherits it.
+          # claimed 1f348e0 while carrying 8c43e5f bytes). The committed pin
+          # is prep-local evidence only: squash merges discard the prep
+          # branch commits, so it is deliberately NOT required to resolve or
+          # be an ancestor here — only to be well-formed. The real identity
+          # gate is the rebind below plus the post-build and pre-publish
+          # verifications against the exact release commit.
           committed_commit="$(node -p "require('./release/release-manifest.json').sourceCommit")"
           echo "$committed_commit" | grep -Eq '^[0-9a-f]{40}$'
-          git cat-file -e "$committed_commit^{commit}"
-          git merge-base --is-ancestor "$committed_commit" "$RELEASE_COMMIT"
+          if git cat-file -e "$committed_commit^{commit}" 2>/dev/null; then
+            echo "Committed prep pin $committed_commit is reachable in this clone."
+          else
+            echo "Committed prep pin $committed_commit is not reachable (expected after a squash merge); rebinding to $RELEASE_COMMIT."
+          fi
           node --input-type=module <<'NODE'
           import { readFileSync, writeFileSync } from 'node:fs';
           const path = 'release/release-manifest.json';
