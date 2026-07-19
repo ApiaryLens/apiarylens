@@ -14,6 +14,11 @@ on:
         required: true
         default: false
         type: boolean
+      include_windows:
+        description: "Build and publish the Windows Setup in this run (Preview-only opt-out: the Windows client is deferred pending a full rewrite, so a Preview may ship platform/web artifacts only)"
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -28,6 +33,7 @@ jobs:
       channel: ${{ steps.policy.outputs.channel }}
       signing_mode: ${{ steps.policy.outputs.signing_mode }}
       explicit_unsigned_preview_opt_in: ${{ steps.policy.outputs.explicit_unsigned_preview_opt_in }}
+      windows_included: ${{ steps.policy.outputs.windows_included }}
       release_commit: ${{ steps.policy.outputs.release_commit }}
     steps:
       - name: Check out exact revision and tags
@@ -41,6 +47,13 @@ jobs:
         env:
           APIARYLENS_EXACT_TAG: ${{ inputs.exact_tag || github.ref_name }}
           APIARYLENS_ALLOW_UNSIGNED_PREVIEW: ${{ inputs.allow_unsigned_preview && 'true' || 'false' }}
+          # Owner directive 2026-07-18 (plan v2.1): the Windows client is off
+          # the roadmap pending a full rewrite, so a Preview run may exclude
+          # the Windows job via the explicit include_windows=false dispatch
+          # input. Tag pushes and omitted inputs keep the historical behavior
+          # (Windows included); the policy script fails closed if a non-preview
+          # channel attempts the exclusion.
+          APIARYLENS_INCLUDE_WINDOWS: ${{ github.event_name != 'workflow_dispatch' || inputs.include_windows }}
           # ADR 0026: Authenticode signing is performed by SignPath Foundation
           # through a submit/wait round trip in the windows job, not by locally
           # held PFX material. Signing counts as "available" only when the
@@ -152,6 +165,10 @@ jobs:
 
   windows:
     needs: [policy, product]
+    # Runs unless the policy resolved an explicitly windows-excluded Preview
+    # (include_windows=false); the publish job independently refuses windows
+    # subjects in that case, so a skipped job cannot leak stale bytes.
+    if: needs.policy.outputs.windows_included == 'true'
     runs-on: windows-latest
     timeout-minutes: 35
     steps:
@@ -305,6 +322,12 @@ jobs:
 
   publish:
     needs: [policy, product, windows]
+    # The windows job may be absent only when the policy explicitly resolved a
+    # windows-excluded Preview; any windows failure still blocks publication.
+    if: >-
+      ${{ !cancelled() && needs.policy.result == 'success' && needs.product.result == 'success' &&
+          (needs.windows.result == 'success' ||
+           (needs.windows.result == 'skipped' && needs.policy.outputs.windows_included == 'false')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -325,6 +348,7 @@ jobs:
           path: dist/merge
 
       - name: Download Windows subjects and authoritative final manifest
+        if: needs.policy.outputs.windows_included == 'true'
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: apiarylens-windows-release
@@ -340,15 +364,29 @@ jobs:
           cp dist/merge/release/apiarylens-*.jsonl dist/publish/
           cp dist/merge/release/artifacts/*.tar.gz dist/publish/
           cp dist/merge/release/artifacts/*.tar dist/publish/
-          cp dist/merge/release/artifacts/windows/windows-package.json dist/publish/
-          cp dist/merge/release/artifacts/windows/artifacts/* dist/publish/
+          if [[ "$WINDOWS_INCLUDED" == "true" ]]; then
+            cp dist/merge/release/artifacts/windows/windows-package.json dist/publish/
+            cp dist/merge/release/artifacts/windows/artifacts/* dist/publish/
+          fi
           (cd dist/publish && sha256sum * > SHA256SUMS)
           node --input-type=module <<'NODE'
           import { createHash } from 'node:crypto';
-          import { readFileSync, statSync } from 'node:fs';
+          import { existsSync, readFileSync, statSync } from 'node:fs';
           const manifest = JSON.parse(readFileSync('dist/publish/release-manifest.json', 'utf8'));
-          const signing = JSON.parse(readFileSync('dist/publish/apiarylens-windows-signing.json', 'utf8'));
-          if (manifest.productVersion !== process.env.RELEASE_VERSION || signing.sourceCommit !== manifest.sourceCommit || signing.releaseCommit !== process.env.RELEASE_COMMIT || signing.exactTag !== process.env.EXACT_TAG) throw new Error('Final release identity mismatch.');
+          if (manifest.productVersion !== process.env.RELEASE_VERSION) throw new Error('Final release identity mismatch.');
+          if (process.env.WINDOWS_INCLUDED === 'true') {
+            const signing = JSON.parse(readFileSync('dist/publish/apiarylens-windows-signing.json', 'utf8'));
+            if (signing.sourceCommit !== manifest.sourceCommit || signing.releaseCommit !== process.env.RELEASE_COMMIT || signing.exactTag !== process.env.EXACT_TAG) throw new Error('Final release identity mismatch.');
+          } else if (
+            manifest.artifacts.some((artifact) => artifact.target === 'windows-x64') ||
+            existsSync('dist/publish/apiarylens-windows-signing.json') ||
+            existsSync('dist/publish/windows-package.json')
+          ) {
+            // Fail closed in the other direction too: an explicitly
+            // windows-excluded run must not publish any Windows subject or
+            // stale signing evidence.
+            throw new Error('Windows subjects present in a windows-excluded run.');
+          }
           for (const artifact of manifest.artifacts) {
             const path = `dist/publish/${artifact.name}`;
             const hash = createHash('sha256').update(readFileSync(path)).digest('hex');
@@ -359,6 +397,7 @@ jobs:
           RELEASE_VERSION: ${{ needs.policy.outputs.version }}
           EXACT_TAG: ${{ needs.policy.outputs.exact_tag }}
           RELEASE_COMMIT: ${{ needs.policy.outputs.release_commit }}
+          WINDOWS_INCLUDED: ${{ needs.policy.outputs.windows_included }}
 
       - name: Attest every published subject
         uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4
@@ -371,16 +410,22 @@ jobs:
           EXACT_TAG: ${{ needs.policy.outputs.exact_tag }}
           VERSION: ${{ needs.policy.outputs.version }}
           SIGNING_MODE: ${{ needs.policy.outputs.signing_mode }}
+          WINDOWS_INCLUDED: ${{ needs.policy.outputs.windows_included }}
         run: |
           if gh release view "$EXACT_TAG" >/dev/null 2>&1; then
             echo "Release $EXACT_TAG already exists; immutable publication refuses replacement." >&2
             exit 1
           fi
           warning=""
-          if [[ "$SIGNING_MODE" == "unsigned-preview" ]]; then
+          if [[ "$SIGNING_MODE" == "unsigned-preview" && "$WINDOWS_INCLUDED" == "true" ]]; then
             # Design v2 §4.3(d): state the SmartScreen prompt honestly and do
             # not instruct users that bypassing it is "safe".
             warning=$'## Unsigned Preview warning\n\n`ApiaryLensSetup-UNSIGNED-PREVIEW.exe` is intentionally not Authenticode signed. This exception was explicitly selected for this exact Preview run. RC and Stable releases cannot use this exception.\n\nBecause the installer is unsigned, Windows SmartScreen will warn that it is from an unknown publisher, and Microsoft Defender may flag the download. Those warnings are accurate: Windows cannot verify who published this file, and continuing past them is not safe on trust alone. Before running the installer, verify the download yourself: check its SHA-256 against `SHA256SUMS` (`Get-FileHash`) and verify the GitHub artifact attestation (`gh attestation verify`). If you have not verified the file, do not bypass the SmartScreen prompt. Preview builds are for testing with data you can afford to lose; keep current backups.'
+          elif [[ "$SIGNING_MODE" == "unsigned-preview" ]]; then
+            # Windows-excluded Preview: the unsigned-preview conditions still
+            # apply to every published subject (checksums + attestation), and
+            # the absence of a Windows build is stated plainly.
+            warning=$'## Unsigned Preview warning\n\nThe artifacts in this release are not code signed. This exception was explicitly selected for this exact Preview run; RC and Stable releases cannot use it. Before using any artifact, verify it yourself: check its SHA-256 against `SHA256SUMS` (`sha256sum --check` or `Get-FileHash`) and verify the GitHub artifact attestation (`gh attestation verify`). Preview builds are for testing with data you can afford to lose; keep current backups.\n\n## No Windows build in this release\n\nThis release ships platform and web artifacts only (Cloudflare, Compose, and air-gap deployment bundles plus their evidence). The Windows desktop client is deferred pending a full rewrite and was not rebuilt for this release; no Windows Setup is attached, and the previously released Windows preview build receives no further preview fixes. See the release notes for known Windows defects.'
           fi
           gh release create "$EXACT_TAG" dist/publish/* \
             --verify-tag --prerelease --latest=false --generate-notes \

@@ -8,6 +8,7 @@ export function resolveProductReleasePolicy({
   exactTag,
   allowUnsignedPreview = false,
   signingMaterialAvailable = false,
+  includeWindows = true,
 }) {
   const expectedTag = `v${version}`;
   if (exactTag !== expectedTag) {
@@ -23,6 +24,36 @@ export function resolveProductReleasePolicy({
   if (!['preview', 'release-candidate', 'stable'].includes(channel)) {
     throw new Error(`Unsupported product release version: ${version}.`);
   }
+  // Owner directive 2026-07-18 (plan v2.1): the Windows client is deferred
+  // pending a full rewrite, so a Preview may explicitly exclude the Windows
+  // build and ship platform/web artifacts only. The exclusion is preview-only
+  // and fail-closed: RC and Stable releases always carry the Windows build
+  // (and therefore its signing requirements).
+  if (!includeWindows && channel !== 'preview') {
+    throw new Error(
+      `${channel} releases must include the Windows build; include_windows=false is a Preview-only option.`,
+    );
+  }
+  if (!includeWindows) {
+    // The Windows job is the only signing job, so a windows-excluded run
+    // ships unsigned bytes even when SignPath material is configured. It must
+    // therefore always resolve as an explicitly opted-in unsigned Preview:
+    // signing material never silently converts it to 'signed', and the
+    // unsigned-preview labeling/warning path always applies to what ships.
+    if (!allowUnsignedPreview) {
+      throw new Error(
+        'A windows-excluded Preview ships unsigned artifacts and requires an explicit manual allow_unsigned_preview opt-in for the exact tag.',
+      );
+    }
+    return {
+      version,
+      exactTag,
+      channel,
+      signingMode: 'unsigned-preview',
+      explicitUnsignedPreviewOptIn: true,
+      windowsIncluded: false,
+    };
+  }
   if (signingMaterialAvailable) {
     return {
       version,
@@ -30,6 +61,7 @@ export function resolveProductReleasePolicy({
       channel,
       signingMode: 'signed',
       explicitUnsignedPreviewOptIn: false,
+      windowsIncluded: includeWindows,
     };
   }
   if (channel === 'preview' && allowUnsignedPreview) {
@@ -39,6 +71,7 @@ export function resolveProductReleasePolicy({
       channel,
       signingMode: 'unsigned-preview',
       explicitUnsignedPreviewOptIn: true,
+      windowsIncluded: includeWindows,
     };
   }
   throw new Error(
@@ -55,6 +88,12 @@ function run() {
     exactTag: process.env.APIARYLENS_EXACT_TAG,
     allowUnsignedPreview: asBoolean(process.env.APIARYLENS_ALLOW_UNSIGNED_PREVIEW),
     signingMaterialAvailable: asBoolean(process.env.APIARYLENS_WINDOWS_SIGNING_AVAILABLE),
+    // Absent means included: only an explicit include_windows=false dispatch
+    // input excludes the Windows build.
+    includeWindows:
+      process.env.APIARYLENS_INCLUDE_WINDOWS === undefined
+        ? true
+        : asBoolean(process.env.APIARYLENS_INCLUDE_WINDOWS),
   });
   if (process.env.GITHUB_OUTPUT) {
     appendFileSync(process.env.GITHUB_OUTPUT, `version=${policy.version}\n`);
@@ -65,9 +104,10 @@ function run() {
       process.env.GITHUB_OUTPUT,
       `explicit_unsigned_preview_opt_in=${policy.explicitUnsignedPreviewOptIn}\n`,
     );
+    appendFileSync(process.env.GITHUB_OUTPUT, `windows_included=${policy.windowsIncluded}\n`);
   }
   process.stdout.write(
-    `ApiaryLens ${policy.version} release policy: ${policy.channel}, ${policy.signingMode}.\n`,
+    `ApiaryLens ${policy.version} release policy: ${policy.channel}, ${policy.signingMode}, windows ${policy.windowsIncluded ? 'included' : 'excluded'}.\n`,
   );
 }
 

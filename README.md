@@ -39,41 +39,49 @@ every decision made in this repo:
 
 ## Status
 
-ApiaryLens is in **Preview 2** (build `0.1.0-preview.4`), available from the
-[Preview 2 GitHub release](https://github.com/ApiaryLens/apiarylens/releases/tag/v0.1.0-preview.4).
+ApiaryLens is in **Preview 1** of the rebooted platform+web product (build
+`0.1.0-preview.5`), available from the
+[Preview 1 GitHub release](https://github.com/ApiaryLens/apiarylens/releases/tag/v0.1.0-preview.5).
 The PWA, Node and Cloudflare backends, Docker Compose profile, air-gapped Compose
 bundle, release artifacts, and public documentation are available for controlled
-evaluation, and Preview 2 adds the standalone Windows desktop application as a
-downloadable preview artifact. Scout Bee remains separate work that is not
-currently offered as an end-user download. This is not GA or a stable release:
-features and workflows may change, updates may arrive frequently (sometimes
-multiple times a day), and physical-device, assistive-technology, and final owner
-acceptance gates remain open in the [MVP UAT record](docs/testing/mvp-uat.md).
+evaluation. Build `0.1.0-preview.5` supersedes build `0.1.0-preview.4`, whose
+air-gap bundle is defective (#82); it ships platform and web artifacts only.
+Scout Bee remains separate work that is not currently offered as an end-user
+download. This is not GA or a stable release: features and workflows may change,
+updates may arrive frequently (sometimes multiple times a day), and
+physical-device, assistive-technology, and final owner acceptance gates remain
+open in the [MVP UAT record](docs/testing/mvp-uat.md).
 
-The Windows Setup executable in Preview 2 is **not Authenticode signed**. Windows
-SmartScreen will warn that it comes from an unknown publisher, and that warning is
-accurate: Windows cannot verify who published an unsigned file, and continuing
-past the prompt is not safe on trust alone. Only install it after verifying the
-exact bytes (SHA-256 checksum and keyless attestation); if you have not verified
-the file, do not bypass the prompt. The
-[Preview 2 release notes](docs/releases/0.1.0-preview.4.md) document the exact
-verification steps.
+The standalone Windows desktop application is **deferred pending a full
+rewrite** (owner decision, 2026-07-18) and is not part of the current build.
+The most recent Windows preview build remains on the
+[`v0.1.0-preview.4` release](https://github.com/ApiaryLens/apiarylens/releases/tag/v0.1.0-preview.4);
+it is not Authenticode signed, carries the known deferred defect
+[#84](https://github.com/ApiaryLens/apiarylens/issues/84), and receives no
+further preview fixes before the rewrite. If you still choose to install it,
+the [build 0.1.0-preview.4 release notes](docs/releases/0.1.0-preview.4.md)
+document the honest SmartScreen guidance and the exact verification steps —
+never bypass the SmartScreen prompt for unverified bytes.
 
 Preview users should keep current backups and must not treat ApiaryLens as the sole
 copy of irreplaceable hive records or media. See the
-[Preview 2 release notes](docs/releases/0.1.0-preview.4.md) for scope,
-verification, and recovery guidance, and the
-[Public Preview 1 release notes](docs/releases/0.1.0-preview.1.md) for the prior
-preview.
+[Preview 1 release notes](docs/releases/0.1.0-preview.5.md) for scope,
+verification, and recovery guidance.
 
 ### Preview naming and build numbers
 
-Public previews are named **Preview N** (Public Preview 1, Preview 2, ...). The
-wire/semver version, `0.1.0-preview.M`, is an internal build ordinal that only
-ever increases and may not match N: `preview.2` and `preview.3` were consumed by
-unpublished internal drafts, so Preview 2 ships as build `0.1.0-preview.4`. Tags,
-manifests, and artifact names always carry the semver build number; announcements
-and documentation lead with the public preview name.
+Public previews are named **Preview N**, counting owner-accepted releases of
+the rebooted platform+web product starting at 1 (owner decision, 2026-07-18).
+The wire/semver version, `0.1.0-preview.M`, is an internal build ordinal that
+only ever increases, is never reused, and may not match N. Releases that
+predate the reboot do not count in the public sequence: the July 2026
+Windows-era "Preview 1" (build `0.1.0-preview.1`) and "Preview 2" (build
+`0.1.0-preview.4`, since retitled "Superseded internal build — do not use")
+are historical, and `preview.2`/`preview.3` were consumed by unpublished
+internal drafts. The current **Preview 1** therefore ships as build
+`0.1.0-preview.5`. Tags, manifests, and artifact names always carry the semver
+build number; announcements and documentation lead with the public preview
+name.
 
 ## Project direction
 
@@ -92,7 +100,7 @@ ADRs 0008 through 0011 accept the MVP implementation below.
 | Official public frontend hosting | Cloudflare Workers Static Assets (accepted) |
 | Scout Bee | Separate React UI and Go loopback executor consuming immutable product releases |
 
-The table describes the current Preview 2 artifact set. The accepted post-preview
+The table describes the current Preview 1 (build 0.1.0-preview.5) artifact set. The accepted post-preview
 direction changes the starting experience without rewriting that release history.
 Portfolio-wide ADRs 0014–0021 are part of the ApiaryLens design record (private;
 see [docs/RELOCATED.md](docs/RELOCATED.md)):

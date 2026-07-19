@@ -64,9 +64,9 @@ describe('contracts', () => {
       planId: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
       release: {
-        version: '0.1.0-preview.4',
+        version: '0.1.0-preview.5',
         channel: 'preview' as const,
-        manifestUrl: 'https://apiarylens.org/releases/0.1.0-preview.4/manifest.json',
+        manifestUrl: 'https://apiarylens.org/releases/0.1.0-preview.5/manifest.json',
         manifestSha256: 'a'.repeat(64),
       },
       operation: 'install' as const,

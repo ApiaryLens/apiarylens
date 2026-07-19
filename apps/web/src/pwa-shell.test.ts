@@ -16,6 +16,19 @@ const manifest = JSON.parse(
 ) as { start_url: string; scope: string; icons: Array<{ src: string }> };
 
 describe('installed PWA shell', () => {
+  it('stamps the service-worker cache name with the released product version', () => {
+    // The service worker is a static script, so its cache version is pinned by
+    // hand; this test is the stale-guard (T2-2 audit finding: the cache name
+    // once lagged one build behind the shipped release, leaving updated shells
+    // served from the previous release's cache generation).
+    const { version } = JSON.parse(
+      readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+    ) as { version: string };
+    expect(serviceWorker).toMatch(
+      new RegExp(`const CACHE = \`\\$\\{CACHE_PREFIX\\}${version.replaceAll('.', '\\.')}-r\\d+\``),
+    );
+  });
+
   it('keeps installation paths relative so root and /app deployments cache the same shell', () => {
     expect(manifest.start_url).toBe('./');
     expect(manifest.scope).toBe('./');

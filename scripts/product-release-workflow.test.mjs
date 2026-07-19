@@ -84,6 +84,27 @@ describe('product release workflow wiring', () => {
     }
   });
 
+  it('publishes without the windows job only for an explicitly windows-excluded Preview', () => {
+    // Owner directive 2026-07-18 (plan v2.1): the Windows client is deferred
+    // pending a full rewrite, so a Preview run may exclude the Windows job via
+    // the explicit include_windows=false dispatch input. The exclusion must be
+    // fail-closed on both sides: a skipped windows job is acceptable only when
+    // the policy resolved the exclusion, and an excluded run must refuse to
+    // publish any Windows subject or stale signing evidence.
+    expect(workflow).toContain('include_windows:');
+    expect(workflow).toContain('APIARYLENS_INCLUDE_WINDOWS');
+    expect(workflow).toContain(
+      "github.event_name != 'workflow_dispatch' || inputs.include_windows",
+    );
+    expect(workflow).toContain("if: needs.policy.outputs.windows_included == 'true'");
+    expect(workflow).toContain(
+      "needs.windows.result == 'skipped' && needs.policy.outputs.windows_included == 'false'",
+    );
+    expect(workflow).toContain('Windows subjects present in a windows-excluded run.');
+    expect(workflow).toContain('No Windows build in this release');
+    expect(workflow).toContain('deferred pending a full rewrite');
+  });
+
   it('refuses to replace an existing immutable release', () => {
     expect(workflow).toContain('gh release view "$EXACT_TAG"');
     expect(workflow).not.toContain('--clobber');

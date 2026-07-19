@@ -4,7 +4,7 @@ import { basename, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { backup as sqliteBackup, DatabaseSync } from 'node:sqlite';
 
-const productVersion = '0.1.0-preview.4';
+const productVersion = '0.1.0-preview.5';
 
 export async function createBackup(dataDirectory, outputDirectory) {
   const data = resolve(dataDirectory);
