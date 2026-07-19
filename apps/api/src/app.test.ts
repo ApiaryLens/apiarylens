@@ -841,4 +841,21 @@ describe('ApiaryLens API', () => {
     expect(after).toHaveLength(1);
     expect(after[0]).toMatchObject({ id: apiaryId, name: 'Original yard', version: 3 });
   });
+
+  it('refuses an archive that declares more content than a restore can safely expand', async () => {
+    const owner = await bootstrap();
+    // A ZIP whose entry count exceeds the restore bound must be refused
+    // before its contents are expanded into memory.
+    const entries: Record<string, Uint8Array> = {};
+    for (let index = 0; index < 10_001; index += 1) {
+      entries[`bomb/${index}`] = strToU8('x');
+    }
+    const refused = await app.request('/api/v1/import/full', {
+      method: 'POST',
+      headers: { cookie: owner.cookie, 'x-csrf-token': owner.body.csrfToken },
+      body: zipSync(entries, { level: 0 }),
+    });
+    expect(refused.status).toBe(400);
+    expect(((await refused.json()) as { code: string }).code).toBe('import_too_large');
+  });
 });

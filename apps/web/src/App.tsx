@@ -609,6 +609,17 @@ export function App() {
                 {...(pageRequest.accountSection ? { section: pageRequest.accountSection } : {})}
                 onSignOut={() => void signOut()}
                 onClear={() => void clearLocalWorkspace().then(() => location.reload())}
+                // Local backup drains the outbox before exporting so the
+                // downloaded file carries the newest work.
+                onFlushPending={() => schedulerRef.current?.request('manual') ?? Promise.resolve()}
+                // Restore cutover: no queued write may push into a freshly
+                // restored database, so synchronization is suspended for the
+                // whole restore and resumed only when the restore fails.
+                onSuspendSync={() => schedulerRef.current?.stop()}
+                onResumeSync={() => {
+                  schedulerRef.current?.resume();
+                  void schedulerRef.current?.request('open');
+                }}
               />
             )}
           </main>

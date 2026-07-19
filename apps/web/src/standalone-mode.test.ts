@@ -104,6 +104,38 @@ describe('local-only (standalone) mode', () => {
     expect(accountSource).toContain('.importFullBackup(csrfToken, request.file)');
     expect(accountSource).toContain('setTimeout(onRestored, 1500)');
   });
+
+  it('drains pending writes before exporting and records a backup only after it downloads', () => {
+    // A backup presented as the family's authoritative copy must carry their
+    // newest work, and the backup-health timestamp must never record an
+    // export that failed.
+    expect(accountSource).toContain('await flushPending();');
+    const flushed = accountSource.indexOf('await flushPending();');
+    const pendingCheck = accountSource.indexOf('pendingOperations + pendingMedia > 0', flushed);
+    const fetched = accountSource.indexOf("fetch('/api/v1/export/full'", pendingCheck);
+    const okGuard = accountSource.indexOf('if (!response.ok) throw', fetched);
+    const recorded = accountSource.indexOf('await recordLocalBackup();', okGuard);
+    expect(pendingCheck).toBeGreaterThan(flushed);
+    expect(fetched).toBeGreaterThan(pendingCheck);
+    expect(okGuard).toBeGreaterThan(fetched);
+    expect(recorded).toBeGreaterThan(okGuard);
+    const appWiring = appSource.indexOf("schedulerRef.current?.request('manual')");
+    expect(appWiring).toBeGreaterThan(-1);
+  });
+
+  it('suspends synchronization for the whole restore cutover', () => {
+    // No queued write may push into a freshly restored database and
+    // reintroduce data the overwrite warning promised would be gone.
+    const confirm = accountSource.indexOf('function confirmRestore()');
+    const suspended = accountSource.indexOf('suspendSync();', confirm);
+    const imported = accountSource.indexOf('.importFullBackup(', suspended);
+    expect(suspended).toBeGreaterThan(confirm);
+    expect(imported).toBeGreaterThan(suspended);
+    // A failed restore resumes normal scheduling.
+    expect(accountSource).toContain('resumeSync();');
+    expect(appSource).toContain('onSuspendSync={() => schedulerRef.current?.stop()}');
+    expect(appSource).toContain('schedulerRef.current?.resume()');
+  });
 });
 
 describe('local backup signal', () => {

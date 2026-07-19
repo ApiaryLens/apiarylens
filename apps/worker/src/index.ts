@@ -813,8 +813,10 @@ app.post('/api/v1/import/full', requireSession, requireCsrf, async (c) => {
     return apiError(c, 400, 'import_invalid', 'The uploaded backup file is empty or too large');
   let archive: Record<string, Uint8Array>;
   try {
-    archive = unzipSync(bytes);
-  } catch {
+    archive = boundedUnzip(bytes);
+  } catch (caught) {
+    if (caught instanceof ArchiveBoundsError)
+      return apiError(c, 400, 'import_too_large', caught.message);
     return apiError(
       c,
       400,
@@ -841,6 +843,32 @@ app.post('/api/v1/import/full', requireSession, requireCsrf, async (c) => {
     }
   }
   const organizationId = c.get('session').organizationId;
+  // Stage the archive's verified media BEFORE the record batches so a storage
+  // failure surfaces while the previous records are still intact. Staged
+  // blobs are either identical replacements (the archive sha was verified
+  // against the record itself) or unreferenced until the records land.
+  try {
+    for (const [mediaId, mediaContent] of parsed.mediaBytes) {
+      // Drop any pre-restore thumbnail so a stale derivative never outlives
+      // the restored original; clients regenerate on demand.
+      await c.env.MEDIA.delete(mediaKey(organizationId, mediaId, 'thumbnail'));
+      await c.env.MEDIA.put(mediaKey(organizationId, mediaId), mediaContent, {
+        httpMetadata: {
+          contentType: String(
+            parsed.records.mediaAsset.find((record) => record.id === mediaId)?.fields.mediaType ??
+              'application/octet-stream',
+          ),
+        },
+      });
+    }
+  } catch {
+    return apiError(
+      c,
+      400,
+      'import_media_failed',
+      'The photos could not be written to storage. Nothing was restored.',
+    );
+  }
   const timestamp = now();
   const statements: D1PreparedStatement[] = [];
   const removedMediaIds: string[] = [];
@@ -920,22 +948,18 @@ app.post('/api/v1/import/full', requireSession, requireCsrf, async (c) => {
     ).bind(crypto.randomUUID(), organizationId, c.get('session').userId, organizationId, timestamp),
   );
   await runBatches(c.env.DB, statements);
-  for (const removedId of removedMediaIds) {
-    await c.env.MEDIA.delete(mediaKey(organizationId, removedId));
-    await c.env.MEDIA.delete(mediaKey(organizationId, removedId, 'thumbnail'));
-  }
-  for (const [mediaId, mediaContent] of parsed.mediaBytes) {
-    // Drop any pre-restore thumbnail so a stale derivative never outlives the
-    // restored original; clients regenerate from the original.
-    await c.env.MEDIA.delete(mediaKey(organizationId, mediaId, 'thumbnail'));
-    await c.env.MEDIA.put(mediaKey(organizationId, mediaId), mediaContent, {
-      httpMetadata: {
-        contentType: String(
-          parsed.records.mediaAsset.find((record) => record.id === mediaId)?.fields.mediaType ??
-            'application/octet-stream',
-        ),
-      },
-    });
+  // Cleanup after the committed cutover: blobs for records the restore
+  // removed, plus stale pre-restore blobs behind imported media ids whose
+  // bytes the archive did not carry (staged/failed records) — otherwise
+  // post-backup photo content would outlive a restore that promised to
+  // replace every photo. Failures here never fail the restore: the affected
+  // records are tombstoned (unreachable) or honestly non-ready.
+  const staleImportedIds = parsed.records.mediaAsset
+    .map((record) => record.id)
+    .filter((id) => !parsed.mediaBytes.has(id));
+  for (const staleId of [...removedMediaIds, ...staleImportedIds]) {
+    await c.env.MEDIA.delete(mediaKey(organizationId, staleId)).catch(() => undefined);
+    await c.env.MEDIA.delete(mediaKey(organizationId, staleId, 'thumbnail')).catch(() => undefined);
   }
   return c.json({
     status: 'restored',
@@ -1148,6 +1172,34 @@ const backupColumns: Record<string, string[]> = {
   ],
 };
 const backupTables = Object.keys(backupColumns);
+
+/** Refusal raised when a ZIP declares more content than a restore may expand. */
+class ArchiveBoundsError extends Error {}
+
+const MAX_ARCHIVE_ENTRIES = 10_000;
+const MAX_EXPANDED_BYTES = 256 * 1024 * 1024;
+
+/**
+ * Unzip with bounds on entry count and total declared uncompressed size so a
+ * small ZIP bomb cannot exhaust Worker memory before record and media
+ * validation can apply their own limits.
+ */
+function boundedUnzip(bytes: Uint8Array): Record<string, Uint8Array> {
+  let entries = 0;
+  let expanded = 0;
+  return unzipSync(bytes, {
+    filter: (file) => {
+      entries += 1;
+      expanded += file.originalSize;
+      if (entries > MAX_ARCHIVE_ENTRIES || expanded > MAX_EXPANDED_BYTES) {
+        throw new ArchiveBoundsError(
+          'The backup archive declares more content than a restore can safely expand',
+        );
+      }
+      return true;
+    },
+  });
+}
 
 async function requireScoutOperator(c: AppContext, next: Next) {
   const supplied = c.req.header('authorization');

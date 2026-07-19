@@ -590,8 +590,11 @@ export function createApi(options: ApiOptions) {
       }
       let archive: Record<string, Uint8Array>;
       try {
-        archive = unzipSync(bytes);
-      } catch {
+        archive = boundedUnzip(bytes);
+      } catch (caught) {
+        if (caught instanceof ArchiveBoundsError) {
+          return error(c, 400, 'import_too_large', caught.message);
+        }
         return error(
           c,
           400,
@@ -624,15 +627,40 @@ export function createApi(options: ApiOptions) {
       }
       const session = c.get('session');
       const organizationId = session.organization.id;
-      const result = store.importOrganizationData(organizationId, session.user.id, parsed.records);
-      for (const removedId of result.removedMediaIds) {
-        await mediaStore.delete(organizationId, removedId);
+      // Stage the archive's verified media BEFORE the record transaction so a
+      // filesystem failure surfaces while the previous records are still
+      // intact. Staged blobs are either identical replacements (the archive
+      // sha was verified against the record itself) or unreferenced until the
+      // transaction commits.
+      try {
+        for (const [mediaId, mediaContent] of parsed.mediaBytes) {
+          // Drop any pre-restore thumbnail so a stale derivative never
+          // outlives the restored original; clients regenerate on demand.
+          await mediaStore.delete(organizationId, mediaId, 'thumbnail');
+          await mediaStore.put(organizationId, mediaId, mediaContent);
+        }
+      } catch {
+        return error(
+          c,
+          400,
+          'import_media_failed',
+          'The photos could not be written to storage. Nothing was restored.',
+        );
       }
-      for (const [mediaId, mediaContent] of parsed.mediaBytes) {
-        // Drop any pre-restore thumbnail so a stale derivative never outlives
-        // the restored original; clients regenerate from the original.
-        await mediaStore.delete(organizationId, mediaId, 'thumbnail');
-        await mediaStore.put(organizationId, mediaId, mediaContent);
+      // Records are replaced in one transaction; a failure here leaves every
+      // previous record intact.
+      const result = store.importOrganizationData(organizationId, session.user.id, parsed.records);
+      // Cleanup after the committed cutover: blobs for records the restore
+      // removed, plus stale pre-restore blobs behind imported media ids whose
+      // bytes the archive did not carry (staged/failed records) — otherwise
+      // post-backup photo content would outlive a restore that promised to
+      // replace every photo. Failures here never fail the restore: the
+      // affected records are tombstoned (unreachable) or honestly non-ready.
+      const staleImportedIds = parsed.records.mediaAsset
+        .map((record) => record.id)
+        .filter((id) => !parsed.mediaBytes.has(id));
+      for (const staleId of [...result.removedMediaIds, ...staleImportedIds]) {
+        await mediaStore.delete(organizationId, staleId).catch(() => undefined);
       }
       return c.json({
         status: 'restored',
@@ -652,6 +680,34 @@ export function createApi(options: ApiOptions) {
   });
 
   return app;
+}
+
+/** Refusal raised when a ZIP declares more content than a restore may expand. */
+class ArchiveBoundsError extends Error {}
+
+const MAX_ARCHIVE_ENTRIES = 10_000;
+const MAX_EXPANDED_BYTES = 256 * 1024 * 1024;
+
+/**
+ * Unzip with bounds on entry count and total declared uncompressed size so a
+ * small ZIP bomb cannot exhaust the service's memory before record and media
+ * validation can apply their own limits.
+ */
+function boundedUnzip(bytes: Uint8Array): Record<string, Uint8Array> {
+  let entries = 0;
+  let expanded = 0;
+  return unzipSync(bytes, {
+    filter: (file) => {
+      entries += 1;
+      expanded += file.originalSize;
+      if (entries > MAX_ARCHIVE_ENTRIES || expanded > MAX_EXPANDED_BYTES) {
+        throw new ArchiveBoundsError(
+          'The backup archive declares more content than a restore can safely expand',
+        );
+      }
+      return true;
+    },
+  });
 }
 
 function safeFileName(value: string): string {

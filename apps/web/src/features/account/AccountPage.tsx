@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import type { BuildIdentity } from '@apiarylens/contracts';
 import { api } from '../../api.js';
 import { frontendBuild, windowsPackageLabel } from '../../build-identity.js';
-import { lastLocalBackupAt, recordLocalBackup } from '../../db.js';
+import { db, lastLocalBackupAt, recordLocalBackup } from '../../db.js';
 import type { AccountSection } from '../../navigation.js';
 import type { ActiveSession } from '../../session.js';
 import { useGlossary } from '../glossary/glossary-context.js';
@@ -21,12 +21,21 @@ export function VersionView({
   section,
   onSignOut,
   onClear,
+  onFlushPending,
+  onSuspendSync,
+  onResumeSync,
 }: {
   session: ActiveSession;
   /** Administration sidebar target: scrolls the matching section into view. */
   section?: AccountSection;
   onSignOut: () => void;
   onClear: () => void;
+  /** Drains pending local writes into the backend before a backup export. */
+  onFlushPending?: () => Promise<void>;
+  /** Suspends background synchronization for a restore cutover. */
+  onSuspendSync?: () => void;
+  /** Resumes background synchronization after a failed restore cutover. */
+  onResumeSync?: () => void;
 }) {
   const [backendBuild, setBackendBuild] = useState<BuildIdentity>();
   // Local-only sessions (no cloud backend) get the first-class local
@@ -61,7 +70,15 @@ export function VersionView({
           <h1>Account and build</h1>
         </div>
       </div>
-      {localOnly && isOwner && <LocalBackupSection session={session} onRestored={onClear} />}
+      {localOnly && isOwner && (
+        <LocalBackupSection
+          session={session}
+          onRestored={onClear}
+          flushPending={onFlushPending ?? (() => Promise.resolve())}
+          suspendSync={onSuspendSync ?? (() => undefined)}
+          resumeSync={onResumeSync ?? (() => undefined)}
+        />
+      )}
       <section className="card details">
         {frontendBuild.releaseChannel === 'preview' && (
           <div className="preview-notice" role="note">
@@ -205,10 +222,19 @@ type PendingRestore = { kind: 'file'; file: File } | { kind: 'native' };
 function LocalBackupSection({
   session,
   onRestored,
+  flushPending,
+  suspendSync,
+  resumeSync,
 }: {
   session: ActiveSession;
   /** Clears the on-device replica and reloads so the restored data is re-read. */
   onRestored: () => void;
+  /** Drains pending local writes into the backend before a backup export. */
+  flushPending: () => Promise<void>;
+  /** Suspends background synchronization for a restore cutover. */
+  suspendSync: () => void;
+  /** Resumes background synchronization after a failed or canceled cutover. */
+  resumeSync: () => void;
 }) {
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState('');
@@ -219,6 +245,44 @@ function LocalBackupSection({
   function finishWith(text: string) {
     setMessage(text);
     setWorking(false);
+  }
+
+  async function downloadBackupFile() {
+    setWorking(true);
+    setMessage('');
+    try {
+      // Drain the outbox and media uploads first so the backup carries the
+      // family's newest work, then refuse honestly if anything is still
+      // pending rather than shipping a file that silently omits it.
+      await flushPending();
+      const [pendingOperations, pendingMedia] = await Promise.all([
+        db.outbox.count(),
+        db.media.filter((item) => item.state !== 'ready').count(),
+      ]);
+      if (pendingOperations + pendingMedia > 0) {
+        finishWith(
+          'Recent work is still being written to this computer. Try the backup again in a moment so nothing is left out.',
+        );
+        return;
+      }
+      const response = await fetch('/api/v1/export/full', { credentials: 'same-origin' });
+      if (!response.ok) throw new Error('The backup file could not be created. Try again.');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `apiarylens-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+      anchor.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      // Recorded only after the archive has actually been produced — this
+      // timestamp is the family's backup-health signal.
+      await recordLocalBackup();
+      finishWith('Backup file downloaded. Keep it somewhere safe.');
+    } catch (caught) {
+      finishWith(
+        caught instanceof Error ? caught.message : 'The backup file could not be created.',
+      );
+    }
   }
 
   function createNativeBackup() {
@@ -247,23 +311,31 @@ function LocalBackupSection({
     if (!request) return;
     setWorking(true);
     setMessage('');
+    // Restore cutover: suspend synchronization so no queued write can push
+    // into the restored database and reintroduce data the overwrite warning
+    // promised would be gone. Resumed only when the restore does not happen.
+    suspendSync();
     if (request.kind === 'native') {
       void api
         .restoreStandaloneBackup()
         .then((result) => {
           if (result.status === 'restored') {
-            finishWith(`Restored ${result.files} verified files. Sign in again to continue.`);
+            setMessage(`Restored ${result.files} verified files. Reloading…`);
+            setTimeout(onRestored, 1500);
           } else {
+            resumeSync();
             setWorking(false);
           }
         })
-        .catch((caught: unknown) =>
-          finishWith(caught instanceof Error ? caught.message : 'Restore could not be completed.'),
-        );
+        .catch((caught: unknown) => {
+          resumeSync();
+          finishWith(caught instanceof Error ? caught.message : 'Restore could not be completed.');
+        });
       return;
     }
     const csrfToken = session.csrfToken;
     if (!csrfToken) {
+      resumeSync();
       finishWith('Reopen the app, then try the restore again.');
       return;
     }
@@ -279,16 +351,19 @@ function LocalBackupSection({
               : ''
           } Reloading…`,
         );
-        // Drop the on-device replica so the app re-reads the restored records.
+        // Drop the on-device replica (including any queued writes — the
+        // warning covered them) so the app re-reads the restored records.
+        // Synchronization stays suspended until the reload.
         setTimeout(onRestored, 1500);
       })
-      .catch((caught: unknown) =>
+      .catch((caught: unknown) => {
+        resumeSync();
         finishWith(
           caught instanceof Error
             ? caught.message
             : 'The backup could not be restored. Nothing was changed.',
-        ),
-      );
+        );
+      });
   }
 
   return (
@@ -342,13 +417,13 @@ function LocalBackupSection({
         </div>
       )}
       <div className="button-row">
-        <a
-          className="button primary link-button"
-          href="/api/v1/export/full"
-          onClick={() => void recordLocalBackup()}
+        <button
+          className="button primary"
+          disabled={working}
+          onClick={() => void downloadBackupFile()}
         >
           Download backup file
-        </a>
+        </button>
         <label className={`button secondary link-button${working ? ' disabled' : ''}`}>
           Restore from backup file…
           <input

@@ -348,9 +348,13 @@ export const apiFixtures: readonly ConformanceFixture[] = [
     async run(world) {
       const owner = await world.owner();
       const bytes = jpegBytes(512, 0x37);
+      const stagedBytes = jpegBytes(256, 0x59);
       const apiaryOperation = createOperation('apiary', { ...apiaryFields });
       const mediaOperation = createOperation('mediaAsset', mediaAssetFields(bytes));
-      await owner.mustPush([apiaryOperation, mediaOperation]);
+      // A second photo record that is still staged (no uploaded bytes) when
+      // the backup is taken.
+      const stagedOperation = createOperation('mediaAsset', mediaAssetFields(stagedBytes));
+      await owner.mustPush([apiaryOperation, mediaOperation, stagedOperation]);
       const upload = await owner.request(`/api/v1/media/${mediaOperation.entityId}/content`, {
         method: 'PUT',
         headers: { 'content-type': 'image/jpeg' },
@@ -362,7 +366,10 @@ export const apiFixtures: readonly ConformanceFixture[] = [
       expect(exported.status).toBe(200);
       const archive = new Uint8Array(await exported.arrayBuffer());
 
-      // The family keeps working after the backup: a rename and a new hive.
+      // The family keeps working after the backup: a rename, a new hive, the
+      // staged photo's bytes arrive, and a brand-new photo is added.
+      const postBackupBytes = jpegBytes(384, 0x73);
+      const postBackupMedia = createOperation('mediaAsset', mediaAssetFields(postBackupBytes));
       await owner.mustPush([
         createOperation(
           'apiary',
@@ -370,7 +377,19 @@ export const apiFixtures: readonly ConformanceFixture[] = [
           { entityId: apiaryOperation.entityId, action: 'update', baseVersion: 1 },
         ),
         createOperation('hive', hiveFields(apiaryOperation.entityId)),
+        postBackupMedia,
       ]);
+      for (const [mediaId, mediaBody] of [
+        [stagedOperation.entityId, stagedBytes],
+        [postBackupMedia.entityId, postBackupBytes],
+      ] as const) {
+        const lateUpload = await owner.request(`/api/v1/media/${mediaId}/content`, {
+          method: 'PUT',
+          headers: { 'content-type': 'image/jpeg' },
+          body: mediaBody,
+        });
+        expect(lateUpload.status).toBe(200);
+      }
       const replicaCursor = await readJson<{ nextCursor: string }>(
         await owner.request('/api/v1/sync/pull?limit=250'),
       );
@@ -389,8 +408,8 @@ export const apiFixtures: readonly ConformanceFixture[] = [
         mediaMissing: number;
       }>(restored);
       expect(summary.status).toBe('restored');
-      expect(summary.imported).toBe(2);
-      expect(summary.removed).toBe(1);
+      expect(summary.imported).toBe(3);
+      expect(summary.removed).toBe(2);
       expect(summary.mediaFiles).toBe(1);
       expect(summary.mediaMissing).toBe(0);
 
@@ -407,6 +426,17 @@ export const apiFixtures: readonly ConformanceFixture[] = [
       const media = await owner.request(`/api/v1/media/${mediaOperation.entityId}/content`);
       expect(media.status).toBe(200);
       expect(Array.from(new Uint8Array(await media.arrayBuffer()))).toEqual(Array.from(bytes));
+
+      // Post-backup photo content does not outlive the restore: the record
+      // that was staged in the backup loses its later-uploaded bytes, and the
+      // photo added after the backup is gone entirely.
+      const staleContent = await owner.request(`/api/v1/media/${stagedOperation.entityId}/content`);
+      expect(staleContent.status).toBe(404);
+      expect(await readErrorCode(staleContent)).toBe('media_content_missing');
+      const removedContent = await owner.request(
+        `/api/v1/media/${postBackupMedia.entityId}/content`,
+      );
+      expect(removedContent.status).toBe(404);
 
       // A device replica pulling from its pre-restore cursor converges without
       // any cursor reset: the restore is expressed as ordinary change rows.
