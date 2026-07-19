@@ -86,6 +86,35 @@ describe('product release signing policy', () => {
     ).toThrow(/allow_unsigned_preview/);
   });
 
+  it('never resolves a windows-excluded run as signed, even with signing material', () => {
+    // The Windows job is the only signing job, so configured SignPath
+    // material must not silently flip a windows-excluded Preview to 'signed'
+    // (which would skip both the signing round trip and the unsigned-preview
+    // warning). The exclusion always requires the explicit opt-in and always
+    // ships as a labeled unsigned Preview.
+    expect(() =>
+      resolveProductReleasePolicy({
+        version: '0.1.0-preview.5',
+        exactTag: 'v0.1.0-preview.5',
+        signingMaterialAvailable: true,
+        includeWindows: false,
+      }),
+    ).toThrow(/allow_unsigned_preview/);
+    expect(
+      resolveProductReleasePolicy({
+        version: '0.1.0-preview.5',
+        exactTag: 'v0.1.0-preview.5',
+        signingMaterialAvailable: true,
+        allowUnsignedPreview: true,
+        includeWindows: false,
+      }),
+    ).toMatchObject({
+      signingMode: 'unsigned-preview',
+      explicitUnsignedPreviewOptIn: true,
+      windowsIncluded: false,
+    });
+  });
+
   it.each([
     ['0.1.0-rc.1', 'v0.1.0-rc.1'],
     ['0.1.0', 'v0.1.0'],

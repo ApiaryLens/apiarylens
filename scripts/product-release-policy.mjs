@@ -34,6 +34,26 @@ export function resolveProductReleasePolicy({
       `${channel} releases must include the Windows build; include_windows=false is a Preview-only option.`,
     );
   }
+  if (!includeWindows) {
+    // The Windows job is the only signing job, so a windows-excluded run
+    // ships unsigned bytes even when SignPath material is configured. It must
+    // therefore always resolve as an explicitly opted-in unsigned Preview:
+    // signing material never silently converts it to 'signed', and the
+    // unsigned-preview labeling/warning path always applies to what ships.
+    if (!allowUnsignedPreview) {
+      throw new Error(
+        'A windows-excluded Preview ships unsigned artifacts and requires an explicit manual allow_unsigned_preview opt-in for the exact tag.',
+      );
+    }
+    return {
+      version,
+      exactTag,
+      channel,
+      signingMode: 'unsigned-preview',
+      explicitUnsignedPreviewOptIn: true,
+      windowsIncluded: false,
+    };
+  }
   if (signingMaterialAvailable) {
     return {
       version,
