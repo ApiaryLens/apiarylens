@@ -6,7 +6,9 @@ export type ManualWeatherSnapshot = {
   windSpeed: number | null;
   windSpeedUnit: string;
   windDirection: string | null;
-  source: 'manual';
+  source: 'manual' | 'provider';
+  providerName: string | null;
+  attribution: string | null;
   observedAt: string;
 };
 
@@ -18,6 +20,9 @@ export function readManualWeatherSnapshot(
 ): ManualWeatherSnapshot | null {
   const text = (name: string) => String(values.get(name) ?? '').trim();
   const numeric = (name: string) => (text(name) === '' ? null : Number(text(name)));
+  // A consented provider lookup records its provenance through these fields;
+  // plain manual entry leaves them absent and stays source "manual".
+  const providerAssisted = text('weatherSource') === 'provider';
   const snapshot: ManualWeatherSnapshot = {
     temperature: numeric('temperature'),
     temperatureUnit: text('temperatureUnit') || 'f',
@@ -26,8 +31,10 @@ export function readManualWeatherSnapshot(
     windSpeed: numeric('windSpeed'),
     windSpeedUnit: text('windSpeedUnit') || 'mph',
     windDirection: text('windDirection') || null,
-    source: 'manual',
-    observedAt,
+    source: providerAssisted ? 'provider' : 'manual',
+    providerName: providerAssisted ? text('weatherProviderName') || null : null,
+    attribution: providerAssisted ? text('weatherAttribution') || null : null,
+    observedAt: (providerAssisted && text('weatherObservedAt')) || observedAt,
   };
   return snapshot.temperature !== null ||
     snapshot.conditions !== '' ||
@@ -41,7 +48,9 @@ export function readManualWeatherSnapshot(
 /**
  * Provider adapters receive only the approved observation time and coordinates.
  * Hive records, family identity, notes, media, and credentials are intentionally
- * outside this boundary. No adapter is configured in the preview release.
+ * outside this boundary. The web inspection form offers one optional keyless
+ * adapter (see features/inspections/weather-assist.ts); it stays behind this
+ * consent gate and is never required to save an inspection.
  */
 export type WeatherEnrichmentRequest = {
   observedAt: string;
@@ -85,5 +94,8 @@ export function formatWeatherSummary(value: unknown): string {
       : '';
     parts.push(`${weather.windSpeed} ${String(weather.windSpeedUnit ?? 'mph')}${direction} wind`);
   } else if (weather.wind) parts.push(String(weather.wind));
-  return parts.length > 0 ? parts.join(' · ') : 'Not recorded';
+  if (parts.length === 0) return 'Not recorded';
+  if (weather.source === 'provider' && weather.providerName)
+    parts.push(`via ${String(weather.providerName)}`);
+  return parts.join(' · ');
 }

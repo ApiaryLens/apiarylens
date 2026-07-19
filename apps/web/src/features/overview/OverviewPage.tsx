@@ -1,8 +1,15 @@
+import { useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { api } from '../../api.js';
 import { db, type LocalResource } from '../../db.js';
 import { useResources } from '../../local/use-resources.js';
 import type { PageRequest } from '../../navigation.js';
 import { Empty } from '../../components/Empty.js';
+import {
+  cacheMemberSummary,
+  cachedMemberSummary,
+  memberSummaryFreshness,
+} from './members-summary.js';
 
 export function Dashboard({
   organizationId,
@@ -16,6 +23,31 @@ export function Dashboard({
   const inspections = useResources(organizationId, 'inspection');
   const followUps = useResources(organizationId, 'followUp');
   const pending = useLiveQuery(() => db.outbox.count(), [], 0);
+  // Refresh the roster reading opportunistically; when the session or the
+  // connection is unavailable the card falls back to the last honest reading
+  // (or a "not synced" state), never to a fabricated count.
+  const memberSummary = useLiveQuery(() => cachedMemberSummary(organizationId), [organizationId]);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const members = await api.members();
+        // Pending invitations sit behind a more privileged route; when this
+        // session cannot read them the summary records "unknown" (null), never
+        // a false zero.
+        const invitations = await api
+          .invitations()
+          .then((result): readonly unknown[] | undefined => result.items)
+          .catch(() => undefined);
+        if (!cancelled) await cacheMemberSummary(organizationId, members.items, invitations);
+      } catch {
+        // Offline or no live session: keep the last honest reading.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [organizationId]);
   const openFollowUps = followUps.filter((item) => !item.data.completedAt);
   const latestByHive = new Map<string, LocalResource>();
   for (const inspection of [...inspections].sort((a, b) =>
@@ -69,6 +101,38 @@ export function Dashboard({
           <strong>{openFollowUps.length}</strong>
           <span>Open follow-ups</span>
         </button>
+        {memberSummary ? (
+          <button
+            className="metric metric-link"
+            type="button"
+            onClick={() => onNavigate({ page: 'version' })}
+            aria-label={`View family members: ${memberSummary.activeMembers} active${
+              typeof memberSummary.invitedMembers === 'number' && memberSummary.invitedMembers > 0
+                ? `, ${memberSummary.invitedMembers} invited`
+                : ''
+            }. ${memberSummaryFreshness(memberSummary.fetchedAt)}.`}
+          >
+            <strong>{memberSummary.activeMembers}</strong>
+            <span>Members</span>
+            <small>
+              {typeof memberSummary.invitedMembers === 'number' && memberSummary.invitedMembers > 0
+                ? `${memberSummary.invitedMembers} invited · `
+                : ''}
+              {memberSummaryFreshness(memberSummary.fetchedAt)}
+            </small>
+          </button>
+        ) : (
+          <button
+            className="metric metric-link"
+            type="button"
+            onClick={() => onNavigate({ page: 'version' })}
+            aria-label="View family members. The roster has not synced to this device yet."
+          >
+            <strong aria-hidden="true">–</strong>
+            <span>Members</span>
+            <small>Not synced to this device yet</small>
+          </button>
+        )}
         <article className="metric pending">
           <strong>{pending}</strong>
           <span>Pending sync</span>

@@ -36,8 +36,49 @@ describe('inspection weather fields', () => {
     expect(readManualWeatherSnapshot(values, '2026-07-17T12:00:00.000Z')).toMatchObject({
       conditions: 'Clear',
       source: 'manual',
+      providerName: null,
+      attribution: null,
       observedAt: '2026-07-17T12:00:00.000Z',
     });
+  });
+
+  it('records provider provenance only after a consented lookup filled the form', () => {
+    const values = new FormData();
+    values.set('temperature', '83.6');
+    values.set('conditions', 'Partly cloudy');
+    values.set('weatherSource', 'provider');
+    values.set('weatherProviderName', 'Open-Meteo');
+    values.set('weatherAttribution', 'Weather data by Open-Meteo.com');
+    values.set('weatherObservedAt', '2026-07-17T11:00:00.000Z');
+    expect(readManualWeatherSnapshot(values, '2026-07-17T11:20:00.000Z')).toMatchObject({
+      source: 'provider',
+      providerName: 'Open-Meteo',
+      attribution: 'Weather data by Open-Meteo.com',
+      observedAt: '2026-07-17T11:00:00.000Z',
+    });
+
+    const forged = new FormData();
+    forged.set('conditions', 'Clear');
+    forged.set('weatherProviderName', 'Somewhere');
+    expect(readManualWeatherSnapshot(forged, '2026-07-17T12:00:00.000Z')).toMatchObject({
+      source: 'manual',
+      providerName: null,
+    });
+  });
+
+  it('discloses provider assistance in the inspection summary', () => {
+    expect(
+      formatWeatherSummary({
+        temperature: 83.6,
+        temperatureUnit: 'f',
+        conditions: 'Partly cloudy',
+        source: 'provider',
+        providerName: 'Open-Meteo',
+      }),
+    ).toBe('83.6°F · Partly cloudy · via Open-Meteo');
+    expect(formatWeatherSummary({ source: 'provider', providerName: 'Open-Meteo' })).toBe(
+      'Not recorded',
+    );
   });
 
   it('requires consent and minimizes the optional provider request', () => {

@@ -1,7 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api } from '../../api.js';
+import { cacheMemberSummary } from '../overview/members-summary.js';
 
-export function FamilyAccess({ csrfToken }: { csrfToken: string }) {
+export function FamilyAccess({
+  csrfToken,
+  organizationId,
+}: {
+  csrfToken: string;
+  organizationId: string;
+}) {
   const [members, setMembers] = useState<
     Array<{ id: string; displayName: string; identifier: string; role: string; status: string }>
   >([]);
@@ -29,6 +36,9 @@ export function FamilyAccess({ csrfToken }: { csrfToken: string }) {
     const [memberResult, invitationResult] = await Promise.all([api.members(), api.invitations()]);
     setMembers(memberResult.items);
     setInvitations(invitationResult.items);
+    // Keep the offline-aware Overview Members card in step with roster and
+    // invitation changes.
+    await cacheMemberSummary(organizationId, memberResult.items, invitationResult.items);
   }
 
   useEffect(() => {
