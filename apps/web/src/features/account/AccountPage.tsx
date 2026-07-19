@@ -115,16 +115,18 @@ export function VersionView({
         </dl>
         <div className="button-row">
           {/* Owner UAT fix (2026-07-19): the version-interpolated
-              `/releases/<version>/` route has no page on apiarylens.org (the
+              `/releases/<version>/` route on apiarylens.org has no page (the
               worker only redirects windows artifact paths), and per-version
-              docs pages are allowlist-gated. The changelog route is always
-              published, and each entry links on to the full per-build notes
-              and the GitHub release with its artifacts. */}
+              docs pages are allowlist-gated on the site. The Version and Build
+              view must link the exact displayed build to its matching release
+              notes (mvp-definition, versioning lifecycle), so this points at
+              the GitHub release tag for `productVersion` — version-exact,
+              always published, and it carries the notes and the artifacts. */}
           <a
             className="button secondary link-button"
-            href="https://apiarylens.org/docs/releases/changelog/"
+            href={`https://github.com/ApiaryLens/apiarylens/releases/tag/v${frontendBuild.productVersion}`}
           >
-            Release notes and changelog
+            Release notes and artifacts
           </a>
           <button
             type="button"

@@ -70,6 +70,16 @@ describe('installed PWA shell', () => {
     expect(accountSource).toContain('{!deviceManaged && (');
   });
 
+  it('links the Version and Build view to the matching release notes at a URL that exists', () => {
+    // Owner UAT fix (2026-07-19): `apiarylens.org/releases/<version>/` has no
+    // page and per-version docs pages are allowlist-gated, so the exact-build
+    // link is the GitHub release tag — version-scoped and always published.
+    expect(accountSource).toContain(
+      'https://github.com/ApiaryLens/apiarylens/releases/tag/v${frontendBuild.productVersion}',
+    );
+    expect(accountSource).not.toContain('apiarylens.org/releases/');
+  });
+
   it('makes destination overview metrics keyboard-native navigation controls', () => {
     expect(overviewSource).toContain(
       "onClick={() => onNavigate({ page: 'hives', hiveStatus: 'active' })}",
