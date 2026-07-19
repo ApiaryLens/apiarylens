@@ -92,6 +92,19 @@ jobs:
           tar -xf release/artifacts/apiarylens-"$version"-airgap-*.tar -C "$RUNNER_TEMP/bundle1"
           tar -xf "$RUNNER_TEMP"/stash/apiarylens-"$NEXT_VERSION"-airgap-*.tar -C "$RUNNER_TEMP/bundle2"
 
+      # Issue #82: the post-load gate exercised further down runs against the
+      # same daemon that built the images, so an image-store-specific recorded
+      # ID (the containerd store reports OCI manifest/index digests that
+      # `docker save` strips) still round-trips through rmi + load and matches
+      # trivially here while failing on every real host. This check derives
+      # the load-reproducible IDs from the saved archive bytes alone — no
+      # daemon involved — so a manifest/archive identity skew fails the job
+      # regardless of the runner's image store.
+      - name: Validate recorded image IDs against the archive bytes (store-independent)
+        run: |
+          node scripts/verify-airgap-images.mjs --bundle-dir "$RUNNER_TEMP/bundle1"
+          node scripts/verify-airgap-images.mjs --bundle-dir "$RUNNER_TEMP/bundle2"
+
       - name: Reject hostile bundle fixtures (G7)
         run: |
           cp -r "$RUNNER_TEMP/bundle1" "$RUNNER_TEMP/hostile"
