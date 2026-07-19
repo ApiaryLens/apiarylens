@@ -20,13 +20,23 @@ export interface ExternalLink {
   detail: string;
 }
 
-/** Release surfaces for the running build. External — require a connection. */
+/**
+ * Release surfaces for the running build. External — require a connection.
+ *
+ * Owner UAT fix (2026-07-19): the docs site publishes release notes only
+ * through a curated allowlist in apiarylens.org's build-docs.mjs, so a
+ * version-interpolated `/docs/releases/<version>/` page is not guaranteed to
+ * exist for every build (and the bare `/releases/<version>/` route never was a
+ * page — the worker only redirects `/releases/<v>/artifacts/windows/*`). The
+ * changelog route is always published and carries every release entry, and the
+ * GitHub release tag is the always-valid per-version fallback.
+ */
 export function releaseLinks(productVersion: string): ExternalLink[] {
   return [
     {
       label: 'Release notes and verification',
-      href: `https://apiarylens.org/releases/${productVersion}/`,
-      detail: `What shipped in build ${productVersion}, with checksums and verification steps`,
+      href: 'https://apiarylens.org/docs/releases/changelog/',
+      detail: `What shipped in build ${productVersion} and every published release, with verification guidance`,
     },
     {
       label: 'GitHub release and artifacts',
