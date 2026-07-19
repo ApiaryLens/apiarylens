@@ -2,29 +2,37 @@
   "$schema": "../../node_modules/wrangler/config-schema.json",
   // CAF/WAF naming: <workload>-<env>. This is the public demo worker (apiarylens.app).
   "name": "apiarylens-demo",
-  // CF-001: MUST be the dedicated ApiaryLens Cloudflare account, NOT
-  // HybridSolutionsCloud. Left as a placeholder on purpose so `wrangler deploy`
-  // fails loudly until the owner supplies the dedicated account id.
-  "account_id": "REPLACE_WITH_DEDICATED_APIARYLENS_ACCOUNT_ID",
+  // Owner decision 2026-07-19: deploy to the existing account (subdomain stays
+  // hybridsolutionscloud); demo is served on the apiarylens.app custom domain.
+  "account_id": "5d8be56e19f1f800b8e482a449472dd9",
   "main": "src/index.ts",
   "compatibility_date": "2026-07-15",
   "compatibility_flags": ["nodejs_compat"],
   "send_metrics": false,
   "workers_dev": false,
   "preview_urls": false,
+  "routes": [
+    { "pattern": "apiarylens.app", "custom_domain": true },
+    { "pattern": "www.apiarylens.app", "custom_domain": true },
+  ],
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "d1-apiarylens-demo",
-      // RECREATE: previous demo D1 deleted 2026-07-19. Run
-      //   wrangler d1 create d1-apiarylens-demo
-      // then paste the new id here before deploying.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "fd2ba9c5-13cb-4fac-85df-73502101acba",
       "migrations_dir": "migrations",
     },
   ],
   // No R2 bucket: the demo runs without media storage. The worker's MEDIA
   // binding is optional (src/index.ts) and media routes return 503 when unbound.
   // A media-enabled profile (Compose/self-host) binds its own R2 bucket.
+  // Serve the built PWA (apps/web) as static assets. /api/* runs the Worker first
+  // (the API); every other path serves a static asset, falling back to index.html
+  // for client-side SPA routes.
+  "assets": {
+    "directory": "../web/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"],
+  },
   "observability": { "enabled": false },
 }
