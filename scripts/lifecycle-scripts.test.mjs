@@ -234,6 +234,125 @@ suite('offline bundle verifier (G7 hostile fixtures)', () => {
   });
 });
 
+suite('post-load image identity gate accepts both image-store identity forms (issue #91)', () => {
+  // What `docker image inspect '{{.Id}}'` reports for a loaded image is
+  // image-store-dependent: the config-blob digest on the classic graphdriver
+  // store, the OCI manifest digest on the containerd store (the current
+  // Docker Engine default — the identity form that made the shipped
+  // preview.5 gate refuse its own bundle). A stub docker reports each form
+  // in turn, so the gate's acceptance logic is proven against both without a
+  // daemon.
+  const configDigest = (seed) => `sha256:${seed.repeat(64)}`;
+  const ids = {
+    api: { config: configDigest('a'), manifest: configDigest('b') },
+    web: { config: configDigest('c'), manifest: configDigest('d') },
+    helper: { config: configDigest('e'), manifest: configDigest('f') },
+  };
+
+  function writeGateBundle() {
+    return writeBundle({
+      apiImage: 'apiarylens-api:0.1.0-preview.3',
+      apiImageId: ids.api.config,
+      apiImageManifestDigest: ids.api.manifest,
+      webImage: 'apiarylens-web:0.1.0-preview.3',
+      webImageId: ids.web.config,
+      webImageManifestDigest: ids.web.manifest,
+      helperImage: 'alpine:3.22',
+      helperImageId: ids.helper.config,
+      helperImageManifestDigest: ids.helper.manifest,
+    });
+  }
+
+  function writeDockerStub() {
+    const stubBin = join(root, 'gate-stub-bin');
+    mkdirSync(stubBin, { recursive: true });
+    writeFileSync(
+      join(stubBin, 'docker'),
+      [
+        '#!/bin/sh',
+        'case "$*" in',
+        '  *apiarylens-api:*) id=${STUB_API_ID:-} ;;',
+        '  *apiarylens-web:*) id=${STUB_WEB_ID:-} ;;',
+        '  *alpine:*) id=${STUB_HELPER_ID:-} ;;',
+        '  *) id= ;;',
+        'esac',
+        '[ -n "$id" ] || exit 1',
+        'printf \'%s\\n\' "$id"',
+        '',
+      ].join('\n'),
+      { mode: 0o755 },
+    );
+    return msys(stubBin);
+  }
+
+  function postLoad(env) {
+    const bundleDir = writeGateBundle();
+    const stubBin = writeDockerStub();
+    return sh(
+      `${env} PATH='${stubBin}':$PATH bash '${lifecycleDir}/verify-bundle.sh' ` +
+        `--bundle-dir '${bundleDir}' --post-load`,
+    );
+  }
+
+  it('accepts loaded IDs in the classic graphdriver form (config digests)', () => {
+    const result = postLoad(
+      `STUB_API_ID='${ids.api.config}' STUB_WEB_ID='${ids.web.config}' STUB_HELPER_ID='${ids.helper.config}'`,
+    );
+    expect(result.status).toBe(0);
+    expect(result.stdout).toMatch(/Loaded image IDs match/);
+  });
+
+  it('accepts loaded IDs in the containerd-store form (OCI manifest digests)', () => {
+    const result = postLoad(
+      `STUB_API_ID='${ids.api.manifest}' STUB_WEB_ID='${ids.web.manifest}' STUB_HELPER_ID='${ids.helper.manifest}'`,
+    );
+    expect(result.status).toBe(0);
+    expect(result.stdout).toMatch(/Loaded image IDs match/);
+  });
+
+  it('accepts a mixed-store host (each image may report either identity)', () => {
+    const result = postLoad(
+      `STUB_API_ID='${ids.api.manifest}' STUB_WEB_ID='${ids.web.config}' STUB_HELPER_ID='${ids.helper.manifest}'`,
+    );
+    expect(result.status).toBe(0);
+  });
+
+  it('refuses (exit 65) an ID matching neither recorded identity', () => {
+    const result = postLoad(
+      `STUB_API_ID='${ids.api.config}' STUB_WEB_ID='sha256:${'9'.repeat(64)}' STUB_HELPER_ID='${ids.helper.config}'`,
+    );
+    expect(result.status).toBe(65);
+    expect(result.stderr).toMatch(/config digest .* and manifest digest/);
+    expect(result.stderr).toMatch(/refuse to activate/);
+  });
+
+  it('refuses (exit 65) an image that is not present after load', () => {
+    const result = postLoad(
+      `STUB_API_ID='${ids.api.config}' STUB_WEB_ID='${ids.web.config}' STUB_HELPER_ID=''`,
+    );
+    expect(result.status).toBe(65);
+    expect(result.stderr).toMatch(/is not present after load/);
+  });
+
+  it('refuses (exit 65) a bundle that does not record the containerd-store identity', () => {
+    const bundleDir = writeBundle({
+      apiImage: 'apiarylens-api:0.1.0-preview.3',
+      apiImageId: ids.api.config,
+      webImage: 'apiarylens-web:0.1.0-preview.3',
+      webImageId: ids.web.config,
+      helperImage: 'alpine:3.22',
+      helperImageId: ids.helper.config,
+    });
+    const stubBin = writeDockerStub();
+    const result = sh(
+      `STUB_API_ID='${ids.api.config}' PATH='${stubBin}':$PATH ` +
+        `bash '${lifecycleDir}/verify-bundle.sh' --bundle-dir '${bundleDir}' --post-load`,
+    );
+    expect(result.status).toBe(65);
+    expect(result.stderr).toMatch(/apiImageManifestDigest is missing/);
+  });
+});
+
 suite('activation-failure recovery decision (lib.sh)', () => {
   const mode = (previous, applied) =>
     lib(root, `al_recovery_mode '${previous}' '${applied}'`).stdout.trim();

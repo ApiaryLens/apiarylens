@@ -14,7 +14,7 @@ const profile: WindowsConnectionProfile = {
   provisioningSource: 'scout',
   createdAt: '2026-07-17T16:00:00.000Z',
   compatibility: {
-    productVersion: '0.1.0-preview.5',
+    productVersion: '0.1.0-preview.6',
     apiContract: '1.0',
     syncContract: 1,
     databaseMigration: '0004',
@@ -25,7 +25,7 @@ const matched: ConnectedIdentityCheck = {
   state: 'matched',
   build: {
     product: 'ApiaryLens',
-    productVersion: '0.1.0-preview.5',
+    productVersion: '0.1.0-preview.6',
     deploymentProfile: 'cloudflare',
     apiContract: '1.0',
     syncContract: 1,

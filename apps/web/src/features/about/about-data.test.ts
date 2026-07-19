@@ -18,10 +18,10 @@ describe('About page data', () => {
   });
 
   it('builds release links for the running build version', () => {
-    const links = releaseLinks('0.1.0-preview.5');
+    const links = releaseLinks('0.1.0-preview.6');
     expect(links.map((link) => link.href)).toEqual([
-      'https://apiarylens.org/releases/0.1.0-preview.5/',
-      'https://github.com/ApiaryLens/apiarylens/releases/tag/v0.1.0-preview.5',
+      'https://apiarylens.org/releases/0.1.0-preview.6/',
+      'https://github.com/ApiaryLens/apiarylens/releases/tag/v0.1.0-preview.6',
     ]);
     for (const link of links) {
       expect(link.label.length).toBeGreaterThan(0);

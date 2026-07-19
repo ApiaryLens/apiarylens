@@ -72,9 +72,11 @@ way), and releases predating the reboot do not count in the public sequence
 (the Windows-era "Preview 1" and "Preview 2" builds `0.1.0-preview.1` and
 `0.1.0-preview.4` are historical; the latter is retitled "Superseded internal
 build — do not use"). The rebooted product's Preview 1 therefore ships as
-build `0.1.0-preview.5`. Tags, manifests, and artifact names always carry the
-exact semver build number; user-facing release communication leads with the
-public preview name and states the build number.
+build `0.1.0-preview.6`, which supersedes the withdrawn Preview 1 build
+`0.1.0-preview.5` under the same public name (a corrective build does not
+advance the public preview counter). Tags, manifests, and artifact names
+always carry the exact semver build number; user-facing release communication
+leads with the public preview name and states the build number.
 
 Before `1.0.0`, a minor release may contain a breaking change only when the release
 notes, migration path, compatibility window, and recovery procedure make that

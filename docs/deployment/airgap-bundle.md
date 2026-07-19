@@ -17,8 +17,9 @@ travels with the artifact.
 
 ```
 apiarylens-<version>-airgap-<sha12>.tar
-├── bundle-manifest.json          bundle identity, image IDs, pinned minimum
-│                                 Docker/Compose versions, member digests
+├── bundle-manifest.json          bundle identity, image IDs (both image-store
+│                                 forms), pinned minimum Docker/Compose
+│                                 versions, member digests
 ├── compatibility-manifest.json   canonical release compatibility manifest
 ├── release-identity.json         release identity block
 ├── checksums.sha256              sha256sum -c format over every member
@@ -117,8 +118,13 @@ Steps 1–4 above on the connected machine, then on the host:
    secrets, release evidence) via `backup.sh`; the path is recorded in the
    ledger entry.
 8. **Stage** — the new release directory is staged, configuration carries
-   over, images are loaded, and loaded image IDs are compared with
-   `bundle-manifest.json`.
+   over, images are loaded, and each loaded image ID is compared with the two
+   identities `bundle-manifest.json` records for it: the config-blob digest
+   (what the classic graphdriver image store reports as the image ID) and the
+   OCI manifest digest (what the containerd image store, the default on
+   current Docker Engine, reports). Both are derived from the bundle's own
+   image archive bytes at build time, so either match proves the loaded image
+   is the bundle's image, on every image store.
 9. **Migrate** — the dedicated one-shot migration container runs with
    `--network none` before any service is recreated. On failure the previous
    release restarts untouched and the ledger records `migration-failed`.

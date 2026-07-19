@@ -14,8 +14,8 @@ tree they live in `scripts/lifecycle/`.
 
 | Script | Purpose |
 | --- | --- |
-| `verify-bundle.sh --bundle-dir DIR [--target DIR] [--allow-channel-change] [--post-load]` | Verify an extracted air-gap bundle: member checksums, bundle format, update compatibility against the installed release, and (post-load) exact docker image IDs |
-| `load-images.sh --bundle-dir DIR` | `docker load` the bundled images and verify loaded image IDs |
+| `verify-bundle.sh --bundle-dir DIR [--target DIR] [--allow-channel-change] [--post-load]` | Verify an extracted air-gap bundle: member checksums, bundle format, update compatibility against the installed release, and (post-load) that every loaded docker image ID equals one of the bundle's two recorded archive-derived identities — the config-blob digest (classic graphdriver store) or the OCI manifest digest (containerd store, the current Docker default) |
+| `load-images.sh --bundle-dir DIR` | `docker load` the bundled images and verify loaded image IDs against both recorded identity forms |
 | `install-airgap.sh --bundle-dir DIR --target DIR [options]` | First install with zero egress: stage, load, migrate (one-shot, `--network none`), activate (`--no-build`, `pull_policy: never`), health-verify, commit |
 | `update-airgap.sh --bundle-dir DIR --target DIR [--allow-channel-change] [--force]` | Transported update: verify, preflight, forced backup, stage, load, migrate, activate, verify, then commit — or recover: re-activate the previous release while the applied migration head still equals the head it shipped, otherwise restore the pre-update backup automatically |
 | `backup.sh --target DIR --project NAME [--retention N]` | Verified backup of database + media + durable secrets; prints the backup path |

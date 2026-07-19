@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/release-signing.yml', 'utf8');
+const airgapWorkflow = readFileSync('.github/workflows/airgap-verification.yml', 'utf8');
 
 describe('product release workflow wiring', () => {
   it('requires an exact existing tag and explicit per-run unsigned Preview input', () => {
@@ -120,6 +121,30 @@ describe('product release workflow wiring', () => {
     expect(check).toBeLessThan(workflow.indexOf('pnpm release:supply-chain'));
   });
 
+  it('binds the built and published identity to the exact release commit (issue 92)', () => {
+    // The committed evidence pins the PREP-time sourceCommit; the tag run
+    // must rebind it to the commit it actually builds, prove the built
+    // provenance agrees, and refuse to publish any subject set claiming a
+    // different commit or a dirty tree. preview.5 shipped claiming 1f348e0
+    // while carrying 8c43e5f bytes from a dirty local build; each of these
+    // pins guards one link of that broken chain.
+    expect(workflow).toContain('manifest.sourceCommit = process.env.RELEASE_COMMIT');
+    expect(workflow).toContain(
+      'git merge-base --is-ancestor "$committed_commit" "$RELEASE_COMMIT"',
+    );
+    expect(workflow).toContain(
+      'Verify the built identity binds to the exact release commit (issue 92)',
+    );
+    expect(workflow).toContain('A publishable build cannot come from a dirty worktree.');
+    // The publish job is the last line of defense and must re-verify the
+    // downloaded subject set independently, before gh release create.
+    const publishGate = workflow.indexOf('Published artifacts claim sourceCommit');
+    expect(publishGate).toBeGreaterThan(-1);
+    expect(workflow.indexOf('Published provenance records gitCommit')).toBeGreaterThan(-1);
+    expect(workflow.indexOf('Published provenance records a dirty worktree')).toBeGreaterThan(-1);
+    expect(publishGate).toBeLessThan(workflow.indexOf('gh release create'));
+  });
+
   it('generates the compatibility manifest only after every artifact list mutation', () => {
     // Supply-chain assembly appends SBOM, license, and provenance entries to
     // the release manifest; a compatibility manifest generated earlier would
@@ -141,5 +166,34 @@ describe('product release workflow wiring', () => {
     expect(finalize).toBeGreaterThan(-1);
     expect(windowsRegenerate).toBeGreaterThan(finalize);
     expect(windowsVerify).toBeGreaterThan(windowsRegenerate);
+  });
+});
+
+describe('air-gap lifecycle workflow wiring', () => {
+  it('exercises the post-load gate under the containerd image store too (issue 91)', () => {
+    // The runner's default image store is the classic graphdriver, where a
+    // loaded image's .Id is the config digest; real hosts on current Docker
+    // default to the containerd store, where .Id is the OCI manifest digest.
+    // The job must flip the daemon to the containerd store, prove the store
+    // actually reports the manifest-digest identity form (not silently the
+    // classic one), and run the load + gate + install path again — so a
+    // store-dependent gate regression can never pass CI while failing real
+    // hosts.
+    expect(airgapWorkflow).toContain('"containerd-snapshotter":true');
+    expect(airgapWorkflow).toContain(`test "$(docker info --format '{{.Driver}}')" = 'overlayfs'`);
+    const gate = airgapWorkflow.indexOf(
+      "Post-load gate accepts the bundle's own images under the containerd store",
+    );
+    expect(gate).toBeGreaterThan(airgapWorkflow.indexOf('containerd-snapshotter'));
+    expect(airgapWorkflow).toContain('test "$loaded_id" = "$manifest_digest"');
+    expect(airgapWorkflow).toContain('test "$loaded_id" != "$config_id"');
+    expect(
+      airgapWorkflow.indexOf('Install air-gapped from the bundle under the containerd store'),
+    ).toBeGreaterThan(gate);
+  });
+
+  it('validates both recorded identity forms from the archive bytes, store-independently', () => {
+    expect(airgapWorkflow).toContain('node scripts/verify-airgap-images.mjs');
+    expect(airgapWorkflow).toContain('apiImageManifestDigest');
   });
 });

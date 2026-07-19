@@ -5,7 +5,43 @@
 - Continued separately versioned Scout Bee deployment-bootloader work. It is not
   currently an end-user release.
 
-## 0.1.0-preview.5 — Preview 1 (platform reboot) — 2026-07-18
+## 0.1.0-preview.6 — Preview 1 (corrective build) — 2026-07-18
+
+Corrective build that ships as **ApiaryLens Preview 1** under the same public
+name, superseding build `0.1.0-preview.5` for the air-gap image-store gate fix
+and the release identity correction. A corrective build does not advance the
+public preview counter; the internal build ordinal only ever increases.
+
+- Fixed the release-blocking air-gap install failure on containerd-image-store
+  hosts (#91): `bundle-manifest.json` now records both load-reproducible image
+  identities — the config-blob digest (classic graphdriver store) and the OCI
+  manifest digest (containerd store, the current Docker Engine default) — each
+  derived from the bundle's own archive bytes, and the fail-closed post-load
+  gate accepts whichever form the host's image store reports. The air-gap
+  lifecycle CI job now re-exercises the load, post-load gate, and install
+  under the containerd image store so a store-dependent regression cannot
+  pass CI while failing real hosts.
+- Fixed the broken release source-identity binding (#92): the release
+  workflow rebinds `sourceCommit` to the exact tagged commit it builds and
+  fails when the release manifest, the provenance `gitCommit`, and the built
+  commit disagree or when a publishable build comes from a dirty worktree —
+  enforced at evidence generation, at `release:verify`, in the product job,
+  and again in the publish job immediately before release creation. Committed
+  release evidence is regenerated pinned to the true built commit.
+- No Windows build: unchanged from `0.1.0-preview.5` — the Windows desktop
+  client is deferred pending a full rewrite; the most recent Windows preview
+  build remains on the `v0.1.0-preview.4` release with known deferred defect
+  #84 and receives no further preview fixes.
+
+See the [build 0.1.0-preview.6 release notes](0.1.0-preview.6.md) for
+verification steps and the compatibility table.
+
+## 0.1.0-preview.5 — Preview 1 (platform reboot) — 2026-07-18 (superseded)
+
+Superseded by corrective build `0.1.0-preview.6` (air-gap post-load gate
+unusable on containerd-image-store hosts, #91; broken artifact
+source-identity binding, #92); its GitHub release carries a superseded
+banner. The historical entry below is retained as published.
 
 Published as **ApiaryLens Preview 1**, the first public preview of the rebooted
 platform+web product. The public preview counter restarted with the reboot

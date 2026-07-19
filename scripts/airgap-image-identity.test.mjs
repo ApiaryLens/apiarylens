@@ -1,9 +1,11 @@
-// Unit coverage for the load-reproducible air-gap image identity (issue
-// #82): the recorded image IDs must be a pure function of the saved images
-// archive — the sha256 of each config blob — because that is the ID
-// `docker load` reproduces on a pristine host on every image store, while
-// the build daemon's `docker image inspect` ID is store-specific and is not
-// preserved by `docker save`.
+// Unit coverage for the load-reproducible air-gap image identity (issues
+// #82, #91): the recorded identities must be a pure function of the saved
+// images archive — the sha256 of each config blob (what the classic
+// graphdriver store reports as `.Id` after `docker load`) AND the OCI
+// manifest digest from the archive's index.json (what the containerd image
+// store, the current Docker default, reports as `.Id`) — because the build
+// daemon's `docker image inspect` ID is store-specific and is not preserved
+// by `docker save`.
 
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -12,6 +14,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+  imageIdentitiesFromArchive,
   imageIdsFromArchive,
   tarEntries,
   verifyBundleImageIdentity,
@@ -19,14 +22,49 @@ import {
 import { createTar } from './release-archive.mjs';
 
 const sha256 = (content) => `sha256:${createHash('sha256').update(content).digest('hex')}`;
+const blobPath = (content) => `blobs/sha256/${createHash('sha256').update(content).digest('hex')}`;
 
 const apiConfig = Buffer.from('{"architecture":"amd64","os":"linux","config":{"User":"api"}}');
 const webConfig = Buffer.from('{"architecture":"amd64","os":"linux","config":{"User":"web"}}');
 const helperConfig = Buffer.from('{"architecture":"amd64","os":"linux"}');
 
-function saveArchive({ manifest, members }) {
+// Minimal OCI image manifest for a config blob, exactly the shape docker
+// save writes into blobs/sha256/ and references from index.json.
+const ociManifestFor = (config) =>
+  Buffer.from(
+    JSON.stringify({
+      schemaVersion: 2,
+      mediaType: 'application/vnd.oci.image.manifest.v1+json',
+      config: {
+        mediaType: 'application/vnd.oci.image.config.v1+json',
+        digest: sha256(config),
+        size: config.length,
+      },
+      layers: [],
+    }),
+  );
+
+const apiManifest = ociManifestFor(apiConfig);
+const webManifest = ociManifestFor(webConfig);
+const helperManifest = ociManifestFor(helperConfig);
+
+function indexFor(manifests) {
+  return Buffer.from(
+    JSON.stringify({
+      schemaVersion: 2,
+      manifests: manifests.map((blob) => ({
+        mediaType: 'application/vnd.oci.image.manifest.v1+json',
+        digest: sha256(blob),
+        size: blob.length,
+      })),
+    }),
+  );
+}
+
+function saveArchive({ manifest, members, index }) {
   const files = new Map(members);
   if (manifest !== null) files.set('manifest.json', Buffer.from(JSON.stringify(manifest)));
+  if (index) files.set('index.json', index);
   return createTar(files);
 }
 
@@ -34,22 +72,26 @@ function productArchive() {
   return saveArchive({
     manifest: [
       {
-        Config: 'blobs/sha256/aaaa',
+        Config: blobPath(apiConfig),
         RepoTags: ['apiarylens-api:0.1.0-preview.4'],
         Layers: [],
       },
       {
-        Config: 'blobs/sha256/bbbb',
+        Config: blobPath(webConfig),
         RepoTags: ['apiarylens-web:0.1.0-preview.4'],
         Layers: [],
       },
-      { Config: 'blobs/sha256/cccc', RepoTags: ['alpine:3.22'], Layers: [] },
+      { Config: blobPath(helperConfig), RepoTags: ['alpine:3.22'], Layers: [] },
     ],
     members: [
-      ['blobs/sha256/aaaa', apiConfig],
-      ['blobs/sha256/bbbb', webConfig],
-      ['blobs/sha256/cccc', helperConfig],
+      [blobPath(apiConfig), apiConfig],
+      [blobPath(webConfig), webConfig],
+      [blobPath(helperConfig), helperConfig],
+      [blobPath(apiManifest), apiManifest],
+      [blobPath(webManifest), webManifest],
+      [blobPath(helperManifest), helperManifest],
     ],
+    index: indexFor([apiManifest, webManifest, helperManifest]),
   });
 }
 
@@ -57,10 +99,13 @@ function bundleManifestFor(overrides = {}) {
   return {
     apiImage: 'apiarylens-api:0.1.0-preview.4',
     apiImageId: sha256(apiConfig),
+    apiImageManifestDigest: sha256(apiManifest),
     webImage: 'apiarylens-web:0.1.0-preview.4',
     webImageId: sha256(webConfig),
+    webImageManifestDigest: sha256(webManifest),
     helperImage: 'alpine:3.22',
     helperImageId: sha256(helperConfig),
+    helperImageManifestDigest: sha256(helperManifest),
     ...overrides,
   };
 }
@@ -139,6 +184,77 @@ describe('imageIdsFromArchive', () => {
   });
 });
 
+describe('imageIdentitiesFromArchive (both image-store identities, issue #91)', () => {
+  it('maps every repo tag to both the config digest and the OCI manifest digest', () => {
+    const identities = imageIdentitiesFromArchive(productArchive());
+    expect(identities.get('apiarylens-api:0.1.0-preview.4')).toEqual({
+      id: sha256(apiConfig),
+      manifestDigest: sha256(apiManifest),
+    });
+    expect(identities.get('apiarylens-web:0.1.0-preview.4')).toEqual({
+      id: sha256(webConfig),
+      manifestDigest: sha256(webManifest),
+    });
+    expect(identities.get('alpine:3.22')).toEqual({
+      id: sha256(helperConfig),
+      manifestDigest: sha256(helperManifest),
+    });
+  });
+
+  it('resolves a nested index to the top-level descriptor digest (what containerd reports)', () => {
+    // A top-level index entry can itself be an index; `.Id` on the containerd
+    // store is the digest of the TOP-LEVEL entry, so the config beneath the
+    // nested index must map to the outer digest.
+    const nestedIndex = indexFor([apiManifest]);
+    const archive = saveArchive({
+      manifest: [{ Config: blobPath(apiConfig), RepoTags: ['apiarylens-api:nested'], Layers: [] }],
+      members: [
+        [blobPath(apiConfig), apiConfig],
+        [blobPath(apiManifest), apiManifest],
+        [blobPath(nestedIndex), nestedIndex],
+      ],
+      index: indexFor([nestedIndex]),
+    });
+    expect(imageIdentitiesFromArchive(archive).get('apiarylens-api:nested')).toEqual({
+      id: sha256(apiConfig),
+      manifestDigest: sha256(nestedIndex),
+    });
+  });
+
+  it('rejects an archive without an OCI index.json', () => {
+    const archive = saveArchive({
+      manifest: [{ Config: blobPath(apiConfig), RepoTags: ['apiarylens-api:x'], Layers: [] }],
+      members: [[blobPath(apiConfig), apiConfig]],
+    });
+    expect(() => imageIdentitiesFromArchive(archive)).toThrow(/no OCI index\.json/);
+  });
+
+  it('rejects an index whose blob bytes do not match the recorded digest', () => {
+    const archive = saveArchive({
+      manifest: [{ Config: blobPath(apiConfig), RepoTags: ['apiarylens-api:x'], Layers: [] }],
+      members: [
+        [blobPath(apiConfig), apiConfig],
+        // Tampered manifest blob stored under the untampered digest path.
+        [blobPath(apiManifest), webManifest],
+      ],
+      index: indexFor([apiManifest]),
+    });
+    expect(() => imageIdentitiesFromArchive(archive)).toThrow(/does not match its recorded digest/);
+  });
+
+  it('rejects an index that does not cover an image in manifest.json', () => {
+    const archive = saveArchive({
+      manifest: [{ Config: blobPath(webConfig), RepoTags: ['apiarylens-web:x'], Layers: [] }],
+      members: [
+        [blobPath(webConfig), webConfig],
+        [blobPath(apiManifest), apiManifest],
+      ],
+      index: indexFor([apiManifest]),
+    });
+    expect(() => imageIdentitiesFromArchive(archive)).toThrow(/does not cover the image/);
+  });
+});
+
 describe('tar metadata records (Go archive/tar shapes)', () => {
   it('applies a pax extended-header path override to the following entry', () => {
     const paxPath = 'blobs/sha256/deadbeef';
@@ -186,7 +302,7 @@ describe('tar metadata records (Go archive/tar shapes)', () => {
 });
 
 describe('verifyBundleImageIdentity', () => {
-  it('accepts a manifest whose recorded IDs are archive-derived', () => {
+  it('accepts a manifest whose recorded identities are archive-derived', () => {
     expect(verifyBundleImageIdentity(bundleManifestFor(), productArchive())).toEqual([]);
   });
 
@@ -198,6 +314,26 @@ describe('verifyBundleImageIdentity', () => {
     expect(failures).toHaveLength(1);
     expect(failures[0]).toMatch(/apiarylens-api:0\.1\.0-preview\.4 \(api\)/);
     expect(failures[0]).toMatch(/every docker load of the images archive reproduces/);
+  });
+
+  it('reports a recorded manifest digest the archive index does not record', () => {
+    const failures = verifyBundleImageIdentity(
+      bundleManifestFor({ webImageManifestDigest: `sha256:${'7'.repeat(64)}` }),
+      productArchive(),
+    );
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toMatch(/apiarylens-web:0\.1\.0-preview\.4 \(web\)/);
+    expect(failures[0]).toMatch(/the archive's OCI index records/);
+  });
+
+  it('reports a missing containerd-store identity (the shipped preview.5 defect class)', () => {
+    const failures = verifyBundleImageIdentity(
+      bundleManifestFor({ apiImageManifestDigest: undefined }),
+      productArchive(),
+    );
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toMatch(/does not record apiImageManifestDigest/);
+    expect(failures[0]).toMatch(/containerd image-store identity/);
   });
 
   it('reports an image that is missing from the archive entirely', () => {
@@ -265,6 +401,18 @@ describe('verify-airgap-images.mjs (CI guard)', () => {
     expect(result.status).toBe(65);
     expect(result.stderr).toMatch(/every docker load of the images archive reproduces/);
     expect(result.stderr).toMatch(/would refuse this bundle everywhere/);
+  });
+
+  it('fails closed (exit 65) on a wrong or missing containerd-store identity', () => {
+    const wrong = writeExtractedBundle({ apiImageManifestDigest: `sha256:${'6'.repeat(64)}` });
+    const wrongResult = runVerifier(['--bundle-dir', wrong.bundleDir]);
+    expect(wrongResult.status).toBe(65);
+    expect(wrongResult.stderr).toMatch(/the archive's OCI index records/);
+    rmSync(wrong.bundleDir, { recursive: true, force: true });
+    const missing = writeExtractedBundle({ helperImageManifestDigest: undefined });
+    const missingResult = runVerifier(['--bundle-dir', missing.bundleDir]);
+    expect(missingResult.status).toBe(65);
+    expect(missingResult.stderr).toMatch(/does not record helperImageManifestDigest/);
   });
 
   it('verifies a packed bundle tar directly', () => {

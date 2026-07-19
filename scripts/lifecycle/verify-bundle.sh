@@ -13,8 +13,14 @@
 #      source for the installed version and channel (not-newer, downgrade,
 #      minimum direct-upgrade, and channel rules from the compatibility
 #      manifest, ADR 0021);
-#   4. with --post-load: the docker image IDs loaded on this host are exactly
-#      the IDs recorded in bundle-manifest.json.
+#   4. with --post-load: every docker image ID loaded on this host is one of
+#      the two identities bundle-manifest.json records for that image — the
+#      config-blob digest (what the classic graphdriver image store reports
+#      as .Id) or the OCI manifest digest (what the containerd image store,
+#      the default on current Docker Engine, reports as .Id). Both are
+#      derived from the bundle's own image archive bytes at build time, so
+#      either match proves the loaded image is the bundle's image (issues
+#      #82, #91).
 
 set -eu
 script_dir=$(dirname "$0")
@@ -86,19 +92,30 @@ fi
 
 if [ "$post_load" = "true" ]; then
   al_require_command docker
-  for pair in api:apiImage:apiImageId web:webImage:webImageId helper:helperImage:helperImageId; do
+  for pair in api:apiImage:apiImageId:apiImageManifestDigest \
+    web:webImage:webImageId:webImageManifestDigest \
+    helper:helperImage:helperImageId:helperImageManifestDigest; do
     label=${pair%%:*}
     rest=${pair#*:}
     image_key=${rest%%:*}
-    id_key=${rest#*:}
+    rest=${rest#*:}
+    id_key=${rest%%:*}
+    digest_key=${rest#*:}
     image=$(al_json_require "$manifest" "$image_key")
     expected_id=$(al_json_require "$manifest" "$id_key")
+    expected_manifest_digest=$(al_json_require "$manifest" "$digest_key")
     actual_id=$(docker image inspect --format '{{.Id}}' "$image" 2>/dev/null) ||
       al_die 65 "Image $image ($label) is not present after load"
-    [ "$actual_id" = "$expected_id" ] ||
-      al_die 65 "Image $image ($label) has ID $actual_id but the bundle recorded $expected_id; refuse to activate (if this host built these images, cached builder/image-store content can mask the bundle's identity: prune the build cache and unused images, then re-run load-images.sh)"
+    # The reported .Id is image-store-dependent: the classic graphdriver
+    # store reports the config-blob digest, the containerd image store (the
+    # current Docker Engine default) reports the OCI manifest digest. Both
+    # recorded values are derived from the bundle's own archive bytes, so
+    # accepting either keeps the gate store-independent without weakening it.
+    if [ "$actual_id" != "$expected_id" ] && [ "$actual_id" != "$expected_manifest_digest" ]; then
+      al_die 65 "Image $image ($label) has ID $actual_id but the bundle recorded config digest $expected_id (classic image store) and manifest digest $expected_manifest_digest (containerd image store); refuse to activate (if this host built these images, cached builder/image-store content can mask the bundle's identity: prune the build cache and unused images, then re-run load-images.sh)"
+    fi
   done
-  al_note "Loaded image IDs match bundle-manifest.json."
+  al_note "Loaded image IDs match the identities recorded in bundle-manifest.json."
 fi
 
 al_note "Bundle verification passed."

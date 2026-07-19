@@ -30,7 +30,7 @@ import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { tmpdir } from 'node:os';
 import prettier from 'prettier';
-import { imageIdsFromArchive } from './airgap-image-identity.mjs';
+import { imageIdentitiesFromArchive } from './airgap-image-identity.mjs';
 import { createTar } from './release-archive.mjs';
 import {
   generateCompatibilityManifest,
@@ -102,30 +102,36 @@ try {
   const imagesArchive = await readFile(imagesArchivePath);
 
   // The recorded image identity must be byte-reproducible by `docker load`
-  // on any pristine host, so it is derived from the saved archive itself
-  // (the sha256 of each image's config blob), never from this daemon's
-  // `docker image inspect`: with the containerd image store the daemon-side
-  // ID is an OCI manifest/index digest — including BuildKit provenance
-  // attestations that `docker save` strips — which no load of this archive
-  // can reproduce, and which made the shipped verify-bundle.sh --post-load
-  // gate refuse the bundle's own images on every real host (issue #82).
-  const savedImageIds = imageIdsFromArchive(imagesArchive);
-  const savedImageId = (reference) => {
-    const id = savedImageIds.get(reference);
-    if (!id) throw new Error(`The saved image archive does not contain ${reference}`);
-    return id;
+  // on any pristine host, so it is derived from the saved archive itself,
+  // never from this daemon's `docker image inspect`: the daemon-side ID is
+  // image-store-specific, and with the containerd store it can include
+  // BuildKit provenance attestations that `docker save` strips (issue #82).
+  // Because what `docker load` reports is ALSO store-specific — the config
+  // digest on the classic graphdriver store, the OCI manifest digest on the
+  // containerd store (issue #91) — both identities are recorded, and the
+  // post-load gate accepts either.
+  const savedImageIdentities = imageIdentitiesFromArchive(imagesArchive);
+  const savedIdentity = (reference) => {
+    const identity = savedImageIdentities.get(reference);
+    if (!identity) throw new Error(`The saved image archive does not contain ${reference}`);
+    return identity;
   };
-  const apiImageId = savedImageId(apiImage);
-  const webImageId = savedImageId(webImage);
-  const helperImageId = savedImageId(HELPER_IMAGE);
+  const apiImageId = savedIdentity(apiImage).id;
+  const apiImageManifestDigest = savedIdentity(apiImage).manifestDigest;
+  const webImageId = savedIdentity(webImage).id;
+  const webImageManifestDigest = savedIdentity(webImage).manifestDigest;
+  const helperImageId = savedIdentity(HELPER_IMAGE).id;
+  const helperImageManifestDigest = savedIdentity(HELPER_IMAGE).manifestDigest;
   for (const reference of [apiImage, webImage, HELPER_IMAGE]) {
     const daemonId = (
       await docker(['image', 'inspect', '--format', '{{.Id}}', reference])
     ).stdout.trim();
-    if (daemonId !== savedImageId(reference)) {
+    const { id, manifestDigest } = savedIdentity(reference);
+    if (daemonId !== id && daemonId !== manifestDigest) {
       console.log(
-        `Note: this daemon reports ${reference} as ${daemonId} (image-store-specific); ` +
-          `recording the load-reproducible ${savedImageId(reference)} instead.`,
+        `Note: this daemon reports ${reference} as ${daemonId} (image-store-specific, not ` +
+          `preserved by docker save); recording the load-reproducible identities ` +
+          `${id} (classic store) and ${manifestDigest} (containerd store) instead.`,
       );
     }
   }
@@ -196,10 +202,13 @@ try {
     imagesArchive: imagesArchiveName,
     apiImage,
     apiImageId,
+    apiImageManifestDigest,
     webImage,
     webImageId,
+    webImageManifestDigest,
     helperImage: HELPER_IMAGE,
     helperImageId,
+    helperImageManifestDigest,
     minimumDockerEngine: MINIMUM_DOCKER_ENGINE,
     minimumComposeVersion: MINIMUM_COMPOSE_VERSION,
     builtWithDockerEngine,

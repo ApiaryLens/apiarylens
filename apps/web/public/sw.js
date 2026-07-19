@@ -5,7 +5,7 @@ const CACHE_PREFIX = 'apiarylens-shell-';
 // fails the suite whenever this literal drifts from apps/web/package.json
 // (T2-2 audit finding: this literal once lagged one build behind the shipped
 // release). The `-rN` suffix allows a forced cache bust within one version.
-const CACHE = `${CACHE_PREFIX}0.1.0-preview.5-r1`;
+const CACHE = `${CACHE_PREFIX}0.1.0-preview.6-r1`;
 const BASE = new URL('./', self.registration.scope);
 const SHELL = [
   BASE.pathname,
