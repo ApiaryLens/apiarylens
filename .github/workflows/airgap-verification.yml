@@ -139,6 +139,15 @@ jobs:
             "apiarylens-api:$BASE_VERSION" "apiarylens-web:$BASE_VERSION" \
             "apiarylens-api:$NEXT_VERSION" "apiarylens-web:$NEXT_VERSION" \
             alpine:3.22
+          # Issue #82: `image rm` alone leaves BuildKit/containerd content
+          # behind, and a later `docker load` can re-associate that cached
+          # content and resurrect the build daemon's store-specific image
+          # identity — the same-daemon behavior that let the defective
+          # preview.4 bundle pass this job. Prune the build cache and all
+          # unused image content so every load below behaves exactly like a
+          # pristine host.
+          docker builder prune --all --force
+          docker image prune --all --force
           docker image ls
 
       - name: Install air-gapped from the bundle (zero egress)

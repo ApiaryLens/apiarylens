@@ -96,7 +96,7 @@ if [ "$post_load" = "true" ]; then
     actual_id=$(docker image inspect --format '{{.Id}}' "$image" 2>/dev/null) ||
       al_die 65 "Image $image ($label) is not present after load"
     [ "$actual_id" = "$expected_id" ] ||
-      al_die 65 "Image $image ($label) has ID $actual_id but the bundle recorded $expected_id; refuse to activate"
+      al_die 65 "Image $image ($label) has ID $actual_id but the bundle recorded $expected_id; refuse to activate (if this host built these images, cached builder/image-store content can mask the bundle's identity: prune the build cache and unused images, then re-run load-images.sh)"
   done
   al_note "Loaded image IDs match bundle-manifest.json."
 fi
