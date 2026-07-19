@@ -94,25 +94,59 @@ rights. This report is evidence, not legal advice.
 `;
 
 const git = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });
-const dirty = spawnSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' });
+// Dirtiness is measured OUTSIDE release/: the release scripts that just ran
+// regenerate release/ by design, so those paths are this build's own output,
+// not unpinned source. Any other uncommitted change means the artifacts
+// contain bytes no commit pins — exactly the preview.5 defect (issue #92).
+const dirty = spawnSync('git', ['status', '--porcelain', '--', ':(exclude)release'], {
+  cwd: root,
+  encoding: 'utf8',
+});
+const headCommit = git.stdout.trim();
+// Issue #92: the artifacts built alongside this evidence were built from the
+// working tree at HEAD, so a manifest pinned to any other commit publishes an
+// identity no one can reproduce. Fail at generation time instead of shipping
+// the skew (preview.5 claimed 1f348e0 while its bytes came from 8c43e5f).
+if (headCommit !== manifest.sourceCommit) {
+  throw new Error(
+    `release-manifest.json pins sourceCommit ${manifest.sourceCommit}, but this evidence is ` +
+      `being generated from ${headCommit}; commit the source first and pin sourceCommit to ` +
+      'the exact commit being built',
+  );
+}
+if (dirty.stdout.trim()) {
+  throw new Error(
+    'The worktree has uncommitted changes outside release/; a build from an unpinned tree ' +
+      `cannot claim sourceCommit ${manifest.sourceCommit}:\n${dirty.stdout}`,
+  );
+}
 const provenance = {
   _type: 'https://in-toto.io/Statement/v1',
   subject: artifactSubjects,
   predicateType: 'https://slsa.dev/provenance/v1',
   predicate: {
     buildDefinition: {
-      buildType: `https://apiarylens.dev/build-types/local-${manifest.channel}/v1`,
+      buildType: `https://apiarylens.dev/build-types/${
+        process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local'
+      }-${manifest.channel}/v1`,
       externalParameters: { productVersion: manifest.productVersion, channel: manifest.channel },
       internalParameters: { dirtyWorktree: Boolean(dirty.stdout.trim()) },
       resolvedDependencies: [
         {
           uri: 'git+https://github.com/ApiaryLens/apiarylens',
-          digest: { gitCommit: git.stdout.trim() },
+          digest: { gitCommit: headCommit },
         },
       ],
     },
     runDetails: {
-      builder: { id: 'https://apiarylens.dev/builders/local-codex-workspace/v1' },
+      // Honest builder identity (issue #92): a CI release run names the
+      // workflow that built it; anything else is a local workspace build.
+      builder: {
+        id:
+          process.env.GITHUB_ACTIONS === 'true'
+            ? `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/workflows/release-signing.yml`
+            : 'https://apiarylens.dev/builders/local-codex-workspace/v1',
+      },
       metadata: { invocationId: randomUUID(), finishedOn: new Date().toISOString() },
     },
   },

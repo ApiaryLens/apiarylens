@@ -53,8 +53,8 @@ describe('product release signing policy', () => {
   it('includes the Windows build by default', () => {
     expect(
       resolveProductReleasePolicy({
-        version: '0.1.0-preview.5',
-        exactTag: 'v0.1.0-preview.5',
+        version: '0.1.0-preview.6',
+        exactTag: 'v0.1.0-preview.6',
         allowUnsignedPreview: true,
       }),
     ).toMatchObject({ windowsIncluded: true });
@@ -66,8 +66,8 @@ describe('product release signing policy', () => {
     // unsigned-preview opt-in still applies to what does ship.
     expect(
       resolveProductReleasePolicy({
-        version: '0.1.0-preview.5',
-        exactTag: 'v0.1.0-preview.5',
+        version: '0.1.0-preview.6',
+        exactTag: 'v0.1.0-preview.6',
         allowUnsignedPreview: true,
         includeWindows: false,
       }),
@@ -79,8 +79,8 @@ describe('product release signing policy', () => {
     // Excluding Windows never waives the explicit unsigned-preview opt-in.
     expect(() =>
       resolveProductReleasePolicy({
-        version: '0.1.0-preview.5',
-        exactTag: 'v0.1.0-preview.5',
+        version: '0.1.0-preview.6',
+        exactTag: 'v0.1.0-preview.6',
         includeWindows: false,
       }),
     ).toThrow(/allow_unsigned_preview/);
@@ -94,16 +94,16 @@ describe('product release signing policy', () => {
     // ships as a labeled unsigned Preview.
     expect(() =>
       resolveProductReleasePolicy({
-        version: '0.1.0-preview.5',
-        exactTag: 'v0.1.0-preview.5',
+        version: '0.1.0-preview.6',
+        exactTag: 'v0.1.0-preview.6',
         signingMaterialAvailable: true,
         includeWindows: false,
       }),
     ).toThrow(/allow_unsigned_preview/);
     expect(
       resolveProductReleasePolicy({
-        version: '0.1.0-preview.5',
-        exactTag: 'v0.1.0-preview.5',
+        version: '0.1.0-preview.6',
+        exactTag: 'v0.1.0-preview.6',
         signingMaterialAvailable: true,
         allowUnsignedPreview: true,
         includeWindows: false,

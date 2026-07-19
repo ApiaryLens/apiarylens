@@ -106,6 +106,23 @@ jobs:
           RELEASE_CHANNEL: ${{ needs.policy.outputs.channel }}
           RELEASE_COMMIT: ${{ needs.policy.outputs.release_commit }}
         run: |
+          # Issue #92: the committed evidence pins the sourceCommit of the
+          # PREP-time build; a tag run builds from the tagged commit, so
+          # keeping the committed value would publish artifacts whose claimed
+          # identity is not the commit they were built from (preview.5
+          # claimed 1f348e0 while carrying 8c43e5f bytes). The committed pin
+          # is prep-local evidence only: squash merges discard the prep
+          # branch commits, so it is deliberately NOT required to resolve or
+          # be an ancestor here — only to be well-formed. The real identity
+          # gate is the rebind below plus the post-build and pre-publish
+          # verifications against the exact release commit.
+          committed_commit="$(node -p "require('./release/release-manifest.json').sourceCommit")"
+          echo "$committed_commit" | grep -Eq '^[0-9a-f]{40}$'
+          if git cat-file -e "$committed_commit^{commit}" 2>/dev/null; then
+            echo "Committed prep pin $committed_commit is reachable in this clone."
+          else
+            echo "Committed prep pin $committed_commit is not reachable (expected after a squash merge); rebinding to $RELEASE_COMMIT."
+          fi
           node --input-type=module <<'NODE'
           import { readFileSync, writeFileSync } from 'node:fs';
           const path = 'release/release-manifest.json';
@@ -115,12 +132,11 @@ jobs:
           manifest.channel = process.env.RELEASE_CHANNEL;
           manifest.buildTime = new Date().toISOString();
           manifest.artifacts = [];
-          if (!/^[0-9a-f]{40}$/.test(manifest.sourceCommit)) throw new Error('Release manifest requires an exact source commit.');
+          if (!/^[0-9a-f]{40}$/.test(process.env.RELEASE_COMMIT)) throw new Error('Release requires an exact release commit.');
+          manifest.sourceCommit = process.env.RELEASE_COMMIT;
           writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`);
           NODE
-          source_commit="$(node -p "require('./release/release-manifest.json').sourceCommit")"
-          git cat-file -e "$source_commit^{commit}"
-          git merge-base --is-ancestor "$source_commit" "$RELEASE_COMMIT"
+          test "$(node -p "require('./release/release-manifest.json').sourceCommit")" = "$RELEASE_COMMIT"
 
       - name: Build deployment bundles and supply-chain evidence
         run: |
@@ -134,6 +150,28 @@ jobs:
           pnpm release:supply-chain
           pnpm release:compatibility
           pnpm release:verify
+
+      - name: Verify the built identity binds to the exact release commit (issue 92)
+        env:
+          RELEASE_COMMIT: ${{ needs.policy.outputs.release_commit }}
+        run: |
+          # release:verify already proves manifest.sourceCommit, provenance
+          # gitCommit, and a clean tree agree with EACH OTHER; this step pins
+          # that agreed identity to the commit this workflow actually built
+          # (the tag's commit), so artifacts claiming any other commit can
+          # never be staged.
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const manifest = JSON.parse(readFileSync('release/release-manifest.json', 'utf8'));
+          const provenance = JSON.parse(readFileSync('release/apiarylens-provenance.intoto.jsonl', 'utf8'));
+          const built = provenance.predicate.buildDefinition.resolvedDependencies[0].digest.gitCommit;
+          if (manifest.sourceCommit !== process.env.RELEASE_COMMIT)
+            throw new Error(`Release manifest claims sourceCommit ${manifest.sourceCommit} but this run builds ${process.env.RELEASE_COMMIT}.`);
+          if (built !== process.env.RELEASE_COMMIT)
+            throw new Error(`Provenance records gitCommit ${built} but this run builds ${process.env.RELEASE_COMMIT}.`);
+          if (provenance.predicate.buildDefinition.internalParameters.dirtyWorktree)
+            throw new Error('A publishable build cannot come from a dirty worktree.');
+          NODE
 
       - name: Stage exact product subjects
         run: |
@@ -374,6 +412,18 @@ jobs:
           import { existsSync, readFileSync, statSync } from 'node:fs';
           const manifest = JSON.parse(readFileSync('dist/publish/release-manifest.json', 'utf8'));
           if (manifest.productVersion !== process.env.RELEASE_VERSION) throw new Error('Final release identity mismatch.');
+          // Issue #92: the published bytes must claim exactly the commit this
+          // release run built, and must never come from a dirty tree. This is
+          // the last gate before publication, so even a stale or locally
+          // produced evidence set cannot ship with a broken identity binding.
+          if (manifest.sourceCommit !== process.env.RELEASE_COMMIT)
+            throw new Error(`Published artifacts claim sourceCommit ${manifest.sourceCommit} but this release builds ${process.env.RELEASE_COMMIT}.`);
+          const provenance = JSON.parse(readFileSync('dist/publish/apiarylens-provenance.intoto.jsonl', 'utf8'));
+          const builtCommit = provenance.predicate.buildDefinition.resolvedDependencies[0].digest.gitCommit;
+          if (builtCommit !== process.env.RELEASE_COMMIT)
+            throw new Error(`Published provenance records gitCommit ${builtCommit} but this release builds ${process.env.RELEASE_COMMIT}.`);
+          if (provenance.predicate.buildDefinition.internalParameters.dirtyWorktree)
+            throw new Error('Published provenance records a dirty worktree; a publishable build must come from a clean tree.');
           if (process.env.WINDOWS_INCLUDED === 'true') {
             const signing = JSON.parse(readFileSync('dist/publish/apiarylens-windows-signing.json', 'utf8'));
             if (signing.sourceCommit !== manifest.sourceCommit || signing.releaseCommit !== process.env.RELEASE_COMMIT || signing.exactTag !== process.env.EXACT_TAG) throw new Error('Final release identity mismatch.');

@@ -1,12 +1,15 @@
-// Store-independent air-gap image identity verifier (issue #82).
+// Store-independent air-gap image identity verifier (issues #82, #91).
 //
-// Recomputes the image IDs a `docker load` of the bundle's images archive
-// reproduces — the sha256 of each config blob, derived from the archive
-// bytes alone — and compares them with the IDs bundle-manifest.json records.
-// No Docker daemon is involved, so this check cannot be fooled by the
-// build/CI daemon's own image store the way a post-load `docker image
+// Recomputes BOTH image identities a `docker load` of the bundle's images
+// archive reproduces — the config-blob digest (classic graphdriver `.Id`)
+// and the OCI manifest digest (containerd-store `.Id`) — from the archive
+// bytes alone, and compares them with the identities bundle-manifest.json
+// records. No Docker daemon is involved, so this check cannot be fooled by
+// the build/CI daemon's own image store the way a post-load `docker image
 // inspect` comparison on the build host can (that comparison is what let the
-// defective 0.1.0-preview.4 bundle pass CI while failing on every real host).
+// defective 0.1.0-preview.4 bundle pass CI while failing on every real host,
+// and a config-digest-only recording is what let 0.1.0-preview.5 fail on
+// every containerd-store host).
 //
 // Usage:
 //   node scripts/verify-airgap-images.mjs --bundle-dir DIR   extracted bundle
@@ -61,11 +64,15 @@ if (failures.length > 0) {
   process.exit(65);
 }
 
-for (const [imageKey, idKey] of [
-  ['apiImage', 'apiImageId'],
-  ['webImage', 'webImageId'],
-  ['helperImage', 'helperImageId'],
+for (const [imageKey, idKey, digestKey] of [
+  ['apiImage', 'apiImageId', 'apiImageManifestDigest'],
+  ['webImage', 'webImageId', 'webImageManifestDigest'],
+  ['helperImage', 'helperImageId', 'helperImageManifestDigest'],
 ]) {
-  console.log(`${manifest[imageKey]}: ${idKey} ${manifest[idKey]} reproduced from the archive.`);
+  console.log(
+    `${manifest[imageKey]}: ${idKey} ${manifest[idKey]} and ${digestKey} ${manifest[digestKey]} reproduced from the archive.`,
+  );
 }
-console.log(`Recorded image IDs for ApiaryLens ${manifest.productVersion} are load-reproducible.`);
+console.log(
+  `Recorded image identities for ApiaryLens ${manifest.productVersion} are load-reproducible on both image stores.`,
+);

@@ -111,11 +111,22 @@ const actualSubjects = provenance.subject
   .sort();
 if (JSON.stringify(expectedSubjects) !== JSON.stringify(actualSubjects))
   throw new Error('Provenance subjects do not match released product artifacts');
-if (
-  manifest.channel === 'stable' &&
-  provenance.predicate.buildDefinition.internalParameters.dirtyWorktree
-)
-  throw new Error('A stable release cannot come from a dirty worktree');
+// Issue #92: the manifest's claimed source identity and the provenance's
+// actual build source must be the same commit — preview.5 shipped with
+// manifest.sourceCommit 1f348e0 while its provenance (and bytes) recorded
+// 8c43e5f, and nothing verified the two against each other. And a
+// publishable artifact set can never come from a dirty tree: dirty bytes are
+// pinned by no commit, so the claimed identity is unreproducible regardless
+// of channel.
+const provenanceCommit =
+  provenance.predicate.buildDefinition.resolvedDependencies?.[0]?.digest?.gitCommit;
+if (provenanceCommit !== manifest.sourceCommit)
+  throw new Error(
+    `Release identity binding is broken: release-manifest.json claims sourceCommit ` +
+      `${manifest.sourceCommit} but the provenance records gitCommit ${provenanceCommit}`,
+  );
+if (provenance.predicate.buildDefinition.internalParameters.dirtyWorktree)
+  throw new Error('Release evidence comes from a dirty worktree; publishable builds must be clean');
 
 console.log(
   `Supply-chain evidence valid: ${manifest.artifacts.length} artifacts (${remotelyPinnedArtifacts} remotely pinned subjects), ${sbom.components.length} components, unsigned provenance structurally verified.`,

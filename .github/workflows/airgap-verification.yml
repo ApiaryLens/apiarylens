@@ -254,6 +254,58 @@ jobs:
           fi
           test ! -e "$RUNNER_TEMP/apiarylens"
 
+      # Issue #91: the lifecycle above ran on the runner's default image
+      # store (classic graphdriver on GitHub runners), where a loaded image's
+      # .Id is the config-blob digest. Real hosts on current Docker Engine
+      # default to the containerd image store, where .Id is the OCI manifest
+      # digest — the identity form that made the shipped preview.5 gate
+      # refuse its own bundle while this job stayed green. Re-exercise the
+      # load + post-load gate + install path under the containerd store so a
+      # store-dependent gate regression can never pass CI again.
+      - name: Switch the daemon to the containerd image store (current Docker default)
+        run: |
+          echo '{"features":{"containerd-snapshotter":true}}' | sudo tee /etc/docker/daemon.json
+          sudo systemctl restart docker
+          docker info --format '{{.DriverStatus}} driver={{.Driver}}'
+          test "$(docker info --format '{{.Driver}}')" = 'overlayfs'
+
+      - name: Prune all image content so only docker load can supply images (containerd store)
+        run: |
+          docker builder prune --all --force
+          docker image prune --all --force
+          docker image ls
+
+      - name: Post-load gate accepts the bundle's own images under the containerd store (#91)
+        run: |
+          "$RUNNER_TEMP/bundle1/scripts/load-images.sh" --bundle-dir "$RUNNER_TEMP/bundle1"
+          "$RUNNER_TEMP/bundle2/scripts/load-images.sh" --bundle-dir "$RUNNER_TEMP/bundle2"
+          # Prove this leg is exercising the containerd identity form, not
+          # silently repeating the classic-store comparison: under the
+          # containerd store the loaded .Id must be the recorded OCI manifest
+          # digest, not the recorded config digest.
+          api_image="$(sed -n 's/^ *"apiImage": "\(.*\)",$/\1/p' "$RUNNER_TEMP/bundle1/bundle-manifest.json")"
+          config_id="$(sed -n 's/^ *"apiImageId": "\(.*\)",$/\1/p' "$RUNNER_TEMP/bundle1/bundle-manifest.json")"
+          manifest_digest="$(sed -n 's/^ *"apiImageManifestDigest": "\(.*\)",$/\1/p' "$RUNNER_TEMP/bundle1/bundle-manifest.json")"
+          loaded_id="$(docker image inspect --format '{{.Id}}' "$api_image")"
+          echo "containerd store loaded .Id: $loaded_id (config $config_id, manifest $manifest_digest)"
+          test "$loaded_id" = "$manifest_digest"
+          test "$loaded_id" != "$config_id"
+
+      - name: Install air-gapped from the bundle under the containerd store (zero egress)
+        run: |
+          "$RUNNER_TEMP/bundle1/scripts/install-airgap.sh" \
+            --bundle-dir "$RUNNER_TEMP/bundle1" --target "$RUNNER_TEMP/apiarylens-ctrd" \
+            --project "$PROJECT-ctrd" --site-address localhost --http-port 8081 --https-port 8444
+          curl -k -fsS https://localhost:8444/health | grep -q "\"version\":\"$BASE_VERSION\""
+          counter="$(sudo iptables -L DOCKER-USER -v -n -x | awk '/DROP/ {print $1; exit}')"
+          echo "Dropped packets after containerd-store install: baseline $EGRESS_BASELINE, now $counter"
+          test "$counter" -eq "$EGRESS_BASELINE"
+
+      - name: Teardown the containerd-store deployment
+        run: |
+          "$RUNNER_TEMP/bundle1/scripts/teardown.sh" --target "$RUNNER_TEMP/apiarylens-ctrd" \
+            --project "$PROJECT-ctrd" --delete-data --yes-delete-my-data
+
       - name: Diagnostics on failure
         if: failure()
         run: |
