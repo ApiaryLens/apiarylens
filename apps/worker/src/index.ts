@@ -3,8 +3,10 @@ import {
   buildOpenApiDocument,
   createBuildIdentity,
   DATABASE_MIGRATION_HEAD,
+  ExportArchiveError,
   invitationAcceptSchema,
   invitationCreateSchema,
+  parseExportArchive,
   recoveryRequestSchema,
   resourceFieldSchemas,
   resourceTypeSchema,
@@ -12,6 +14,7 @@ import {
   signInRequestSchema,
   syncPushRequestSchema,
   type ApiError,
+  type ParsedExportArchive,
   type ResourceType,
   type Role,
   type SyncOperation,
@@ -757,6 +760,7 @@ app.get('/api/v1/export/full', requireSession, async (c) => {
       .all<{ value_json: string }>();
     resources[type] = response.results.map((row) => JSON.parse(row.value_json));
   }
+  const dataBytes = strToU8(JSON.stringify(resources, null, 2));
   const files: Record<string, Uint8Array> = {
     'manifest.json': strToU8(
       JSON.stringify(
@@ -766,12 +770,14 @@ app.get('/api/v1/export/full', requireSession, async (c) => {
           exportFormat: 1,
           profile: 'cloudflare',
           exportedAt: now(),
+          // Restore verifies this checksum before touching any data.
+          dataSha256: await sha256(dataBytes),
         },
         null,
         2,
       ),
     ),
-    'data.json': strToU8(JSON.stringify(resources, null, 2)),
+    'data.json': dataBytes,
   };
   for (const type of ['apiary', 'hive', 'inspection'] as const) {
     files[`csv/${type}.csv`] = strToU8(toCsv(resources[type] ?? []));
@@ -791,6 +797,177 @@ app.get('/api/v1/export/full', requireSession, async (c) => {
       'content-disposition': 'attachment; filename="apiarylens-export.zip"',
       'cache-control': 'no-store',
     },
+  });
+});
+
+// Restore a full-export archive over the organization's records (WEB-001).
+// Mirrors the Node profile: full verification before any change, tombstones
+// plus upserts through versioned change rows so replicas converge through the
+// ordinary sync pull. D1 has no cross-batch transaction, so statements are
+// applied in chunked batches after validation has fully passed.
+app.post('/api/v1/import/full', requireSession, requireCsrf, async (c) => {
+  if (!rolePermissions[c.get('session').role].includes('backup:operate'))
+    return apiError(c, 403, 'permission_denied', 'You do not have permission for this action');
+  const bytes = new Uint8Array(await c.req.arrayBuffer());
+  if (bytes.byteLength === 0 || bytes.byteLength > 256 * 1024 * 1024)
+    return apiError(c, 400, 'import_invalid', 'The uploaded backup file is empty or too large');
+  let archive: Record<string, Uint8Array>;
+  try {
+    archive = boundedUnzip(bytes);
+  } catch (caught) {
+    if (caught instanceof ArchiveBoundsError)
+      return apiError(c, 400, 'import_too_large', caught.message);
+    return apiError(
+      c,
+      400,
+      'import_invalid',
+      'The file is not a readable ApiaryLens backup archive',
+    );
+  }
+  let parsed: ParsedExportArchive;
+  try {
+    parsed = await parseExportArchive(archive, sha256);
+  } catch (caught) {
+    if (caught instanceof ExportArchiveError)
+      return apiError(
+        c,
+        400,
+        caught.code === 'corrupt' ? 'import_corrupt' : 'import_invalid',
+        caught.message,
+      );
+    throw caught;
+  }
+  for (const record of parsed.records.mediaAsset) {
+    if (parsed.missingMediaIds.includes(record.id)) {
+      record.fields = { ...record.fields, state: 'failed' };
+    }
+  }
+  const organizationId = c.get('session').organizationId;
+  // Stage the archive's verified media BEFORE the record batches so a storage
+  // failure surfaces while the previous records are still intact. Staged
+  // blobs are either identical replacements (the archive sha was verified
+  // against the record itself) or unreferenced until the records land.
+  try {
+    for (const [mediaId, mediaContent] of parsed.mediaBytes) {
+      // Drop any pre-restore thumbnail so a stale derivative never outlives
+      // the restored original; clients regenerate on demand.
+      await c.env.MEDIA.delete(mediaKey(organizationId, mediaId, 'thumbnail'));
+      await c.env.MEDIA.put(mediaKey(organizationId, mediaId), mediaContent, {
+        httpMetadata: {
+          contentType: String(
+            parsed.records.mediaAsset.find((record) => record.id === mediaId)?.fields.mediaType ??
+              'application/octet-stream',
+          ),
+        },
+      });
+    }
+  } catch {
+    return apiError(
+      c,
+      400,
+      'import_media_failed',
+      'The photos could not be written to storage. Nothing was restored.',
+    );
+  }
+  const timestamp = now();
+  const statements: D1PreparedStatement[] = [];
+  const removedMediaIds: string[] = [];
+  let imported = 0;
+  let removed = 0;
+  for (const entityType of resourceTypeSchema.options) {
+    const incoming = parsed.records[entityType];
+    const incomingIds = new Set(incoming.map((record) => record.id));
+    const response = await c.env.DB.prepare(
+      `SELECT id, version, value_json, deleted_at FROM resources WHERE organization_id = ? AND entity_type = ?`,
+    )
+      .bind(organizationId, entityType)
+      .all<{ id: string; version: number; value_json: string; deleted_at: string | null }>();
+    const versions = new Map(response.results.map((row) => [row.id, Number(row.version)]));
+    for (const row of response.results) {
+      if (row.deleted_at !== null || incomingIds.has(row.id)) continue;
+      const version = Number(row.version) + 1;
+      const value = {
+        ...(JSON.parse(row.value_json) as Record<string, unknown>),
+        version,
+        updatedAt: timestamp,
+        deletedAt: timestamp,
+      };
+      statements.push(
+        c.env.DB.prepare(
+          `UPDATE resources SET version = ?, value_json = ?, updated_at = ?, deleted_at = ? WHERE organization_id = ? AND entity_type = ? AND id = ?`,
+        ).bind(
+          version,
+          JSON.stringify(value),
+          timestamp,
+          timestamp,
+          organizationId,
+          entityType,
+          row.id,
+        ),
+        c.env.DB.prepare(
+          `INSERT INTO changes(organization_id, entity_type, entity_id, action, version, changed_at, value_json) VALUES (?, ?, ?, 'delete', ?, ?, NULL)`,
+        ).bind(organizationId, entityType, row.id, version, timestamp),
+      );
+      removed += 1;
+      if (entityType === 'mediaAsset') removedMediaIds.push(row.id);
+    }
+    for (const record of incoming) {
+      const version = (versions.get(record.id) ?? 0) + 1;
+      const value = {
+        ...record.fields,
+        id: record.id,
+        organizationId,
+        version,
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+        deletedAt: null,
+      };
+      const serialized = JSON.stringify(value);
+      statements.push(
+        c.env.DB.prepare(
+          `INSERT INTO resources(organization_id, entity_type, id, version, value_json, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, NULL) ON CONFLICT(organization_id, entity_type, id) DO UPDATE SET version=excluded.version, value_json=excluded.value_json, updated_at=excluded.updated_at, deleted_at=NULL`,
+        ).bind(
+          organizationId,
+          entityType,
+          record.id,
+          version,
+          serialized,
+          record.createdAt,
+          record.updatedAt,
+        ),
+        c.env.DB.prepare(
+          `INSERT INTO changes(organization_id, entity_type, entity_id, action, version, changed_at, value_json) VALUES (?, ?, ?, 'upsert', ?, ?, ?)`,
+        ).bind(organizationId, entityType, record.id, version, timestamp, serialized),
+      );
+      imported += 1;
+    }
+  }
+  statements.push(
+    c.env.DB.prepare(
+      `INSERT INTO audit_events(id, organization_id, actor_user_id, action, target_type, target_id, result, created_at) VALUES (?, ?, ?, 'data.import', 'organization', ?, 'success', ?)`,
+    ).bind(crypto.randomUUID(), organizationId, c.get('session').userId, organizationId, timestamp),
+  );
+  await runBatches(c.env.DB, statements);
+  // Cleanup after the committed cutover: blobs for records the restore
+  // removed, plus stale pre-restore blobs behind imported media ids whose
+  // bytes the archive did not carry (staged/failed records) — otherwise
+  // post-backup photo content would outlive a restore that promised to
+  // replace every photo. Failures here never fail the restore: the affected
+  // records are tombstoned (unreachable) or honestly non-ready.
+  const staleImportedIds = parsed.records.mediaAsset
+    .map((record) => record.id)
+    .filter((id) => !parsed.mediaBytes.has(id));
+  for (const staleId of [...removedMediaIds, ...staleImportedIds]) {
+    await c.env.MEDIA.delete(mediaKey(organizationId, staleId)).catch(() => undefined);
+    await c.env.MEDIA.delete(mediaKey(organizationId, staleId, 'thumbnail')).catch(() => undefined);
+  }
+  return c.json({
+    status: 'restored',
+    imported,
+    removed,
+    mediaFiles: parsed.mediaBytes.size,
+    mediaMissing: parsed.missingMediaIds.length,
+    restoredAt: now(),
   });
 });
 
@@ -995,6 +1172,34 @@ const backupColumns: Record<string, string[]> = {
   ],
 };
 const backupTables = Object.keys(backupColumns);
+
+/** Refusal raised when a ZIP declares more content than a restore may expand. */
+class ArchiveBoundsError extends Error {}
+
+const MAX_ARCHIVE_ENTRIES = 10_000;
+const MAX_EXPANDED_BYTES = 256 * 1024 * 1024;
+
+/**
+ * Unzip with bounds on entry count and total declared uncompressed size so a
+ * small ZIP bomb cannot exhaust Worker memory before record and media
+ * validation can apply their own limits.
+ */
+function boundedUnzip(bytes: Uint8Array): Record<string, Uint8Array> {
+  let entries = 0;
+  let expanded = 0;
+  return unzipSync(bytes, {
+    filter: (file) => {
+      entries += 1;
+      expanded += file.originalSize;
+      if (entries > MAX_ARCHIVE_ENTRIES || expanded > MAX_EXPANDED_BYTES) {
+        throw new ArchiveBoundsError(
+          'The backup archive declares more content than a restore can safely expand',
+        );
+      }
+      return true;
+    },
+  });
+}
 
 async function requireScoutOperator(c: AppContext, next: Next) {
   const supplied = c.req.header('authorization');

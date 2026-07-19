@@ -71,6 +71,22 @@ describe('online sync scheduler', () => {
     vi.useRealTimers();
   });
 
+  it('stays suspended after stop until resume allows scheduling again', async () => {
+    // Restore cutover contract (WEB-001): while a restore replaces the
+    // backend database, no queued write may sync into it; a failed restore
+    // resumes normal scheduling.
+    const synchronize = vi.fn(() => Promise.resolve());
+    const scheduler = new OnlineSyncScheduler({ isOnline: () => true, synchronize });
+
+    scheduler.stop();
+    await scheduler.request('save');
+    expect(synchronize).not.toHaveBeenCalled();
+
+    scheduler.resume();
+    await scheduler.request('open');
+    expect(synchronize).toHaveBeenCalledTimes(1);
+  });
+
   it('suppresses a late success callback when canceled work ignores abort', async () => {
     let release!: () => void;
     const synchronize = vi.fn(() => new Promise<void>((resolve) => (release = resolve)));

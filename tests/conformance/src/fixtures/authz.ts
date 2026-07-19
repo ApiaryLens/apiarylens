@@ -20,6 +20,7 @@ export const authzFixtures: readonly ConformanceFixture[] = [
         ['GET', '/api/v1/resources/apiary'],
         ['GET', '/api/v1/export/full'],
         ['GET', `/api/v1/media/${randomUUID()}/content`],
+        ['POST', '/api/v1/import/full'],
         ['POST', '/api/v1/sync/push'],
         ['POST', '/api/v1/auth/sign-out'],
         ['POST', '/api/v1/session/revoke-others'],
@@ -40,6 +41,7 @@ export const authzFixtures: readonly ConformanceFixture[] = [
         ['POST', '/api/v1/auth/sign-out'],
         ['POST', '/api/v1/session/revoke-others'],
         ['POST', '/api/v1/sync/push'],
+        ['POST', '/api/v1/import/full'],
         ['POST', '/api/v1/invitations'],
         ['PUT', `/api/v1/media/${randomUUID()}/content`],
         ['DELETE', `/api/v1/media/${randomUUID()}/content`],
@@ -84,6 +86,7 @@ export const authzFixtures: readonly ConformanceFixture[] = [
         ],
         ['GET', '/api/v1/invitations', undefined],
         ['GET', '/api/v1/export/full', undefined],
+        ['POST', '/api/v1/import/full', undefined],
         ['PUT', `/api/v1/media/${randomUUID()}/content`, undefined],
         ['DELETE', `/api/v1/members/${viewer.session?.membership.id}`, undefined],
       ];
@@ -123,6 +126,12 @@ export const authzFixtures: readonly ConformanceFixture[] = [
       const exportResponse = await beekeeper.request('/api/v1/export/full');
       expect(exportResponse.status).toBe(403);
       expect(await readErrorCode(exportResponse)).toBe('permission_denied');
+
+      // backup:operate is owner-only: restoring over the family workspace is
+      // not field work.
+      const importResponse = await beekeeper.request('/api/v1/import/full', { method: 'POST' });
+      expect(importResponse.status).toBe(403);
+      expect(await readErrorCode(importResponse)).toBe('permission_denied');
     },
   },
   {

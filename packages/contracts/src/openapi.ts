@@ -251,6 +251,24 @@ export function buildOpenApiDocument() {
           },
         },
       },
+      '/import/full': {
+        post: csrfOperation({
+          tags: ['Ownership'],
+          summary: 'Restore the workspace from a full export archive, replacing current records',
+          requestBody: {
+            required: true,
+            content: { 'application/zip': { schema: { type: 'string', format: 'binary' } } },
+          },
+          responses: {
+            '200': { description: 'Workspace replaced with the verified archive content' },
+            '400': {
+              description: 'The archive is not a valid export or failed integrity checks',
+              content: json(apiErrorSchema),
+            },
+            '403': { description: 'Owner permission required', content: json(apiErrorSchema) },
+          },
+        }),
+      },
     },
     components: {
       securitySchemes: {

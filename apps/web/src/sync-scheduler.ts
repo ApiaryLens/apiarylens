@@ -52,6 +52,14 @@ export class OnlineSyncScheduler {
     this.cancel();
   }
 
+  /**
+   * Reverses stop() after a suspended operation (for example a failed restore
+   * cutover) so lifecycle triggers schedule synchronization again.
+   */
+  resume(): void {
+    this.stopped = false;
+  }
+
   cancel(): void {
     this.cancelGeneration += 1;
     this.requested = false;

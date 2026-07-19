@@ -9,7 +9,11 @@ import type {
   SyncOperationResult,
   User,
 } from '@apiarylens/contracts';
-import { resourceFieldSchemas } from '@apiarylens/contracts';
+import {
+  resourceFieldSchemas,
+  resourceTypeSchema,
+  type ImportedRecord,
+} from '@apiarylens/contracts';
 import { migration0001, migration0002, migration0003, migration0004 } from './schema.js';
 
 type SqlValue = string | number | null;
@@ -810,6 +814,129 @@ export class SqliteStore {
         now(),
       );
     return result;
+  }
+
+  /**
+   * Replace the organization's records with the verified content of an export
+   * archive (WEB-001 restore). Every live record absent from the import is
+   * tombstoned and every imported record is upserted, all through new
+   * `changes` rows with monotonically increasing versions — so replicas
+   * converge on the restored state through the ordinary sync pull instead of
+   * needing a cursor reset. Runs in one transaction: a failed import changes
+   * nothing.
+   */
+  importOrganizationData(
+    organizationId: string,
+    actorUserId: string,
+    records: Partial<Record<ResourceType, ImportedRecord[]>>,
+  ): { imported: number; removed: number; removedMediaIds: string[] } {
+    const timestamp = now();
+    return this.transaction(() => {
+      let imported = 0;
+      let removed = 0;
+      const removedMediaIds: string[] = [];
+      const tombstone = this.database.prepare(
+        `UPDATE resources SET version = ?, value_json = ?, updated_at = ?, deleted_at = ?
+         WHERE organization_id = ? AND entity_type = ? AND id = ?`,
+      );
+      const upsert = this.database.prepare(
+        `INSERT INTO resources(
+          organization_id, entity_type, id, version, value_json, created_at, updated_at, deleted_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
+        ON CONFLICT(organization_id, entity_type, id) DO UPDATE SET
+          version = excluded.version, value_json = excluded.value_json,
+          updated_at = excluded.updated_at, deleted_at = NULL`,
+      );
+      const change = this.database.prepare(
+        `INSERT INTO changes(
+          organization_id, entity_type, entity_id, action, version, changed_at, value_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      );
+      for (const entityType of resourceTypeSchema.options) {
+        const incoming = records[entityType] ?? [];
+        const incomingIds = new Set(incoming.map((record) => record.id));
+        const rows = this.database
+          .prepare(
+            `SELECT id, version, value_json, deleted_at FROM resources
+             WHERE organization_id = ? AND entity_type = ?`,
+          )
+          .all(organizationId, entityType) as Row[];
+        const versions = new Map(rows.map((row) => [String(row.id), Number(row.version)]));
+        for (const row of rows) {
+          if (row.deleted_at !== null || incomingIds.has(String(row.id))) continue;
+          const version = Number(row.version) + 1;
+          const value = {
+            ...fromJson(row.value_json),
+            version,
+            updatedAt: timestamp,
+            deletedAt: timestamp,
+          };
+          tombstone.run(
+            version,
+            JSON.stringify(value),
+            timestamp,
+            timestamp,
+            organizationId,
+            entityType,
+            String(row.id),
+          );
+          change.run(
+            organizationId,
+            entityType,
+            String(row.id),
+            'delete',
+            version,
+            timestamp,
+            null,
+          );
+          removed += 1;
+          if (entityType === 'mediaAsset') removedMediaIds.push(String(row.id));
+        }
+        for (const record of incoming) {
+          const version = (versions.get(record.id) ?? 0) + 1;
+          const value: ResourceRecord = {
+            ...record.fields,
+            ...entityMeta(
+              record.id,
+              organizationId,
+              version,
+              record.createdAt,
+              record.updatedAt,
+              null,
+            ),
+          };
+          const serialized = JSON.stringify(value);
+          upsert.run(
+            organizationId,
+            entityType,
+            record.id,
+            version,
+            serialized,
+            record.createdAt,
+            record.updatedAt,
+          );
+          change.run(
+            organizationId,
+            entityType,
+            record.id,
+            'upsert',
+            version,
+            timestamp,
+            serialized,
+          );
+          imported += 1;
+        }
+      }
+      this.audit(
+        organizationId,
+        actorUserId,
+        'data.import',
+        'organization',
+        organizationId,
+        'success',
+      );
+      return { imported, removed, removedMediaIds };
+    });
   }
 
   pullChanges(organizationId: string, cursor = 0, limit = 100) {

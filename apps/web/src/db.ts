@@ -21,5 +21,6 @@ export {
   resolveConflict,
   stageImage,
 } from './local/outbox.js';
+export { lastLocalBackupAt, recordLocalBackup } from './local/backup-signal.js';
 export { synchronize } from './local/sync.js';
 export type { LocalMedia, LocalResource, OutboxItem, SyncState } from './local/types.js';
