@@ -8,7 +8,7 @@
   "channel": "preview",
   "supportStatus": "supported",
   "sourceCommit": "e1ce402ca532dca61fe169cb800aea82e75618c9",
-  "buildTime": "2026-07-18T21:30:33.905Z",
+  "buildTime": "2026-07-18T23:45:58.409Z",
   "contracts": {
     "api": "1.0",
     "sync": 1,
@@ -114,44 +114,84 @@
   ],
   "artifacts": [
     {
-      "name": "apiarylens-0.1.0-preview.4-cloudflare-0e9ce392023c.tar.gz",
+      "name": "apiarylens-0.1.0-preview.4-cloudflare-bcc990f66558.tar.gz",
       "kind": "deployment-bundle",
       "target": "cloudflare",
-      "url": "https://apiarylens.org/releases/0.1.0-preview.4/artifacts/apiarylens-0.1.0-preview.4-cloudflare-0e9ce392023c.tar.gz",
-      "sha256": "0e9ce392023c31cac81be2b7f7af4caef87ac760c8d742700581abfc26f1478e",
-      "bytes": 659104
+      "url": "https://apiarylens.org/releases/0.1.0-preview.4/artifacts/apiarylens-0.1.0-preview.4-cloudflare-bcc990f66558.tar.gz",
+      "sha256": "bcc990f66558f3b0e7fe269eefa251d142e58448e3ef975329c6a5128f4cecca",
+      "bytes": 658255
     },
     {
-      "name": "apiarylens-0.1.0-preview.4-compose-9b553f88b7e4.tar.gz",
+      "name": "apiarylens-0.1.0-preview.4-compose-016b34756ec6.tar.gz",
       "kind": "deployment-bundle",
       "target": "compose",
-      "url": "https://apiarylens.org/releases/0.1.0-preview.4/artifacts/apiarylens-0.1.0-preview.4-compose-9b553f88b7e4.tar.gz",
-      "sha256": "9b553f88b7e42b3ad85364a9bd102442f08d7d708a7d7db229368c3412d1f71c",
-      "bytes": 162262
+      "url": "https://apiarylens.org/releases/0.1.0-preview.4/artifacts/apiarylens-0.1.0-preview.4-compose-016b34756ec6.tar.gz",
+      "sha256": "016b34756ec666de2e497b97245c13cb935ed30d257be00873888dae2b5a89f5",
+      "bytes": 161701
+    },
+    {
+      "name": "apiarylens-0.1.0-preview.4-airgap-42bfd2d35c41.tar",
+      "kind": "deployment-bundle",
+      "target": "airgap",
+      "url": "https://apiarylens.org/releases/0.1.0-preview.4/artifacts/apiarylens-0.1.0-preview.4-airgap-42bfd2d35c41.tar",
+      "sha256": "42bfd2d35c41a87b189084cf75ef4c6ddc5b480800a6a26b361fbec068c062a5",
+      "bytes": 240959488
     },
     {
       "name": "apiarylens-sbom.cdx.json",
       "kind": "sbom",
       "target": "release",
       "url": "https://apiarylens.org/releases/0.1.0-preview.4/apiarylens-sbom.cdx.json",
-      "sha256": "b75c168096678a59451165241ecd3a17ede61872115916c4c5f090dd0d5ec621",
-      "bytes": 111089
+      "sha256": "b08fc043758c58b43a05d4c2c0128665c526a2c42bd0940fc57f6ebeba956bb1",
+      "bytes": 111520
     },
     {
       "name": "apiarylens-license-report.md",
       "kind": "license-report",
       "target": "release",
       "url": "https://apiarylens.org/releases/0.1.0-preview.4/apiarylens-license-report.md",
-      "sha256": "bbeb287ef4cd2286158bc95c5d026a8f66ba37aa53edae57a92d568d50ef4b79",
-      "bytes": 891
+      "sha256": "9b3ea7865474f0a0a5664954b773134157603c45bc0309c7e0fb21a12497f48a",
+      "bytes": 876
     },
     {
       "name": "apiarylens-provenance.intoto.jsonl",
       "kind": "provenance",
       "target": "release",
       "url": "https://apiarylens.org/releases/0.1.0-preview.4/apiarylens-provenance.intoto.jsonl",
-      "sha256": "69500a31bcb9d5fb61db51bfadfe6e7e24b742c2908f73623445fc70b1417196",
-      "bytes": 980
+      "sha256": "01718246a5b007339d367278dc638c8e94fb86c985c1e0246785ce7a09e051c0",
+      "bytes": 1129
+    },
+    {
+      "name": "windows-package.json",
+      "kind": "windows-package-manifest",
+      "target": "windows-x64",
+      "url": "https://apiarylens.org/releases/0.1.0-preview.4/artifacts/windows/windows-package.json",
+      "sha256": "9b05f51a609877e9151e8e9bedbcf9b1efd6f31704c123944200d8ce0c75409f",
+      "bytes": 808
+    },
+    {
+      "name": "ApiaryLens-0.1.0-preview4-full.nupkg",
+      "kind": "windows-package-artifact",
+      "target": "windows-x64",
+      "url": "https://apiarylens.org/releases/0.1.0-preview.4/artifacts/windows/ApiaryLens-0.1.0-preview4-full.nupkg",
+      "sha256": "48d3911bc9ab97cc08d11d33208a7cc54969133f4f11e297b7588b13b1ebb02d",
+      "bytes": 140781235
+    },
+    {
+      "name": "ApiaryLensSetup-UNSIGNED-PREVIEW.exe",
+      "kind": "windows-package-artifact",
+      "target": "windows-x64",
+      "url": "https://apiarylens.org/releases/0.1.0-preview.4/artifacts/windows/ApiaryLensSetup-UNSIGNED-PREVIEW.exe",
+      "sha256": "97acfed863e01379cacb667feaa989df841bac097ff80c2e647fd0fbf9de7efd",
+      "bytes": 141538816
+    },
+    {
+      "name": "RELEASES",
+      "kind": "windows-package-artifact",
+      "target": "windows-x64",
+      "url": "https://apiarylens.org/releases/0.1.0-preview.4/artifacts/windows/RELEASES",
+      "sha256": "328135354ff7c9177336c9664a63fea9bcca95533d511f01f5b5de0d5f147e15",
+      "bytes": 90
     }
   ],
   "revokedArtifacts": [],

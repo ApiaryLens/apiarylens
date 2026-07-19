@@ -8,7 +8,27 @@ const manifest = JSON.parse(
   await readFile(join(releaseDirectory, 'release-manifest.json'), 'utf8'),
 );
 const releaseKinds = new Set(['sbom', 'license-report', 'provenance']);
-let remotelyPinnedWindowsArtifacts = 0;
+let remotelyPinnedArtifacts = 0;
+
+// Artifacts too large to live in git (Windows installers, the air-gap tar)
+// are allowed to be absent locally only when the manifest pins them to their
+// canonical immutable release URL; their bytes are still verified in the
+// release workflow before publication and by SHA256SUMS + attestation after.
+function isRemotelyPinned(artifact) {
+  if (
+    artifact.target === 'windows-x64' &&
+    artifact.kind === 'windows-package-artifact' &&
+    artifact.url ===
+      `https://apiarylens.org/releases/${manifest.productVersion}/artifacts/windows/${artifact.name}`
+  )
+    return true;
+  return (
+    artifact.target === 'airgap' &&
+    artifact.kind === 'deployment-bundle' &&
+    artifact.url ===
+      `https://apiarylens.org/releases/${manifest.productVersion}/artifacts/${artifact.name}`
+  );
+}
 
 for (const artifact of manifest.artifacts) {
   const localPath =
@@ -25,14 +45,8 @@ for (const artifact of manifest.artifacts) {
     content = await readFile(localPath);
     metadata = await stat(localPath);
   } catch (error) {
-    if (
-      error?.code === 'ENOENT' &&
-      artifact.target === 'windows-x64' &&
-      artifact.kind === 'windows-package-artifact' &&
-      artifact.url ===
-        `https://apiarylens.org/releases/${manifest.productVersion}/artifacts/windows/${artifact.name}`
-    ) {
-      remotelyPinnedWindowsArtifacts += 1;
+    if (error?.code === 'ENOENT' && isRemotelyPinned(artifact)) {
+      remotelyPinnedArtifacts += 1;
       continue;
     }
     throw error;
@@ -104,5 +118,5 @@ if (
   throw new Error('A stable release cannot come from a dirty worktree');
 
 console.log(
-  `Supply-chain evidence valid: ${manifest.artifacts.length} artifacts (${remotelyPinnedWindowsArtifacts} remote Windows subjects), ${sbom.components.length} components, unsigned provenance structurally verified.`,
+  `Supply-chain evidence valid: ${manifest.artifacts.length} artifacts (${remotelyPinnedArtifacts} remotely pinned subjects), ${sbom.components.length} components, unsigned provenance structurally verified.`,
 );

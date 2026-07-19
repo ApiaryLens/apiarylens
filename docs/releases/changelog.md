@@ -5,7 +5,11 @@
 - Continued separately versioned Scout Bee deployment-bootloader work. It is not
   currently an end-user release.
 
-## 0.1.0-preview.4 — 2026-07-18
+## 0.1.0-preview.4 — Preview 2 — 2026-07-18
+
+Published as **ApiaryLens Preview 2**; `0.1.0-preview.4` is the internal build
+number (build ordinals only increase and may skip public preview numbers —
+`preview.2` and `preview.3` were consumed by unpublished internal drafts).
 
 First release offering the standalone Windows desktop application as a
 downloadable preview artifact. The Windows Setup is intentionally unsigned and
@@ -19,7 +23,7 @@ Also includes the air-gapped Compose bundle with offline lifecycle scripts, the
 machine-verified compatibility manifest, the cross-client conformance suite,
 the decomposed web client with profile import preview and the offline glossary,
 and the SignPath-ready release pipeline. See the
-[Preview 4 release notes](0.1.0-preview.4.md) for verification steps and the
+[Preview 2 release notes](0.1.0-preview.4.md) for verification steps and the
 honest SmartScreen guidance.
 
 ## 0.1.0-preview.1 — 2026-07-16
