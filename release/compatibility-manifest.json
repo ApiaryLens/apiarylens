@@ -7,8 +7,8 @@
   "productVersion": "0.1.0-preview.6",
   "channel": "preview",
   "supportStatus": "supported",
-  "sourceCommit": "19ed016eda60ae66e2d01df373f7bad02e0c237c",
-  "buildTime": "2026-07-19T04:02:40.605Z",
+  "sourceCommit": "8d5d4ffd46c6ebffd66bae6c4bee829755d3d7a2",
+  "buildTime": "2026-07-19T04:30:48.058Z",
   "contracts": {
     "api": "1.0",
     "sync": 1,
@@ -114,44 +114,52 @@
   ],
   "artifacts": [
     {
-      "name": "apiarylens-0.1.0-preview.6-cloudflare-edaa604384b0.tar.gz",
+      "name": "apiarylens-0.1.0-preview.6-cloudflare-45875bbdf548.tar.gz",
       "kind": "deployment-bundle",
       "target": "cloudflare",
-      "url": "https://apiarylens.org/releases/0.1.0-preview.6/artifacts/apiarylens-0.1.0-preview.6-cloudflare-edaa604384b0.tar.gz",
-      "sha256": "edaa604384b0084e59866914d4c16b25edec37a78eee5560ed142cbdc08136bf",
-      "bytes": 720138
+      "url": "https://apiarylens.org/releases/0.1.0-preview.6/artifacts/apiarylens-0.1.0-preview.6-cloudflare-45875bbdf548.tar.gz",
+      "sha256": "45875bbdf5486eb1e9b362c972fdfaf531a74800ef98c00ec0ab56619bb78c47",
+      "bytes": 719223
     },
     {
-      "name": "apiarylens-0.1.0-preview.6-compose-a7903bbf5684.tar.gz",
+      "name": "apiarylens-0.1.0-preview.6-compose-6caefb957737.tar.gz",
       "kind": "deployment-bundle",
       "target": "compose",
-      "url": "https://apiarylens.org/releases/0.1.0-preview.6/artifacts/apiarylens-0.1.0-preview.6-compose-a7903bbf5684.tar.gz",
-      "sha256": "a7903bbf568431b041c8b5872967cc813349cbc9aa0f895251db1266bf848a8c",
-      "bytes": 197567
+      "url": "https://apiarylens.org/releases/0.1.0-preview.6/artifacts/apiarylens-0.1.0-preview.6-compose-6caefb957737.tar.gz",
+      "sha256": "6caefb9577371c16fe3ce24c265624651b902e3b8a575bcf0e0e6d025f7cb056",
+      "bytes": 196765
+    },
+    {
+      "name": "apiarylens-0.1.0-preview.6-airgap-b07141c0b494.tar",
+      "kind": "deployment-bundle",
+      "target": "airgap",
+      "url": "https://apiarylens.org/releases/0.1.0-preview.6/artifacts/apiarylens-0.1.0-preview.6-airgap-b07141c0b494.tar",
+      "sha256": "b07141c0b494798e18dfbaaaffd15e39370a0b1223321ba9a88af687eb5a75e4",
+      "bytes": 241215488
     },
     {
       "name": "apiarylens-sbom.cdx.json",
       "kind": "sbom",
       "target": "release",
       "url": "https://apiarylens.org/releases/0.1.0-preview.6/apiarylens-sbom.cdx.json",
-      "sha256": "6fa4d39b09ecb7af884a4948d250b4a7669328d9cfa33213789bd5aff3358b45",
-      "bytes": 111089
+      "sha256": "72e1fcbbf7260c5b84392ea4f4453d57d6cd693bb7123eeb78556095d9203da7",
+      "bytes": 111520
     },
     {
       "name": "apiarylens-license-report.md",
       "kind": "license-report",
       "target": "release",
       "url": "https://apiarylens.org/releases/0.1.0-preview.6/apiarylens-license-report.md",
-      "sha256": "e956554602a9bcd2ff2d189868a328d388f7018e58a24e578c2e9608ae13dbc0",
-      "bytes": 891
+      "sha256": "3c9023ed7f83139b9147ecde24b2996d30e1c86fdb33b7978c06b47a9df7aa99",
+      "bytes": 876
     },
     {
       "name": "apiarylens-provenance.intoto.jsonl",
       "kind": "provenance",
       "target": "release",
       "url": "https://apiarylens.org/releases/0.1.0-preview.6/apiarylens-provenance.intoto.jsonl",
-      "sha256": "14d9b467cbfdff1c4e4d3cea7ddce9d7b735c27cd9a0a96b9a3a46f30c095c9c",
-      "bytes": 981
+      "sha256": "c9c1de9e7f150e35581bf0a508660e96c8e311235464879d3a54d7d7694c6e57",
+      "bytes": 1161
     }
   ],
   "revokedArtifacts": [],
