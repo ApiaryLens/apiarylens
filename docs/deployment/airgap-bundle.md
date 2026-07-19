@@ -90,7 +90,9 @@ bundle/scripts/install-airgap.sh --bundle-dir bundle --target /opt/apiarylens \
 `install-airgap.sh` performs, in order: bundle verification, host preflight
 (architecture, Compose minimum, no existing install), secret creation (or
 adoption of operator-provided secret files), release staging, `docker load`
-with image-ID verification against `bundle-manifest.json`, the one-shot
+with image-ID verification against `bundle-manifest.json` (the recorded IDs
+are derived from the image archive itself — the config-blob digests that
+`docker load` reproduces on any host and image store), the one-shot
 network-isolated migration, offline activation
 (`docker compose -f compose.yaml -f compose.airgap.yaml up -d --no-build --wait`),
 health verification of the running release identity, and the commit of the

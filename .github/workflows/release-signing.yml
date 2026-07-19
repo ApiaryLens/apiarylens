@@ -86,7 +86,7 @@ jobs:
           pnpm verify
           pnpm docs:check
           pnpm audit --audit-level high
-          pnpm exec vitest run scripts/product-release-policy.test.mjs scripts/product-release-workflow.test.mjs scripts/apply-signed-windows-setup.test.mjs
+          pnpm exec vitest run scripts/product-release-policy.test.mjs scripts/product-release-workflow.test.mjs scripts/apply-signed-windows-setup.test.mjs scripts/airgap-image-identity.test.mjs
 
       - name: Bind release inputs to the exact revision
         env:
@@ -113,6 +113,11 @@ jobs:
         run: |
           pnpm release:artifacts
           pnpm release:airgap
+          # Issue #82: prove, before anything is published, that the image IDs
+          # recorded in the packed air-gap bundle are reproducible from the
+          # bundle's own archive bytes by any `docker load`, independent of
+          # this runner's image store.
+          node scripts/verify-airgap-images.mjs --bundle release/artifacts/apiarylens-*-airgap-*.tar
           pnpm release:supply-chain
           pnpm release:compatibility
           pnpm release:verify

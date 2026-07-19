@@ -30,6 +30,7 @@ import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { tmpdir } from 'node:os';
 import prettier from 'prettier';
+import { imageIdsFromArchive } from './airgap-image-identity.mjs';
 import { createTar } from './release-archive.mjs';
 import {
   generateCompatibilityManifest,
@@ -85,12 +86,6 @@ console.log(`Building ${apiImage} and ${webImage} from the pinned Dockerfiles...
 await docker(['compose', '-f', 'docker/compose.yaml', 'build', '--pull']);
 await docker(['pull', HELPER_IMAGE]);
 
-const imageId = async (reference) =>
-  (await docker(['image', 'inspect', '--format', '{{.Id}}', reference])).stdout.trim();
-const apiImageId = await imageId(apiImage);
-const webImageId = await imageId(webImage);
-const helperImageId = await imageId(HELPER_IMAGE);
-
 const builtWithDockerEngine = (
   await docker(['version', '--format', '{{.Server.Version}}'])
 ).stdout.trim();
@@ -105,6 +100,35 @@ const imagesArchivePath = join(scratch, 'images.tar');
 try {
   await docker(['save', '-o', imagesArchivePath, apiImage, webImage, HELPER_IMAGE]);
   const imagesArchive = await readFile(imagesArchivePath);
+
+  // The recorded image identity must be byte-reproducible by `docker load`
+  // on any pristine host, so it is derived from the saved archive itself
+  // (the sha256 of each image's config blob), never from this daemon's
+  // `docker image inspect`: with the containerd image store the daemon-side
+  // ID is an OCI manifest/index digest — including BuildKit provenance
+  // attestations that `docker save` strips — which no load of this archive
+  // can reproduce, and which made the shipped verify-bundle.sh --post-load
+  // gate refuse the bundle's own images on every real host (issue #82).
+  const savedImageIds = imageIdsFromArchive(imagesArchive);
+  const savedImageId = (reference) => {
+    const id = savedImageIds.get(reference);
+    if (!id) throw new Error(`The saved image archive does not contain ${reference}`);
+    return id;
+  };
+  const apiImageId = savedImageId(apiImage);
+  const webImageId = savedImageId(webImage);
+  const helperImageId = savedImageId(HELPER_IMAGE);
+  for (const reference of [apiImage, webImage, HELPER_IMAGE]) {
+    const daemonId = (
+      await docker(['image', 'inspect', '--format', '{{.Id}}', reference])
+    ).stdout.trim();
+    if (daemonId !== savedImageId(reference)) {
+      console.log(
+        `Note: this daemon reports ${reference} as ${daemonId} (image-store-specific); ` +
+          `recording the load-reproducible ${savedImageId(reference)} instead.`,
+      );
+    }
+  }
 
   const identity = Buffer.from(
     `${JSON.stringify(

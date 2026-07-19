@@ -90,6 +90,15 @@ describe('product release workflow wiring', () => {
     expect(workflow).not.toContain('gh release edit');
   });
 
+  it('proves recorded air-gap image IDs are load-reproducible before publishing (issue 82)', () => {
+    // The build daemon's image store can report IDs that `docker save` does
+    // not preserve; the packed bundle must be checked against its own archive
+    // bytes before any subject is staged or published.
+    const check = workflow.indexOf('node scripts/verify-airgap-images.mjs');
+    expect(check).toBeGreaterThan(workflow.indexOf('pnpm release:airgap'));
+    expect(check).toBeLessThan(workflow.indexOf('pnpm release:supply-chain'));
+  });
+
   it('generates the compatibility manifest only after every artifact list mutation', () => {
     // Supply-chain assembly appends SBOM, license, and provenance entries to
     // the release manifest; a compatibility manifest generated earlier would

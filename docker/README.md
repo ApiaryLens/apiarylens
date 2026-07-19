@@ -40,11 +40,20 @@ install -d -m 700 secrets
 umask 077
 openssl rand -base64 36 > secrets/bootstrap-token
 openssl rand -base64 48 > secrets/auth-root
+chmod 644 secrets/bootstrap-token secrets/auth-root
 docker compose config --quiet
 docker compose build --pull
 docker compose up -d --wait
 curl --fail --show-error --silent "https://hives.example.com/health"
 ```
+
+The `chmod 644` is required: the secret files are bind-mounted read-only into the
+`api` container, which runs as the unprivileged user `apiarylens` (uid 10001, per
+`api.Dockerfile`) and cannot open host-user-only files — with mode 600 the API
+fails at startup with `EACCES` on `/run/secrets/bootstrap_token` and the stack
+never becomes healthy. The mode-700 `secrets` directory is what keeps the files
+private to the operator on the host; this is the same permission model the
+air-gap `install-airgap.sh` applies.
 
 The bootstrap token is a one-time first-owner setup code. Keep it only until the
 first owner and family have been created, then remove the local copy. The

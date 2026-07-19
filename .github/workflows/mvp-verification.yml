@@ -42,7 +42,7 @@ jobs:
       - name: Verify compatibility manifest and lifecycle script suites
         run: |
           node scripts/compatibility-manifest.mjs generate --check
-          pnpm exec vitest run scripts/compatibility-manifest.test.mjs scripts/lifecycle-scripts.test.mjs
+          pnpm exec vitest run scripts/compatibility-manifest.test.mjs scripts/lifecycle-scripts.test.mjs scripts/airgap-image-identity.test.mjs
 
       - name: Verify documentation, dependencies, and release evidence
         run: |
