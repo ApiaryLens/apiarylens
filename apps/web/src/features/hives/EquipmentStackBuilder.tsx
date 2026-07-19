@@ -13,6 +13,7 @@ import {
 } from '../../equipment-stack.js';
 import { Empty } from '../../components/Empty.js';
 import { GlossaryLink } from '../glossary/GlossaryLink.js';
+import { stackEntries } from './hive-stack.js';
 
 export function EquipmentStackBuilder({
   organizationId,
@@ -89,58 +90,71 @@ export function EquipmentStackBuilder({
       {active.length === 0 ? (
         <Empty text="No equipment recorded for this hive." />
       ) : (
-        <ol className="equipment-stack" aria-label="Hive equipment, bottom to top">
-          {active.map((item, index) => {
-            const type = String(item.data.boxType) as EquipmentType;
-            const typeLabel = equipmentTypeLabel(item.data);
-            return (
-              <li className={`equipment-component component-${type}`} key={item.key}>
-                <div>
-                  <strong>{typeLabel}</strong>
-                  <span>
-                    {equipmentPurposeLabel(item.data)}
-                    {item.data.frameCount ? ` · ${item.data.frameCount} frames` : ''}
-                  </span>
-                  {item.data.installedAt ? (
-                    <span>Installed {String(item.data.installedAt)}</span>
-                  ) : null}
-                  {item.data.notes ? <span>{String(item.data.notes)}</span> : null}
-                </div>
-                <div className="record-actions" aria-label={`Actions for ${typeLabel}`}>
-                  <button
-                    className="text-button"
-                    disabled={index === 0}
-                    onClick={() => void move(item, -1)}
-                    aria-label="Move toward bottom"
-                  >
-                    Down
-                  </button>
-                  <button
-                    className="text-button"
-                    disabled={index === active.length - 1}
-                    onClick={() => void move(item, 1)}
-                    aria-label="Move toward top"
-                  >
-                    Up
-                  </button>
-                  <button
-                    className="text-button"
-                    onClick={() =>
-                      void queueUpdate(item, {
-                        status: 'removed',
-                        removedAt: new Date().toISOString(),
-                      }).then(() =>
-                        onNotice('Component removed from the active stack; history retained.'),
-                      )
-                    }
-                  >
-                    Remove
-                  </button>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+        <div className="stack-cols">
+          <div
+            className="schematic"
+            role="img"
+            aria-label={`Schematic stack of ${active.length} component${active.length === 1 ? '' : 's'}, editable in the adjacent list`}
+          >
+            {stackEntries(equipment, hiveId).map((entry) => (
+              <div key={entry.key} className={`sbox ${entry.silhouette}`} title={entry.name}>
+                {entry.boxLabel}
+              </div>
+            ))}
+          </div>
+          <ol className="equipment-stack" aria-label="Hive equipment, bottom to top">
+            {active.map((item, index) => {
+              const type = String(item.data.boxType) as EquipmentType;
+              const typeLabel = equipmentTypeLabel(item.data);
+              return (
+                <li className={`equipment-component component-${type}`} key={item.key}>
+                  <div>
+                    <strong>{typeLabel}</strong>
+                    <span>
+                      {equipmentPurposeLabel(item.data)}
+                      {item.data.frameCount ? ` · ${item.data.frameCount} frames` : ''}
+                    </span>
+                    {item.data.installedAt ? (
+                      <span>Installed {String(item.data.installedAt)}</span>
+                    ) : null}
+                    {item.data.notes ? <span>{String(item.data.notes)}</span> : null}
+                  </div>
+                  <div className="record-actions" aria-label={`Actions for ${typeLabel}`}>
+                    <button
+                      className="text-button"
+                      disabled={index === 0}
+                      onClick={() => void move(item, -1)}
+                      aria-label="Move toward bottom"
+                    >
+                      Down
+                    </button>
+                    <button
+                      className="text-button"
+                      disabled={index === active.length - 1}
+                      onClick={() => void move(item, 1)}
+                      aria-label="Move toward top"
+                    >
+                      Up
+                    </button>
+                    <button
+                      className="text-button"
+                      onClick={() =>
+                        void queueUpdate(item, {
+                          status: 'removed',
+                          removedAt: new Date().toISOString(),
+                        }).then(() =>
+                          onNotice('Component removed from the active stack; history retained.'),
+                        )
+                      }
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       )}
       <form className="form compact equipment-form" onSubmit={(event) => void add(event)}>
         <h3>Add a component</h3>

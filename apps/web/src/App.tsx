@@ -14,15 +14,26 @@ import {
   synchronize,
 } from './db.js';
 import { OnlineSyncScheduler, type SyncTrigger } from './sync-scheduler.js';
-import type { PageRequest } from './navigation.js';
+import { pageTitles, sidebarTarget, type Page, type PageRequest } from './navigation.js';
 import type { ActiveSession } from './session.js';
+import {
+  applyThemeMode,
+  loadThemeMode,
+  nextThemeMode,
+  themeModeLabel,
+  themeStorageKey,
+  type ThemeMode,
+} from './theme.js';
 import { AuthScreen } from './features/auth/AuthScreen.js';
 import { RecoveryCodes } from './features/auth/RecoveryCodes.js';
 import { Dashboard } from './features/overview/OverviewPage.js';
 import { Apiaries } from './features/apiaries/ApiariesPage.js';
+import { ApiaryDetail } from './features/apiaries/ApiaryDetail.js';
 import { Hives } from './features/hives/HivesPage.js';
+import { HiveDetail } from './features/hives/HiveDetail.js';
 import { Inspections } from './features/inspections/InspectionsPage.js';
 import { CareRecords } from './features/care/CarePage.js';
+import { AboutPage } from './features/about/AboutPage.js';
 import { VersionView } from './features/account/AccountPage.js';
 import { GlossaryContext } from './features/glossary/glossary-context.js';
 import { GlossaryPanel } from './features/glossary/GlossaryPanel.js';
@@ -31,6 +42,19 @@ import { GlossaryPanel } from './features/glossary/GlossaryPanel.js';
 // service, so external connectivity (navigator.onLine) must never gate the
 // launch, synchronization, or onboarding paths (WIN-028).
 const desktopStandalone = api.desktopStandalone();
+
+/** Minimal typing for the Chromium install prompt event (PWA install). */
+interface InstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+}
+
+const workspaceNav = [
+  ['dashboard', '▦', 'Overview'],
+  ['apiaries', '⌂', 'Apiaries'],
+  ['hives', '▤', 'Hives'],
+  ['inspections', '✎', 'Inspections'],
+  ['care', '✚', 'Care'],
+] as const satisfies ReadonlyArray<readonly [Page, string, string]>;
 
 export function App() {
   const [session, setSession] = useState<ActiveSession>();
@@ -42,8 +66,16 @@ export function App() {
   const [glossary, setGlossary] = useState<{ open: boolean; termId?: string }>({ open: false });
   const [notice, setNotice] = useState('');
   const [syncing, setSyncing] = useState(false);
+  const [lastSyncAt, setLastSyncAt] = useState<Date>();
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [updateRegistration, setUpdateRegistration] = useState<ServiceWorkerRegistration>();
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() =>
+    loadThemeMode(localStorage.getItem(themeStorageKey)),
+  );
+  // Narrow viewports hide the sidebar; this opens it as a drawer so About,
+  // the theme control, install, and Administration stay reachable on phones.
+  const [sideOpen, setSideOpen] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent>();
   const sessionRef = useRef<ActiveSession | undefined>(undefined);
   const schedulerRef = useRef<OnlineSyncScheduler | undefined>(undefined);
   const pendingWork = useLiveQuery(
@@ -57,6 +89,12 @@ export function App() {
     [],
     0,
   );
+
+  useEffect(() => {
+    applyThemeMode(document.documentElement, themeMode);
+    if (themeMode === 'auto') localStorage.removeItem(themeStorageKey);
+    else localStorage.setItem(themeStorageKey, themeMode);
+  }, [themeMode]);
 
   useEffect(() => {
     const syncNotice = (trigger: SyncTrigger) => {
@@ -95,6 +133,7 @@ export function App() {
       onStart: () => setSyncing(true),
       onSuccess: (trigger) => {
         setSyncing(false);
+        setLastSyncAt(new Date());
         setNotice(syncNotice(trigger));
       },
       onError: (error) => {
@@ -130,6 +169,11 @@ export function App() {
     const updateReady = (event: Event) =>
       setUpdateRegistration((event as CustomEvent<ServiceWorkerRegistration>).detail);
     window.addEventListener('apiarylens:update-ready', updateReady);
+    const installReady = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as InstallPromptEvent);
+    };
+    window.addEventListener('beforeinstallprompt', installReady);
     void initialize(scheduler);
     return () => {
       scheduler.stop();
@@ -140,6 +184,7 @@ export function App() {
       window.removeEventListener(LOCAL_CHANGE_EVENT, localChange);
       document.removeEventListener('visibilitychange', resume);
       window.removeEventListener('apiarylens:update-ready', updateReady);
+      window.removeEventListener('beforeinstallprompt', installReady);
     };
   }, []);
 
@@ -227,6 +272,12 @@ export function App() {
     updateRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
   }
 
+  function installApp() {
+    if (!installPrompt) return;
+    void installPrompt.prompt();
+    setInstallPrompt(undefined);
+  }
+
   if (loading) return <main className="center-card">Opening your apiary…</main>;
   if (!session) {
     return (
@@ -240,142 +291,312 @@ export function App() {
   }
 
   const page = pageRequest.page;
+  const activeSidebar = sidebarTarget(page);
+  const activeAccountSection =
+    page === 'version' ? (pageRequest.accountSection ?? 'account') : undefined;
+  const canWrite = session.membership.role !== 'viewer';
+  const isOwner = session.membership.role === 'owner';
+  // Members and Backup & restore are owner-only sections of the account page;
+  // other roles get only the Account entry so no sidebar target is a dead end.
+  const adminNav = (
+    [
+      ['members', '◉', 'Members'],
+      ['backup', '⛁', 'Backup & restore'],
+      ['account', '⚙', 'Account'],
+    ] as const
+  ).filter(([section]) => isOwner || section === 'account');
+  const navigate = (request: PageRequest) => {
+    setPageRequest(request);
+    setSideOpen(false);
+  };
+  const sideNavButton = (target: Page, icon: string, label: string) => (
+    <button
+      key={target}
+      type="button"
+      className={activeSidebar === target ? 'active' : ''}
+      aria-current={activeSidebar === target ? 'page' : undefined}
+      onClick={() => navigate({ page: target })}
+    >
+      <span className="ico" aria-hidden="true">
+        {icon}
+      </span>
+      {label}
+    </button>
+  );
+
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <div>
-          <span className="eyebrow">ApiaryLens</span>
-          <button className="account-link" onClick={() => setPageRequest({ page: 'version' })}>
-            {session.organization.name}
-          </button>
+      {sideOpen && (
+        <button
+          className="side-backdrop"
+          aria-label="Close menu"
+          onClick={() => setSideOpen(false)}
+        ></button>
+      )}
+      <aside
+        id="app-sidebar"
+        className={`sidebar${sideOpen ? ' open' : ''}`}
+        aria-label="ApiaryLens navigation"
+      >
+        <div className="brand">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="#f5b83d"
+            strokeWidth="1.6"
+            aria-hidden="true"
+          >
+            <path d="M10 1.5l7 4v9l-7 4-7-4v-9z" />
+            <circle cx="10" cy="10" r="2.6" fill="#f5b83d" stroke="none" />
+          </svg>
+          ApiaryLens
         </div>
-        <div className="top-actions">
-          <span className={`connectivity ${offline ? 'offline' : ''}`}>
-            {offline ? 'Offline' : 'Online'}
-          </span>
+        <div className="side-h" id="nav-workspace">
+          Workspace
+        </div>
+        <nav className="snav" aria-labelledby="nav-workspace">
+          {workspaceNav.map(([target, icon, label]) => sideNavButton(target, icon, label))}
+        </nav>
+        <div className="side-h" id="nav-reference">
+          Reference
+        </div>
+        <nav className="snav" aria-labelledby="nav-reference">
           <button
-            className="button secondary"
-            onClick={() => setGlossary({ open: true })}
+            type="button"
+            onClick={() => {
+              setGlossary({ open: true });
+              setSideOpen(false);
+            }}
             aria-haspopup="dialog"
           >
+            <span className="ico" aria-hidden="true">
+              ✱
+            </span>
             Glossary
           </button>
+          {sideNavButton('about', 'ⓘ', 'About')}
+        </nav>
+        <div className="side-h" id="nav-administration">
+          Administration
+        </div>
+        <nav className="snav" aria-labelledby="nav-administration">
+          {adminNav.map(([section, icon, label]) => (
+            <button
+              key={section}
+              type="button"
+              className={activeAccountSection === section ? 'active' : ''}
+              aria-current={activeAccountSection === section ? 'page' : undefined}
+              onClick={() => navigate({ page: 'version', accountSection: section })}
+            >
+              <span className="ico" aria-hidden="true">
+                {icon}
+              </span>
+              {label}
+            </button>
+          ))}
+        </nav>
+        <div className="side-foot">
+          {offline ? <span className="q">● Offline</span> : <span className="on">● Online</span>}
+          {pendingWork > 0 && (
+            <>
+              {' '}
+              · <span className="q">{pendingWork} queued</span>
+            </>
+          )}
+          <br />
+          {lastSyncAt ? `Last sync ${lastSyncAt.toLocaleTimeString()}` : 'Not synced this session'}
+          <br />
+          <span className="mono">{session.organization.name}</span>
+          <button type="button" onClick={() => setThemeMode((mode) => nextThemeMode(mode))}>
+            {themeModeLabel(themeMode)}
+          </button>
+          {installPrompt && (
+            <button type="button" onClick={installApp}>
+              Install app
+            </button>
+          )}
+        </div>
+      </aside>
+
+      <div className="main-col">
+        <header className="topbar">
           <button
-            className="button secondary"
-            onClick={() => void sync()}
-            disabled={syncing || offline}
+            className="menu-btn"
+            type="button"
+            aria-expanded={sideOpen}
+            aria-controls="app-sidebar"
+            onClick={() => setSideOpen((open) => !open)}
           >
-            {syncing ? 'Syncing…' : 'Sync now'}
+            <span aria-hidden="true">☰</span> Menu
           </button>
-        </div>
-      </header>
-
-      {notice && (
-        <div className="notice" role="status">
-          {notice}
-          <button aria-label="Dismiss message" onClick={() => setNotice('')}>
-            ×
-          </button>
-        </div>
-      )}
-
-      {updateRegistration && (
-        <div className="update-notice" role="status">
-          <div>
-            <strong>ApiaryLens update ready</strong>
-            <span>
-              {pendingWork > 0
-                ? `${pendingWork} local item${pendingWork === 1 ? '' : 's'} remain safely on this device. Synchronize them before updating.`
-                : 'Your local work is clear. Install when you are ready.'}
+          <span className="crumb">
+            <button
+              className="account-link"
+              onClick={() => setPageRequest({ page: 'version', accountSection: 'account' })}
+            >
+              {session.organization.name}
+            </button>{' '}
+            / <b>{pageTitles[page]}</b>
+          </span>
+          <span className="spacer"></span>
+          <div className="top-actions">
+            <span className={`connectivity ${offline ? 'offline' : ''}`}>
+              {offline ? 'OFFLINE' : 'ONLINE'}
             </span>
+            {pendingWork > 0 && <span className="pill q">{pendingWork} QUEUED</span>}
+            <button
+              className="button secondary"
+              onClick={() => setGlossary({ open: true })}
+              aria-haspopup="dialog"
+            >
+              Glossary
+            </button>
+            <button
+              className="button secondary"
+              onClick={() => void sync()}
+              disabled={syncing || offline}
+            >
+              {syncing ? 'Syncing…' : 'Sync now'}
+            </button>
+            {canWrite && (
+              <button
+                className="button primary"
+                onClick={() => setPageRequest({ page: 'inspections' })}
+              >
+                New inspection
+              </button>
+            )}
           </div>
-          <button className="button secondary" disabled={pendingWork > 0} onClick={installUpdate}>
-            {pendingWork > 0 ? 'Waiting for sync' : 'Install update'}
-          </button>
-        </div>
-      )}
+        </header>
 
-      {recoveryCodes.length > 0 && (
-        <RecoveryCodes codes={recoveryCodes} onSaved={() => setRecoveryCodes([])} />
-      )}
+        {notice && (
+          <div className="notice" role="status">
+            {notice}
+            <button aria-label="Dismiss message" onClick={() => setNotice('')}>
+              ×
+            </button>
+          </div>
+        )}
 
-      <GlossaryContext.Provider
-        value={{
-          open: (termId?: string) => setGlossary({ open: true, ...(termId ? { termId } : {}) }),
-        }}
-      >
-        <main className="content">
-          {page === 'dashboard' && (
-            <Dashboard organizationId={session.organization.id} onNavigate={setPageRequest} />
-          )}
-          {page === 'apiaries' && (
-            <Apiaries
-              organizationId={session.organization.id}
-              onNotice={setNotice}
-              canWrite={session.membership.role !== 'viewer'}
-            />
-          )}
-          {page === 'hives' && (
-            <Hives
-              organizationId={session.organization.id}
-              onNotice={setNotice}
-              canWrite={session.membership.role !== 'viewer'}
-              {...(pageRequest.hiveStatus ? { initialStatusFilter: pageRequest.hiveStatus } : {})}
-            />
-          )}
-          {page === 'inspections' && (
-            <Inspections
-              organizationId={session.organization.id}
-              onNotice={setNotice}
-              canWrite={session.membership.role !== 'viewer'}
-              {...(pageRequest.hiveId ? { initialHiveId: pageRequest.hiveId } : {})}
-            />
-          )}
-          {page === 'care' && (
-            <CareRecords
-              organizationId={session.organization.id}
-              onNotice={setNotice}
-              canWrite={session.membership.role !== 'viewer'}
-              {...(pageRequest.careView ? { initialView: pageRequest.careView } : {})}
-            />
-          )}
-          {page === 'version' && (
-            <VersionView
-              session={session}
-              onSignOut={() => void signOut()}
-              onClear={() => void clearLocalWorkspace().then(() => location.reload())}
-            />
-          )}
-        </main>
-      </GlossaryContext.Provider>
+        {updateRegistration && (
+          <div className="update-notice" role="status">
+            <div>
+              <strong>ApiaryLens update ready</strong>
+              <span>
+                {pendingWork > 0
+                  ? `${pendingWork} local item${pendingWork === 1 ? '' : 's'} remain safely on this device. Synchronize them before updating.`
+                  : 'Your local work is clear. Install when you are ready.'}
+              </span>
+            </div>
+            <button className="button secondary" disabled={pendingWork > 0} onClick={installUpdate}>
+              {pendingWork > 0 ? 'Waiting for sync' : 'Install update'}
+            </button>
+          </div>
+        )}
 
-      {glossary.open && (
-        <GlossaryPanel
-          {...(glossary.termId ? { initialTermId: glossary.termId } : {})}
-          onClose={() => setGlossary({ open: false })}
-        />
-      )}
+        {recoveryCodes.length > 0 && (
+          <RecoveryCodes codes={recoveryCodes} onSaved={() => setRecoveryCodes([])} />
+        )}
 
-      <nav className="bottom-nav" aria-label="Primary navigation">
-        {(
-          [
-            ['dashboard', 'Overview'],
-            ['apiaries', 'Apiaries'],
-            ['hives', 'Hives'],
-            ['inspections', 'Inspect'],
-            ['care', 'Care'],
-          ] as const
-        ).map(([target, label]) => (
-          <button
-            key={target}
-            className={page === target ? 'active' : ''}
-            aria-current={page === target ? 'page' : undefined}
-            onClick={() => setPageRequest({ page: target })}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
+        <GlossaryContext.Provider
+          value={{
+            open: (termId?: string) => setGlossary({ open: true, ...(termId ? { termId } : {}) }),
+          }}
+        >
+          <main className="content">
+            {page === 'dashboard' && (
+              <Dashboard organizationId={session.organization.id} onNavigate={setPageRequest} />
+            )}
+            {page === 'apiaries' && (
+              <Apiaries
+                organizationId={session.organization.id}
+                onNotice={setNotice}
+                canWrite={canWrite}
+                onNavigate={setPageRequest}
+              />
+            )}
+            {page === 'apiary' && pageRequest.apiaryId && (
+              <ApiaryDetail
+                organizationId={session.organization.id}
+                apiaryId={pageRequest.apiaryId}
+                onNavigate={setPageRequest}
+              />
+            )}
+            {page === 'hives' && (
+              <Hives
+                organizationId={session.organization.id}
+                onNotice={setNotice}
+                canWrite={canWrite}
+                onNavigate={setPageRequest}
+                {...(pageRequest.hiveStatus ? { initialStatusFilter: pageRequest.hiveStatus } : {})}
+              />
+            )}
+            {page === 'hive' && pageRequest.hiveId && (
+              <HiveDetail
+                organizationId={session.organization.id}
+                hiveId={pageRequest.hiveId}
+                onNavigate={setPageRequest}
+              />
+            )}
+            {page === 'inspections' && (
+              <Inspections
+                organizationId={session.organization.id}
+                onNotice={setNotice}
+                canWrite={canWrite}
+                {...(pageRequest.hiveId ? { initialHiveId: pageRequest.hiveId } : {})}
+              />
+            )}
+            {page === 'care' && (
+              <CareRecords
+                organizationId={session.organization.id}
+                onNotice={setNotice}
+                canWrite={canWrite}
+                {...(pageRequest.careView ? { initialView: pageRequest.careView } : {})}
+                {...(pageRequest.hiveId ? { initialHiveId: pageRequest.hiveId } : {})}
+              />
+            )}
+            {page === 'about' && <AboutPage offline={offline} />}
+            {page === 'version' && (
+              <VersionView
+                session={session}
+                {...(pageRequest.accountSection ? { section: pageRequest.accountSection } : {})}
+                onSignOut={() => void signOut()}
+                onClear={() => void clearLocalWorkspace().then(() => location.reload())}
+              />
+            )}
+          </main>
+        </GlossaryContext.Provider>
+
+        {glossary.open && (
+          <GlossaryPanel
+            {...(glossary.termId ? { initialTermId: glossary.termId } : {})}
+            onClose={() => setGlossary({ open: false })}
+          />
+        )}
+
+        <nav className="bottom-nav" aria-label="Primary navigation">
+          {(
+            [
+              ['dashboard', 'Overview'],
+              ['apiaries', 'Apiaries'],
+              ['hives', 'Hives'],
+              ['inspections', 'Inspect'],
+              ['care', 'Care'],
+            ] as const
+          ).map(([target, label]) => (
+            <button
+              key={target}
+              className={activeSidebar === target ? 'active' : ''}
+              aria-current={activeSidebar === target ? 'page' : undefined}
+              onClick={() => setPageRequest({ page: target })}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+      </div>
     </div>
   );
 }

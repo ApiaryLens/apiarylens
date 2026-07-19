@@ -5,12 +5,31 @@ import { db, type LocalResource } from '../../db.js';
 import { useResources } from '../../local/use-resources.js';
 import type { PageRequest } from '../../navigation.js';
 import { Empty } from '../../components/Empty.js';
+import { Sparkline } from '../../components/Sparkline.js';
+import { glossaryEntries } from '../glossary/glossary-data.js';
+import { useGlossary } from '../glossary/glossary-context.js';
+import {
+  cumulativeMonthlySeries,
+  formatMiteReading,
+  hiveStatusTag,
+  latestInspectionByHive,
+  latestMiteByHive,
+  seasonHarvest,
+} from '../board-data.js';
+import { SeasonHarvestChart } from './SeasonHarvestChart.js';
+import { WeatherPanel } from './WeatherPanel.js';
 import {
   cacheMemberSummary,
   cachedMemberSummary,
   memberSummaryFreshness,
 } from './members-summary.js';
 
+/**
+ * V2 "Clean Dashboard" overview. Composed of small self-contained blocks
+ * (KPI row, status board, follow-up queue, harvest chart, conditions,
+ * members, glossary) so the owner can reorder, drop, or extend blocks later —
+ * the dashboard composition is deliberately NOT frozen by the T2 selection.
+ */
 export function Dashboard({
   organizationId,
   onNavigate,
@@ -22,6 +41,9 @@ export function Dashboard({
   const hives = useResources(organizationId, 'hive');
   const inspections = useResources(organizationId, 'inspection');
   const followUps = useResources(organizationId, 'followUp');
+  const miteCounts = useResources(organizationId, 'miteCount');
+  const treatments = useResources(organizationId, 'treatmentEvent');
+  const harvests = useResources(organizationId, 'harvest');
   const pending = useLiveQuery(() => db.outbox.count(), [], 0);
   // Refresh the roster reading opportunistically; when the session or the
   // connection is unavailable the card falls back to the last honest reading
@@ -48,31 +70,52 @@ export function Dashboard({
       cancelled = true;
     };
   }, [organizationId]);
-  const openFollowUps = followUps.filter((item) => !item.data.completedAt);
-  const latestByHive = new Map<string, LocalResource>();
-  for (const inspection of [...inspections].sort((a, b) =>
-    String(b.data.inspectedAt).localeCompare(String(a.data.inspectedAt)),
-  )) {
-    const hiveId = String(inspection.data.hiveId);
-    if (!latestByHive.has(hiveId)) latestByHive.set(hiveId, inspection);
-  }
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const activeHives = hives.filter((hive) => hive.data.status === 'active');
+  const openFollowUps = followUps
+    .filter((item) => !item.data.completedAt)
+    .sort((a, b) =>
+      String(a.data.dueDate ?? '9999').localeCompare(String(b.data.dueDate ?? '9999')),
+    );
+  const harvest = seasonHarvest(harvests, year, now);
+  const hiveSeries = cumulativeMonthlySeries(
+    activeHives.map((hive) => String(hive.data.installDate ?? hive.createdAt)),
+    now,
+  );
+  const hiveNames = new Map(hives.map((hive) => [hive.id, String(hive.data.name)]));
+  const apiaryNames = new Map(apiaries.map((yard) => [yard.id, String(yard.data.name)]));
+
   return (
     <>
-      <div className="page-heading">
-        <div>
-          <span className="eyebrow">Today</span>
-          <h1>Apiary overview</h1>
-        </div>
+      <div className="page-h">
+        <h1>Operations overview</h1>
+        <span className="sub">
+          {now.toLocaleDateString(undefined, {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          })}{' '}
+          · all data local-first
+        </span>
       </div>
-      <section className="metric-grid" aria-label="Apiary summary">
+
+      {/* Block: KPI row. Tiles are keyboard-native navigation controls. */}
+      <section className="metric-grid" aria-label="Key figures — tiles open their pages">
         <button
           className="metric metric-link"
           type="button"
           onClick={() => onNavigate({ page: 'hives', hiveStatus: 'active' })}
           aria-label="View active hives"
         >
-          <strong>{hives.filter((hive) => hive.data.status === 'active').length}</strong>
           <span>Active hives</span>
+          <div className="metric-row">
+            <strong>{activeHives.length}</strong>
+            <Sparkline values={hiveSeries} />
+          </div>
+          <small>open ›</small>
         </button>
         <button
           className="metric metric-link"
@@ -80,8 +123,16 @@ export function Dashboard({
           onClick={() => onNavigate({ page: 'apiaries' })}
           aria-label="View apiaries"
         >
-          <strong>{apiaries.length}</strong>
           <span>Apiaries</span>
+          <div className="metric-row">
+            <strong>{apiaries.length}</strong>
+          </div>
+          <small>
+            {apiaries
+              .slice(0, 2)
+              .map((yard) => String(yard.data.name))
+              .join(' · ') || 'open ›'}
+          </small>
         </button>
         <button
           className="metric metric-link"
@@ -89,8 +140,11 @@ export function Dashboard({
           onClick={() => onNavigate({ page: 'inspections' })}
           aria-label="View inspections"
         >
-          <strong>{inspections.length}</strong>
           <span>Inspections</span>
+          <div className="metric-row">
+            <strong>{inspections.length}</strong>
+          </div>
+          <small>open ›</small>
         </button>
         <button
           className="metric metric-link"
@@ -98,22 +152,51 @@ export function Dashboard({
           onClick={() => onNavigate({ page: 'care', careView: 'open-follow-ups' })}
           aria-label="View open follow-ups"
         >
-          <strong>{openFollowUps.length}</strong>
           <span>Open follow-ups</span>
+          <div className="metric-row">
+            <strong>{openFollowUps.length}</strong>
+          </div>
+          <small>
+            {openFollowUps[0]?.data.dueDate
+              ? `next due ${String(openFollowUps[0].data.dueDate)}`
+              : 'open ›'}
+          </small>
+        </button>
+        <button
+          className="metric metric-link"
+          type="button"
+          onClick={() => onNavigate({ page: 'care' })}
+          aria-label={`View season harvest records: ${harvest.total} ${harvest.unit ?? ''}`}
+        >
+          <span>Season harvest</span>
+          <div className="metric-row">
+            <strong>
+              {harvest.total}
+              {harvest.unit ? <span style={{ fontSize: 13 }}> {harvest.unit}</span> : null}
+            </strong>
+            <Sparkline values={harvest.series} />
+          </div>
+          <small>
+            {harvest.byHive.length > 0
+              ? `${harvest.byHive.length} hive${harvest.byHive.length === 1 ? '' : 's'} recorded`
+              : 'no pulls recorded'}
+          </small>
         </button>
         {memberSummary ? (
           <button
             className="metric metric-link"
             type="button"
-            onClick={() => onNavigate({ page: 'version' })}
+            onClick={() => onNavigate({ page: 'version', accountSection: 'members' })}
             aria-label={`View family members: ${memberSummary.activeMembers} active${
               typeof memberSummary.invitedMembers === 'number' && memberSummary.invitedMembers > 0
                 ? `, ${memberSummary.invitedMembers} invited`
                 : ''
             }. ${memberSummaryFreshness(memberSummary.fetchedAt)}.`}
           >
-            <strong>{memberSummary.activeMembers}</strong>
             <span>Members</span>
+            <div className="metric-row">
+              <strong>{memberSummary.activeMembers}</strong>
+            </div>
             <small>
               {typeof memberSummary.invitedMembers === 'number' && memberSummary.invitedMembers > 0
                 ? `${memberSummary.invitedMembers} invited · `
@@ -125,81 +208,300 @@ export function Dashboard({
           <button
             className="metric metric-link"
             type="button"
-            onClick={() => onNavigate({ page: 'version' })}
+            onClick={() => onNavigate({ page: 'version', accountSection: 'members' })}
             aria-label="View family members. The roster has not synced to this device yet."
           >
-            <strong aria-hidden="true">–</strong>
             <span>Members</span>
+            <div className="metric-row">
+              <strong aria-hidden="true">–</strong>
+            </div>
             <small>Not synced to this device yet</small>
           </button>
         )}
         <article className="metric pending">
-          <strong>{pending}</strong>
-          <span>Pending sync</span>
+          <span>Outbox</span>
+          <div className="metric-row">
+            <strong>{pending}</strong>
+          </div>
+          <small>retries safe · no duplicates</small>
         </article>
       </section>
-      <section className="card">
-        <h2>Latest inspection by hive</h2>
-        {hives.length === 0 ? (
+
+      <div className="grid g2">
+        <HiveStatusBoard
+          hives={hives}
+          inspections={inspections}
+          miteCounts={miteCounts}
+          treatments={treatments}
+          apiaryNames={apiaryNames}
+          onNavigate={onNavigate}
+        />
+        <FollowUpQueue followUps={openFollowUps} hiveNames={hiveNames} onNavigate={onNavigate} />
+      </div>
+
+      <div className="grid g2">
+        <div className="panel">
+          <div className="panel-h">
+            <h2>Season harvest by hive</h2>
+          </div>
+          <div className="panel-b">
+            <SeasonHarvestChart harvest={harvest} hiveNames={hiveNames} year={year} />
+          </div>
+        </div>
+        <WeatherPanel inspections={inspections} hiveNames={hiveNames} />
+      </div>
+
+      <div className="grid g2">
+        <MembersBlockNote onNavigate={onNavigate} />
+        <GlossaryQuickReference />
+      </div>
+    </>
+  );
+}
+
+/** Block: dense hive status board — every non-archived hive in one table. */
+function HiveStatusBoard({
+  hives,
+  inspections,
+  miteCounts,
+  treatments,
+  apiaryNames,
+  onNavigate,
+}: {
+  hives: LocalResource[];
+  inspections: LocalResource[];
+  miteCounts: LocalResource[];
+  treatments: LocalResource[];
+  apiaryNames: Map<string, string>;
+  onNavigate: (request: PageRequest) => void;
+}) {
+  const latestInspection = latestInspectionByHive(inspections);
+  const latestMite = latestMiteByHive(miteCounts);
+  const now = new Date().toISOString();
+  return (
+    <div className="panel">
+      <div className="panel-h">
+        <h2>Hive status board</h2>
+        <span className="spacer"></span>
+        <button className="linkish" type="button" onClick={() => onNavigate({ page: 'hives' })}>
+          All hives ›
+        </button>
+      </div>
+      {hives.length === 0 ? (
+        <div className="panel-b">
           <Empty text="Add your first hive to begin its history." />
-        ) : (
-          <ul className="dashboard-list">
-            {hives
-              .filter((hive) => hive.data.status !== 'archived')
-              .map((hive) => {
-                const inspection = latestByHive.get(hive.id);
+        </div>
+      ) : (
+        <div className="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Hive</th>
+                <th>Yard</th>
+                <th>Last insp.</th>
+                <th className="num">Mites</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {hives.map((hive) => {
+                const inspection = latestInspection.get(hive.id);
+                const status = hiveStatusTag(hive, treatments, now);
                 return (
-                  <li key={hive.id}>
-                    <button
-                      type="button"
-                      className="dashboard-list-link"
-                      onClick={() => onNavigate({ page: 'inspections', hiveId: hive.id })}
-                      aria-label={`View inspections for ${String(hive.data.name)}`}
-                    >
-                      <strong>{String(hive.data.name)}</strong>
-                      <span>
-                        {inspection
-                          ? `${new Date(String(inspection.data.inspectedAt)).toLocaleString()} · ${String(inspection.data.state)}`
-                          : 'No inspection recorded yet'}
-                      </span>
-                    </button>
-                  </li>
+                  <tr key={hive.id}>
+                    <td>
+                      <button
+                        className="row-link"
+                        type="button"
+                        onClick={() => onNavigate({ page: 'hive', hiveId: hive.id })}
+                        aria-label={`Open hive ${String(hive.data.name)}`}
+                      >
+                        {String(hive.data.name)}
+                      </button>
+                    </td>
+                    <td>{apiaryNames.get(String(hive.data.apiaryId)) ?? '—'}</td>
+                    <td>
+                      {inspection ? (
+                        <>
+                          {new Date(String(inspection.data.inspectedAt)).toLocaleDateString()}
+                          {inspection.data.inspectorName ? (
+                            <span className="sub-t">
+                              {' '}
+                              · {String(inspection.data.inspectorName)}
+                            </span>
+                          ) : null}
+                        </>
+                      ) : (
+                        <span className="sub-t">n/a</span>
+                      )}
+                    </td>
+                    <td className="num">{formatMiteReading(latestMite.get(hive.id))}</td>
+                    <td>
+                      <span className={`tag ${status.tone}`}>{status.label}</span>
+                    </td>
+                  </tr>
                 );
               })}
-          </ul>
-        )}
-      </section>
-      <section className="card dashboard-followups">
-        <h2>Follow-up work</h2>
-        {openFollowUps.length === 0 ? (
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Block: open follow-ups, soonest due first. */
+function FollowUpQueue({
+  followUps,
+  hiveNames,
+  onNavigate,
+}: {
+  followUps: LocalResource[];
+  hiveNames: Map<string, string>;
+  onNavigate: (request: PageRequest) => void;
+}) {
+  return (
+    <div className="panel">
+      <div className="panel-h">
+        <h2>Follow-up queue</h2>
+        <span className="spacer"></span>
+        <button
+          className="linkish"
+          type="button"
+          onClick={() => onNavigate({ page: 'care', careView: 'open-follow-ups' })}
+        >
+          Care ›
+        </button>
+      </div>
+      {followUps.length === 0 ? (
+        <div className="panel-b">
           <Empty text="No open follow-up items." />
-        ) : (
-          <ul className="dashboard-list">
-            {openFollowUps
-              .sort((a, b) =>
-                String(a.data.dueDate ?? '9999').localeCompare(String(b.data.dueDate ?? '9999')),
-              )
-              .map((item) => (
-                <li key={item.key}>
-                  <button
-                    type="button"
-                    className="dashboard-list-link"
-                    onClick={() => onNavigate({ page: 'care', careView: 'open-follow-ups' })}
-                    aria-label={`View follow-up: ${String(item.data.description)}`}
-                  >
-                    <strong>{String(item.data.description)}</strong>
-                    <span>
-                      {item.data.dueDate
-                        ? `Due ${new Date(`${item.data.dueDate}T12:00:00`).toLocaleDateString()}`
-                        : 'No due date'}{' '}
-                      · {item.syncState}
+        </div>
+      ) : (
+        <div className="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Due</th>
+                <th>Task</th>
+                <th>Hive</th>
+                <th>Sync</th>
+              </tr>
+            </thead>
+            <tbody>
+              {followUps.map((item) => (
+                <tr key={item.key}>
+                  <td className="num">
+                    {item.data.dueDate ? (
+                      new Date(`${item.data.dueDate}T12:00:00`).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                      })
+                    ) : (
+                      <span className="sub-t">—</span>
+                    )}
+                  </td>
+                  <td>
+                    <button
+                      className="row-link"
+                      type="button"
+                      onClick={() => onNavigate({ page: 'care', careView: 'open-follow-ups' })}
+                      aria-label={`View follow-up: ${String(item.data.description)}`}
+                    >
+                      {String(item.data.description)}
+                    </button>
+                  </td>
+                  <td>{hiveNames.get(String(item.data.hiveId)) ?? '—'}</td>
+                  <td>
+                    <span className={`tag ${item.syncState === 'synchronized' ? 'ok' : 'warn'}`}>
+                      {item.syncState === 'synchronized' ? 'SYNCED' : 'QUEUED'}
                     </span>
-                  </button>
-                </li>
+                  </td>
+                </tr>
               ))}
-          </ul>
-        )}
-      </section>
-    </>
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Block: pointer into the Members administration surface. */
+function MembersBlockNote({ onNavigate }: { onNavigate: (request: PageRequest) => void }) {
+  return (
+    <div className="panel">
+      <div className="panel-h">
+        <h2>Members</h2>
+        <span className="spacer"></span>
+        <button
+          className="linkish"
+          type="button"
+          onClick={() => onNavigate({ page: 'version', accountSection: 'members' })}
+        >
+          Manage members ›
+        </button>
+      </div>
+      <div className="panel-b">
+        <p className="sub-t" style={{ margin: 0 }}>
+          The family roster and invitations live under Administration → Members. Invitations let
+          each member set their own password; roles are enforced server-side. The Members tile above
+          shows this device's last honest roster reading.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Block: glossary quick reference — first entries, opening the full panel. */
+function GlossaryQuickReference() {
+  const glossary = useGlossary();
+  const entries = glossaryEntries.slice(0, 4);
+  return (
+    <div className="panel">
+      <div className="panel-h">
+        <h2>Glossary quick reference</h2>
+        <span className="spacer"></span>
+        <button
+          className="linkish"
+          type="button"
+          onClick={() => glossary.open()}
+          aria-haspopup="dialog"
+        >
+          Full glossary ›
+        </button>
+      </div>
+      <div className="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Term</th>
+              <th>Definition (first line)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((entry) => (
+              <tr key={entry.id}>
+                <td>
+                  <button
+                    className="row-link"
+                    type="button"
+                    onClick={() => glossary.open(entry.id)}
+                    aria-haspopup="dialog"
+                  >
+                    {entry.term}
+                  </button>
+                </td>
+                <td className="sub-t">
+                  {entry.definition.length > 96
+                    ? `${entry.definition.slice(0, 96)}…`
+                    : entry.definition}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
