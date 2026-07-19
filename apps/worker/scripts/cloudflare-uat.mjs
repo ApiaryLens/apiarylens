@@ -30,7 +30,7 @@ class Client {
 
 const report = {
   product: 'ApiaryLens',
-  release: '0.1.0-preview.4',
+  release: '0.1.0-preview.5',
   profile: `${deploymentProfile}-uat`,
   target: baseUrl,
   startedAt: new Date().toISOString(),

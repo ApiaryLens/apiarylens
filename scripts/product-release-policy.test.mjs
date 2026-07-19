@@ -49,6 +49,56 @@ describe('product release signing policy', () => {
       resolveProductReleasePolicy({ version, exactTag, signingMaterialAvailable: true }),
     ).toMatchObject({ channel, signingMode: 'signed' });
   });
+
+  it('includes the Windows build by default', () => {
+    expect(
+      resolveProductReleasePolicy({
+        version: '0.1.0-preview.5',
+        exactTag: 'v0.1.0-preview.5',
+        allowUnsignedPreview: true,
+      }),
+    ).toMatchObject({ windowsIncluded: true });
+  });
+
+  it('permits excluding the Windows build only for an explicitly opted-in Preview', () => {
+    // Owner directive 2026-07-18 (plan v2.1): Windows is deferred pending a
+    // full rewrite, so a Preview may ship platform/web artifacts only. The
+    // unsigned-preview opt-in still applies to what does ship.
+    expect(
+      resolveProductReleasePolicy({
+        version: '0.1.0-preview.5',
+        exactTag: 'v0.1.0-preview.5',
+        allowUnsignedPreview: true,
+        includeWindows: false,
+      }),
+    ).toMatchObject({
+      channel: 'preview',
+      signingMode: 'unsigned-preview',
+      windowsIncluded: false,
+    });
+    // Excluding Windows never waives the explicit unsigned-preview opt-in.
+    expect(() =>
+      resolveProductReleasePolicy({
+        version: '0.1.0-preview.5',
+        exactTag: 'v0.1.0-preview.5',
+        includeWindows: false,
+      }),
+    ).toThrow(/allow_unsigned_preview/);
+  });
+
+  it.each([
+    ['0.1.0-rc.1', 'v0.1.0-rc.1'],
+    ['0.1.0', 'v0.1.0'],
+  ])('refuses to exclude the Windows build from %s', (version, exactTag) => {
+    expect(() =>
+      resolveProductReleasePolicy({
+        version,
+        exactTag,
+        signingMaterialAvailable: true,
+        includeWindows: false,
+      }),
+    ).toThrow(/Preview-only/);
+  });
 });
 
 describe('product Windows signing evidence', () => {
