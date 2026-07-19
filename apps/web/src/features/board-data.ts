@@ -98,7 +98,11 @@ export interface HiveStatusTag {
   tone: 'ok' | 'warn' | 'mut';
 }
 
-/** Status tag for a hive row: archived, treating, or active — data-derived. */
+/**
+ * Status tag for a hive row — data-derived, never guessed. Every recorded
+ * non-active contract status (inactive, lost, sold, archived) keeps its own
+ * label; TREATING derives from an open treatment window on an active hive.
+ */
 export function hiveStatusTag(
   hive: LocalResource,
   treatments: LocalResource[],
@@ -106,6 +110,8 @@ export function hiveStatusTag(
 ): HiveStatusTag {
   if (hive.data.status === 'archived' || hive.data.archivedAt)
     return { label: 'ARCHIVED', tone: 'mut' };
+  const status = String(hive.data.status ?? 'active');
+  if (status !== 'active') return { label: status.toUpperCase(), tone: 'mut' };
   const treating = activeTreatmentForHive(treatments, hive.id, today);
   if (treating) {
     const removal = treating.data.removalDate ? String(treating.data.removalDate) : null;

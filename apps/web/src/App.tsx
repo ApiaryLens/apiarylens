@@ -72,6 +72,9 @@ export function App() {
   const [themeMode, setThemeMode] = useState<ThemeMode>(() =>
     loadThemeMode(localStorage.getItem(themeStorageKey)),
   );
+  // Narrow viewports hide the sidebar; this opens it as a drawer so About,
+  // the theme control, install, and Administration stay reachable on phones.
+  const [sideOpen, setSideOpen] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent>();
   const sessionRef = useRef<ActiveSession | undefined>(undefined);
   const schedulerRef = useRef<OnlineSyncScheduler | undefined>(undefined);
@@ -292,13 +295,27 @@ export function App() {
   const activeAccountSection =
     page === 'version' ? (pageRequest.accountSection ?? 'account') : undefined;
   const canWrite = session.membership.role !== 'viewer';
+  const isOwner = session.membership.role === 'owner';
+  // Members and Backup & restore are owner-only sections of the account page;
+  // other roles get only the Account entry so no sidebar target is a dead end.
+  const adminNav = (
+    [
+      ['members', '◉', 'Members'],
+      ['backup', '⛁', 'Backup & restore'],
+      ['account', '⚙', 'Account'],
+    ] as const
+  ).filter(([section]) => isOwner || section === 'account');
+  const navigate = (request: PageRequest) => {
+    setPageRequest(request);
+    setSideOpen(false);
+  };
   const sideNavButton = (target: Page, icon: string, label: string) => (
     <button
       key={target}
       type="button"
       className={activeSidebar === target ? 'active' : ''}
       aria-current={activeSidebar === target ? 'page' : undefined}
-      onClick={() => setPageRequest({ page: target })}
+      onClick={() => navigate({ page: target })}
     >
       <span className="ico" aria-hidden="true">
         {icon}
@@ -309,7 +326,18 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar" aria-label="ApiaryLens navigation">
+      {sideOpen && (
+        <button
+          className="side-backdrop"
+          aria-label="Close menu"
+          onClick={() => setSideOpen(false)}
+        ></button>
+      )}
+      <aside
+        id="app-sidebar"
+        className={`sidebar${sideOpen ? ' open' : ''}`}
+        aria-label="ApiaryLens navigation"
+      >
         <div className="brand">
           <svg
             width="18"
@@ -335,7 +363,14 @@ export function App() {
           Reference
         </div>
         <nav className="snav" aria-labelledby="nav-reference">
-          <button type="button" onClick={() => setGlossary({ open: true })} aria-haspopup="dialog">
+          <button
+            type="button"
+            onClick={() => {
+              setGlossary({ open: true });
+              setSideOpen(false);
+            }}
+            aria-haspopup="dialog"
+          >
             <span className="ico" aria-hidden="true">
               ✱
             </span>
@@ -347,19 +382,13 @@ export function App() {
           Administration
         </div>
         <nav className="snav" aria-labelledby="nav-administration">
-          {(
-            [
-              ['members', '◉', 'Members'],
-              ['backup', '⛁', 'Backup & restore'],
-              ['account', '⚙', 'Account'],
-            ] as const
-          ).map(([section, icon, label]) => (
+          {adminNav.map(([section, icon, label]) => (
             <button
               key={section}
               type="button"
               className={activeAccountSection === section ? 'active' : ''}
               aria-current={activeAccountSection === section ? 'page' : undefined}
-              onClick={() => setPageRequest({ page: 'version', accountSection: section })}
+              onClick={() => navigate({ page: 'version', accountSection: section })}
             >
               <span className="ico" aria-hidden="true">
                 {icon}
@@ -393,6 +422,15 @@ export function App() {
 
       <div className="main-col">
         <header className="topbar">
+          <button
+            className="menu-btn"
+            type="button"
+            aria-expanded={sideOpen}
+            aria-controls="app-sidebar"
+            onClick={() => setSideOpen((open) => !open)}
+          >
+            <span aria-hidden="true">☰</span> Menu
+          </button>
           <span className="crumb">
             <button
               className="account-link"
@@ -516,6 +554,7 @@ export function App() {
                 onNotice={setNotice}
                 canWrite={canWrite}
                 {...(pageRequest.careView ? { initialView: pageRequest.careView } : {})}
+                {...(pageRequest.hiveId ? { initialHiveId: pageRequest.hiveId } : {})}
               />
             )}
             {page === 'about' && <AboutPage offline={offline} />}

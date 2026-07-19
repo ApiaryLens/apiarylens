@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useResources } from '../../local/use-resources.js';
 import type { CareView } from '../../navigation.js';
 import { Empty } from '../../components/Empty.js';
-import { filterCareRecords } from '../record-filters.js';
+import { filterCareRecords, filterRecordsByHive } from '../record-filters.js';
 import type { FormProps } from '../types.js';
 import { CareForm } from './CareForm.js';
 import { CareTimeline } from './CareTimeline.js';
@@ -13,7 +13,8 @@ export function CareRecords({
   onNotice,
   canWrite = true,
   initialView,
-}: FormProps & { initialView?: CareView }) {
+  initialHiveId,
+}: FormProps & { initialView?: CareView; initialHiveId?: string }) {
   const hives = useResources(organizationId, 'hive');
   const miteCounts = useResources(organizationId, 'miteCount');
   const observations = useResources(organizationId, 'healthObservation');
@@ -30,7 +31,12 @@ export function CareRecords({
   );
   const [view, setView] = useState<CareView>(initialView ?? 'all');
   useEffect(() => setView(initialView ?? 'all'), [initialView]);
-  const visibleRecords = filterCareRecords(records, view);
+  // A hive-detail tile promises "follow-ups for this hive", so the requested
+  // hive scope is honored here and stays adjustable in the filter row.
+  const [hiveFilter, setHiveFilter] = useState(initialHiveId ?? 'all');
+  useEffect(() => setHiveFilter(initialHiveId ?? 'all'), [initialHiveId]);
+  const visibleRecords = filterRecordsByHive(filterCareRecords(records, view), hiveFilter);
+  const filteredHiveName = hives.find((hive) => hive.id === hiveFilter)?.data.name;
   return (
     <>
       <div className="page-heading">
@@ -67,12 +73,32 @@ export function CareRecords({
                 <option value="all">All care records</option>
                 <option value="open-follow-ups">Open follow-ups</option>
               </select>
+              {hives.length > 0 && (
+                <select
+                  aria-label="Hive"
+                  value={hiveFilter}
+                  onChange={(event) => setHiveFilter(event.currentTarget.value)}
+                >
+                  <option value="all">All hives</option>
+                  {hives.map((hive) => (
+                    <option key={hive.id} value={hive.id}>
+                      {String(hive.data.name)}
+                    </option>
+                  ))}
+                </select>
+              )}
             </label>
           )}
           {records.length === 0 ? (
             <Empty text="No care records yet." />
           ) : visibleRecords.length === 0 ? (
-            <Empty text="No open follow-up items." />
+            <Empty
+              text={
+                hiveFilter !== 'all'
+                  ? `No matching care records for ${String(filteredHiveName ?? 'this hive')}.`
+                  : 'No open follow-up items.'
+              }
+            />
           ) : (
             <CareTimeline records={visibleRecords} onNotice={onNotice} canWrite={canWrite} />
           )}

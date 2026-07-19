@@ -21,10 +21,18 @@ export function filterCareRecords(records: LocalResource[], view: CareView): Loc
   return records;
 }
 
-export function filterInspectionsByHive(
+/** Generic hive scoping for any hive-linked record list (inspections, care). */
+export function filterRecordsByHive(
   records: LocalResource[],
   hiveId: string | 'all',
 ): LocalResource[] {
   if (hiveId === 'all') return records;
   return records.filter((record) => String(record.data.hiveId) === hiveId);
+}
+
+export function filterInspectionsByHive(
+  records: LocalResource[],
+  hiveId: string | 'all',
+): LocalResource[] {
+  return filterRecordsByHive(records, hiveId);
 }

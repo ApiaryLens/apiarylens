@@ -107,6 +107,28 @@ describe('hive status board selectors', () => {
     });
   });
 
+  it('preserves every recorded non-active contract status, never relabeling as active', () => {
+    for (const status of ['inactive', 'lost', 'sold'] as const) {
+      const hive = resource('hive', { name: 'Cedar', status });
+      expect(hiveStatusTag(hive, [], '2026-07-18T00:00:00Z')).toEqual({
+        label: status.toUpperCase(),
+        tone: 'mut',
+      });
+    }
+    // A non-active hive is never shown as TREATING even with an open window.
+    const lost = resource('hive', { name: 'Cedar', status: 'lost' });
+    const open = resource('treatmentEvent', {
+      hiveId: lost.id,
+      productOrMethod: 'Formic Pro',
+      applicationDate: '2026-07-15',
+      removalDate: null,
+    });
+    expect(hiveStatusTag(lost, [open], '2026-07-18T00:00:00Z')).toEqual({
+      label: 'LOST',
+      tone: 'mut',
+    });
+  });
+
   it('accumulates monthly counts for sparklines and ignores unparseable dates', () => {
     const now = new Date('2026-07-18T12:00:00Z');
     expect(

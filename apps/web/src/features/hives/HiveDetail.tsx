@@ -74,6 +74,11 @@ export function HiveDetail({
   const queen = currentQueen(queens, hiveId);
   const mark = queen ? queenMark(queen.data) : undefined;
   const miteSeries = miteSeriesForHive(miteCounts, hiveId);
+  // The chart panel is titled "season", so it plots only this season's
+  // readings; the KPI sparkline stays all-time (its label is not scoped).
+  const seasonMiteSeries = miteSeries.filter(
+    (reading) => String(reading.measuredAt).slice(0, 4) === String(year),
+  );
   const latestMite = latestMiteByHive(miteCounts).get(hiveId);
   const seasonInspections = inspections.filter(
     (record) =>
@@ -156,7 +161,7 @@ export function HiveDetail({
         <button
           className="metric metric-link"
           type="button"
-          onClick={() => onNavigate({ page: 'care', careView: 'open-follow-ups' })}
+          onClick={() => onNavigate({ page: 'care', careView: 'open-follow-ups', hiveId })}
           aria-label={`View ${openHiveFollowUps.length} open follow-ups for this hive`}
         >
           <span>Open follow-ups</span>
@@ -179,7 +184,7 @@ export function HiveDetail({
             <span className="sub-t">observations, not a diagnosis</span>
           </div>
           <div className="panel-b">
-            <VarroaChart readings={miteSeries} />
+            <VarroaChart readings={seasonMiteSeries} />
           </div>
         </div>
 

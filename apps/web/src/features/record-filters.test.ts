@@ -4,6 +4,7 @@ import {
   filterCareRecords,
   filterHivesByStatus,
   filterInspectionsByHive,
+  filterRecordsByHive,
 } from './record-filters.js';
 
 function record(
@@ -50,5 +51,23 @@ describe('overview navigation filters', () => {
     const second = record('inspection', { hiveId: 'hive-2', state: 'draft' });
     expect(filterInspectionsByHive([first, second], 'all')).toEqual([first, second]);
     expect(filterInspectionsByHive([first, second], 'hive-2')).toEqual([second]);
+  });
+
+  it('scopes care records to one hive so a hive-detail tile lands on its own list', () => {
+    const mine = record('followUp', {
+      hiveId: 'hive-1',
+      description: 'Pull super',
+      completedAt: null,
+    });
+    const other = record('followUp', {
+      hiveId: 'hive-2',
+      description: 'Requeen',
+      completedAt: null,
+    });
+    const records = [mine, other];
+    expect(filterRecordsByHive(records, 'all')).toEqual(records);
+    expect(filterRecordsByHive(filterCareRecords(records, 'open-follow-ups'), 'hive-1')).toEqual([
+      mine,
+    ]);
   });
 });
