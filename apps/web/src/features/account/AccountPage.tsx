@@ -2,17 +2,27 @@ import { useEffect, useState } from 'react';
 import type { BuildIdentity } from '@apiarylens/contracts';
 import { api } from '../../api.js';
 import { frontendBuild, windowsPackageLabel } from '../../build-identity.js';
+import type { AccountSection } from '../../navigation.js';
 import type { ActiveSession } from '../../session.js';
 import { useGlossary } from '../glossary/glossary-context.js';
 import { FamilyAccess } from './FamilyAccess.js';
 import { SessionTransparency } from './SessionTransparency.js';
 
+const sectionAnchors: Record<AccountSection, string> = {
+  account: 'account-section',
+  backup: 'backup-section',
+  members: 'members-section',
+};
+
 export function VersionView({
   session,
+  section,
   onSignOut,
   onClear,
 }: {
   session: ActiveSession;
+  /** Administration sidebar target: scrolls the matching section into view. */
+  section?: AccountSection;
   onSignOut: () => void;
   onClear: () => void;
 }) {
@@ -26,6 +36,10 @@ export function VersionView({
   // re-provisions it (WIN-028).
   const deviceManaged = api.deviceManagedSession(session);
   useEffect(() => {
+    if (!section || section === 'account') return;
+    document.getElementById(sectionAnchors[section])?.scrollIntoView({ block: 'start' });
+  }, [section]);
+  useEffect(() => {
     void fetch('/health', { cache: 'no-store' })
       .then((response) => (response.ok ? response.json() : undefined))
       .then((value) => {
@@ -37,7 +51,7 @@ export function VersionView({
 
   return (
     <>
-      <div className="page-heading">
+      <div className="page-heading" id="account-section">
         <div>
           <h1>Account and build</h1>
         </div>
@@ -126,7 +140,7 @@ export function VersionView({
       </section>
       <SessionTransparency session={session} />
       {session.membership.role === 'owner' && (
-        <section className="card backup-recovery">
+        <section className="card backup-recovery" id="backup-section">
           <div>
             <p className="eyebrow">Data protection</p>
             <h2>Backup and recovery</h2>
@@ -248,7 +262,9 @@ export function VersionView({
         </section>
       )}
       {session.membership.role === 'owner' && session.csrfToken && (
-        <FamilyAccess csrfToken={session.csrfToken} organizationId={session.organization.id} />
+        <div id="members-section">
+          <FamilyAccess csrfToken={session.csrfToken} organizationId={session.organization.id} />
+        </div>
       )}
     </>
   );
