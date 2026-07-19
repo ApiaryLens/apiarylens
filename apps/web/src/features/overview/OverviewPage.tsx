@@ -6,7 +6,6 @@ import { useResources } from '../../local/use-resources.js';
 import type { PageRequest } from '../../navigation.js';
 import { Empty } from '../../components/Empty.js';
 import { Sparkline } from '../../components/Sparkline.js';
-import { formatWeatherSummary } from '../../weather-fields.js';
 import { glossaryEntries } from '../glossary/glossary-data.js';
 import { useGlossary } from '../glossary/glossary-context.js';
 import {
@@ -18,6 +17,7 @@ import {
   seasonHarvest,
 } from '../board-data.js';
 import { SeasonHarvestChart } from './SeasonHarvestChart.js';
+import { WeatherPanel } from './WeatherPanel.js';
 import {
   cacheMemberSummary,
   cachedMemberSummary,
@@ -248,7 +248,7 @@ export function Dashboard({
             <SeasonHarvestChart harvest={harvest} hiveNames={hiveNames} year={year} />
           </div>
         </div>
-        <ConditionsPanel inspections={inspections} hiveNames={hiveNames} />
+        <WeatherPanel inspections={inspections} hiveNames={hiveNames} />
       </div>
 
       <div className="grid g2">
@@ -423,86 +423,6 @@ function FollowUpQueue({
           </table>
         </div>
       )}
-    </div>
-  );
-}
-
-/** Block: latest recorded conditions, from the newest inspection weather. */
-function ConditionsPanel({
-  inspections,
-  hiveNames,
-}: {
-  inspections: LocalResource[];
-  hiveNames: Map<string, string>;
-}) {
-  const withWeather = [...inspections]
-    .filter((record) => record.data.weather && typeof record.data.weather === 'object')
-    .sort((a, b) => String(b.data.inspectedAt).localeCompare(String(a.data.inspectedAt)));
-  const latest = withWeather[0];
-  const weather = latest?.data.weather as Record<string, unknown> | undefined;
-  return (
-    <div className="panel">
-      <div className="panel-h">
-        <h2>Latest recorded conditions</h2>
-        <span className="spacer"></span>
-        {latest && (
-          <span className="sub-t">
-            {hiveNames.get(String(latest.data.hiveId)) ?? 'hive'} ·{' '}
-            {new Date(String(latest.data.inspectedAt)).toLocaleDateString()}
-          </span>
-        )}
-      </div>
-      {weather ? (
-        <div className="tbl-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th className="num">Temp</th>
-                <th>Sky</th>
-                <th>Wind</th>
-                <th className="num">Humidity</th>
-                <th>Source</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="num">
-                  {typeof weather.temperature === 'number'
-                    ? `${weather.temperature}°${String(weather.temperatureUnit ?? 'f').toUpperCase()}`
-                    : '—'}
-                </td>
-                <td>{weather.conditions ? String(weather.conditions) : '—'}</td>
-                <td>
-                  {typeof weather.windSpeed === 'number'
-                    ? `${weather.windSpeed} ${String(weather.windSpeedUnit ?? 'mph')}${weather.windDirection ? ` ${String(weather.windDirection).toUpperCase()}` : ''}`
-                    : '—'}
-                </td>
-                <td className="num">
-                  {typeof weather.humidity === 'number' ? `${weather.humidity}%` : '—'}
-                </td>
-                <td>
-                  <span className={`tag ${weather.source === 'provider' ? 'mut' : 'ok'}`}>
-                    {weather.source === 'provider'
-                      ? `PROVIDER · ${String(weather.providerName ?? '')}`.trim()
-                      : 'MANUAL'}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="panel-b">
-          <Empty text="Weather recorded with an inspection will appear here." />
-        </div>
-      )}
-      <div className="panel-note">
-        <span className="sub-t">
-          Conditions are the snapshot saved with an inspection — manual entry always works offline;
-          the optional provider assist in the inspection form requires explicit location consent
-          (FB-011).
-        </span>
-      </div>
     </div>
   );
 }

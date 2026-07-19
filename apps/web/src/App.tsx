@@ -33,6 +33,7 @@ import { Hives } from './features/hives/HivesPage.js';
 import { HiveDetail } from './features/hives/HiveDetail.js';
 import { Inspections } from './features/inspections/InspectionsPage.js';
 import { CareRecords } from './features/care/CarePage.js';
+import { AboutPage } from './features/about/AboutPage.js';
 import { VersionView } from './features/account/AccountPage.js';
 import { GlossaryContext } from './features/glossary/glossary-context.js';
 import { GlossaryPanel } from './features/glossary/GlossaryPanel.js';
@@ -340,6 +341,7 @@ export function App() {
             </span>
             Glossary
           </button>
+          {sideNavButton('about', 'ⓘ', 'About')}
         </nav>
         <div className="side-h" id="nav-administration">
           Administration
@@ -516,6 +518,7 @@ export function App() {
                 {...(pageRequest.careView ? { initialView: pageRequest.careView } : {})}
               />
             )}
+            {page === 'about' && <AboutPage offline={offline} />}
             {page === 'version' && (
               <VersionView
                 session={session}

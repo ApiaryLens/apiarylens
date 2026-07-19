@@ -1,5 +1,13 @@
 export type Page =
-  'dashboard' | 'apiaries' | 'apiary' | 'hives' | 'hive' | 'inspections' | 'care' | 'version';
+  | 'dashboard'
+  | 'apiaries'
+  | 'apiary'
+  | 'hives'
+  | 'hive'
+  | 'inspections'
+  | 'care'
+  | 'about'
+  | 'version';
 
 export type HiveStatusFilter = 'all' | 'active' | 'archived';
 export type CareView = 'all' | 'open-follow-ups';
@@ -36,5 +44,6 @@ export const pageTitles: Record<Page, string> = {
   hive: 'Hive',
   inspections: 'Inspections',
   care: 'Care',
+  about: 'About',
   version: 'Account',
 };

@@ -688,6 +688,53 @@ svg .mite-dot {
   height: auto;
 }
 
+/* ---- weather hero (Overview conditions block) ---- */
+.wx-hero {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.wx-icon {
+  flex: none;
+  stroke: var(--series);
+}
+.wx-icon .wx-fill {
+  fill: var(--series);
+  fill-opacity: 0.12;
+}
+.wx-temp {
+  display: block;
+  font-size: 40px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.wx-cond {
+  display: block;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+.wx-facts {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+  margin: 0 0 0 auto;
+}
+.wx-facts dt {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.wx-facts dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  font-size: 13px;
+}
+
 /* ---- key/value ---- */
 .kv {
   display: grid;
@@ -1648,6 +1695,26 @@ svg .mite-dot {
   display: block;
   margin-top: 0.3rem;
   font-style: italic;
+}
+
+/* ---- about page ---- */
+.about-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+.about-links li {
+  display: grid;
+  gap: 0.1rem;
+}
+.about-links a {
+  font-weight: 600;
+}
+.about-link-disabled {
+  font-weight: 600;
+  color: var(--ink-3);
 }
 
 /* ---- bottom navigation (narrow viewports only) ---- */

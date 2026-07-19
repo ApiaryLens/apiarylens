@@ -68,9 +68,14 @@ describe('V2 clean-dashboard shell', () => {
     // block must stay separable.
     expect(overviewSource).toContain('function HiveStatusBoard');
     expect(overviewSource).toContain('function FollowUpQueue');
-    expect(overviewSource).toContain('function ConditionsPanel');
+    expect(overviewSource).toContain('<WeatherPanel');
     expect(overviewSource).toContain('function GlossaryQuickReference');
     expect(overviewSource).toContain('SeasonHarvestChart');
+  });
+
+  it('makes the About page discoverable in the Reference group', () => {
+    expect(appSource).toContain("sideNavButton('about', 'ⓘ', 'About')");
+    expect(appSource).toContain("page === 'about' && <AboutPage offline={offline} />");
   });
 
   it('routes the V2 detail screens through the shared page request', () => {
