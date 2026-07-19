@@ -63,15 +63,18 @@ release documentation. Semantic Versioning is the accepted public format:
 - Release-candidate UAT uses an explicit `-rc.N` tag
 
 Public preview naming is decoupled from the wire version: public previews are
-named **Preview N** (Public Preview 1, Preview 2, ...), while the semver
-prerelease `0.1.0-preview.M` is an internal build ordinal that only ever
-increases and may not match N — a build number consumed by an unpublished
+named **Preview N**, counting owner-accepted releases of the rebooted
+platform+web product starting at 1 (owner decision, 2026-07-18), while the
+semver prerelease `0.1.0-preview.M` is an internal build ordinal that only
+ever increases and may not match N — a build number consumed by an unpublished
 internal draft is never reused (`preview.2` and `preview.3` were consumed this
-way, so Preview 2 first shipped as build `0.1.0-preview.4`; a re-release under
-the same public name ships as a later build, such as `0.1.0-preview.5`). Tags,
-manifests, and artifact names always carry the exact semver build number;
-user-facing release communication leads with the public preview name and states
-the build number.
+way), and releases predating the reboot do not count in the public sequence
+(the Windows-era "Preview 1" and "Preview 2" builds `0.1.0-preview.1` and
+`0.1.0-preview.4` are historical; the latter is retitled "Superseded internal
+build — do not use"). The rebooted product's Preview 1 therefore ships as
+build `0.1.0-preview.5`. Tags, manifests, and artifact names always carry the
+exact semver build number; user-facing release communication leads with the
+public preview name and states the build number.
 
 Before `1.0.0`, a minor release may contain a breaking change only when the release
 notes, migration path, compatibility window, and recovery procedure make that

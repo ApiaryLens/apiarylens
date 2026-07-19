@@ -5,11 +5,14 @@
 - Continued separately versioned Scout Bee deployment-bootloader work. It is not
   currently an end-user release.
 
-## 0.1.0-preview.5 — Preview 2 (re-release) — 2026-07-18
+## 0.1.0-preview.5 — Preview 1 (platform reboot) — 2026-07-18
 
-Published as **ApiaryLens Preview 2**; the public preview name does not advance
-(`0.1.0-preview.5` is the internal build number). This build supersedes
-`0.1.0-preview.4` and ships **platform and web artifacts only** — the
+Published as **ApiaryLens Preview 1**, the first public preview of the rebooted
+platform+web product. The public preview counter restarted with the reboot
+(owner decision, 2026-07-18); the internal build ordinal (`0.1.0-preview.5`)
+is unaffected and only ever increases. This build supersedes
+`0.1.0-preview.4` (whose GitHub release is now titled "Superseded internal
+build — do not use") and ships **platform and web artifacts only** — the
 Cloudflare bundle, the Compose bundle, the air-gapped Compose bundle, and their
 evidence.
 
@@ -31,7 +34,12 @@ evidence.
 See the [build 0.1.0-preview.5 release notes](0.1.0-preview.5.md) for
 verification steps and the compatibility table.
 
-## 0.1.0-preview.4 — Preview 2 — 2026-07-18
+## 0.1.0-preview.4 — Preview 2 — 2026-07-18 (superseded; retitled)
+
+Superseded by build `0.1.0-preview.5` and excluded from the restarted public
+preview sequence; its GitHub release is now titled "Superseded internal build —
+do not use" (defective air-gap bundle, #82). The historical entry below is
+retained as published.
 
 Published as **ApiaryLens Preview 2**; `0.1.0-preview.4` is the internal build
 number (build ordinals only increase and may skip public preview numbers —
