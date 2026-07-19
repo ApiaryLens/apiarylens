@@ -32,7 +32,7 @@
         {
           "binding": "DB",
           "database_name": "apiarylens-family-uat",
-          "database_id": "8e33a873-9665-4455-a480-44e67f6ad16c",
+          "database_id": "ae55b0ed-37a1-4341-b0d3-902b6d26fadd",
           "migrations_dir": "migrations",
         },
       ],
@@ -52,7 +52,7 @@
         {
           "binding": "DB",
           "database_name": "apiarylens-family-production",
-          "database_id": "94d019ec-854d-488f-8dd6-41ecea1044d0",
+          "database_id": "584a23df-c7ef-42a0-a3b1-62c1f58744ed",
           "migrations_dir": "migrations",
         },
       ],
