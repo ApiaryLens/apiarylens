@@ -50,12 +50,16 @@ export function WeatherAssist({
   const [longitude, setLongitude] = useState('');
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState('');
+  // The apiary whose coordinates currently fill the inputs. Coordinates never
+  // carry over to a different apiary — that would look up the wrong place.
+  const [loadedApiaryId, setLoadedApiaryId] = useState<string | undefined>(undefined);
   const [provenance, setProvenance] = useState<Provenance | undefined>(() =>
     providerProvenance(existingWeather),
   );
 
   // A saved inspection resets the form; the next one must start with clean
-  // manual provenance and a fresh consent decision.
+  // manual provenance, a fresh consent decision, and no leftover coordinates
+  // (the next inspection may target a hive in a different apiary).
   useEffect(() => {
     const target = containerRef.current?.closest('form');
     if (!target) return;
@@ -64,6 +68,9 @@ export function WeatherAssist({
       setMessage('');
       setConsent(false);
       setOpen(false);
+      setLatitude('');
+      setLongitude('');
+      setLoadedApiaryId(undefined);
     };
     target.addEventListener('reset', onReset);
     return () => target.removeEventListener('reset', onReset);
@@ -88,19 +95,28 @@ export function WeatherAssist({
     return hive ? String(hive.data.apiaryId) : undefined;
   }
 
+  async function loadCoordinates(apiaryId: string) {
+    const stored = (await db.settings.get(coordinateKey(apiaryId)))?.value as
+      { latitude?: number; longitude?: number } | undefined;
+    if (typeof stored?.latitude === 'number' && typeof stored.longitude === 'number') {
+      setLatitude(String(stored.latitude));
+      setLongitude(String(stored.longitude));
+    } else {
+      setLatitude('');
+      setLongitude('');
+    }
+    setLoadedApiaryId(apiaryId);
+  }
+
   async function togglePanel() {
     const next = !open;
     setOpen(next);
     setMessage('');
     if (!next) return;
     const apiaryId = selectedApiaryId();
-    if (!apiaryId) return;
-    const stored = (await db.settings.get(coordinateKey(apiaryId)))?.value as
-      { latitude?: number; longitude?: number } | undefined;
-    if (typeof stored?.latitude === 'number' && typeof stored.longitude === 'number') {
-      setLatitude((current) => current || String(stored.latitude));
-      setLongitude((current) => current || String(stored.longitude));
-    }
+    // Reload whenever the selection points at a different apiary than the one
+    // whose coordinates are showing; edits for the same apiary are kept.
+    if (apiaryId && apiaryId !== loadedApiaryId) await loadCoordinates(apiaryId);
   }
 
   function applyConditions(target: HTMLFormElement, conditions: ProviderConditions) {
@@ -132,6 +148,16 @@ export function WeatherAssist({
     }
     const target = form();
     if (!target) return;
+    // Guard against the hive selection moving to another apiary while the
+    // panel was open: refuse the stale coordinates and reload honest ones.
+    const apiaryId = selectedApiaryId();
+    if (apiaryId && apiaryId !== loadedApiaryId) {
+      await loadCoordinates(apiaryId);
+      setMessage(
+        'The selected hive is in a different apiary, so the coordinates were reloaded. Review them, then press Get conditions again.',
+      );
+      return;
+    }
     if (!navigator.onLine) {
       setMessage(
         'You are offline, so the provider cannot be reached. The manual fields above keep working — nothing is lost.',

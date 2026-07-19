@@ -10,7 +10,13 @@ import { db } from '../../db.js';
  */
 export type MemberSummary = {
   activeMembers: number;
-  invitedMembers: number;
+  /**
+   * Pending invitations live behind a separate, more privileged route than the
+   * member roster. `null` means this reading could not see them (for example a
+   * beekeeper or viewer session), so the card must stay silent about
+   * invitations rather than claim there are none.
+   */
+  invitedMembers: number | null;
   fetchedAt: string;
 };
 
@@ -20,22 +26,27 @@ function summaryKey(organizationId: string): string {
   return `memberSummary:${organizationId}`;
 }
 
-export function summarizeMembers(items: readonly MemberLike[]): {
+export function summarizeMembers(
+  members: readonly MemberLike[],
+  invitations?: readonly unknown[],
+): {
   activeMembers: number;
-  invitedMembers: number;
+  invitedMembers: number | null;
 } {
+  const invitedMemberships = members.filter((item) => item.status === 'invited').length;
   return {
-    activeMembers: items.filter((item) => item.status === 'active').length,
-    invitedMembers: items.filter((item) => item.status === 'invited').length,
+    activeMembers: members.filter((item) => item.status === 'active').length,
+    invitedMembers: invitations === undefined ? null : invitedMemberships + invitations.length,
   };
 }
 
 export async function cacheMemberSummary(
   organizationId: string,
-  items: readonly MemberLike[],
+  members: readonly MemberLike[],
+  invitations?: readonly unknown[],
   fetchedAt = new Date().toISOString(),
 ): Promise<MemberSummary> {
-  const summary: MemberSummary = { ...summarizeMembers(items), fetchedAt };
+  const summary: MemberSummary = { ...summarizeMembers(members, invitations), fetchedAt };
   await db.settings.put({ key: summaryKey(organizationId), value: summary });
   return summary;
 }
@@ -48,7 +59,7 @@ export async function cachedMemberSummary(
   const summary = value as Partial<MemberSummary>;
   if (
     typeof summary.activeMembers !== 'number' ||
-    typeof summary.invitedMembers !== 'number' ||
+    (typeof summary.invitedMembers !== 'number' && summary.invitedMembers !== null) ||
     typeof summary.fetchedAt !== 'string'
   )
     return undefined;

@@ -49,14 +49,16 @@ function utcDayStart(value: number): number {
 export function pastDaysFor(observedAt: string, now: Date = new Date()): number {
   const observed = Date.parse(observedAt);
   if (!Number.isFinite(observed)) throw new Error('Enter a valid inspection date first.');
+  // Full-timestamp comparison: an inspection later today is still the future.
+  // One hour of allowance covers clock skew and just-started inspections.
+  if (observed > now.getTime() + 3_600_000)
+    throw new Error('Weather lookup covers current and past conditions, not future times.');
   const dayDifference = (utcDayStart(now.getTime()) - utcDayStart(observed)) / DAY_MS;
-  if (dayDifference < 0)
-    throw new Error('Weather lookup covers current and past conditions, not future dates.');
   if (dayDifference > providerHistoryLimitDays)
     throw new Error(
       `The weather provider associates conditions for about the last ${providerHistoryLimitDays} days. Enter older weather manually.`,
     );
-  return dayDifference;
+  return Math.max(0, dayDifference);
 }
 
 export function openMeteoRequestUrl(

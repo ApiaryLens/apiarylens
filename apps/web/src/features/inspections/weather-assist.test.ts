@@ -20,9 +20,17 @@ describe('provider-assisted weather lookup', () => {
   it('computes the past-day window and enforces honest limits', () => {
     expect(pastDaysFor('2026-07-18T09:00:00.000Z', NOW)).toBe(0);
     expect(pastDaysFor('2026-07-11T09:00:00.000Z', NOW)).toBe(7);
-    expect(() => pastDaysFor('2026-07-20T09:00:00.000Z', NOW)).toThrow('not future dates');
+    expect(() => pastDaysFor('2026-07-20T09:00:00.000Z', NOW)).toThrow('not future times');
     expect(() => pastDaysFor('2026-01-01T09:00:00.000Z', NOW)).toThrow('last 92 days');
     expect(() => pastDaysFor('never', NOW)).toThrow('valid inspection date');
+  });
+
+  it('rejects future times on the current day but tolerates minor clock skew', () => {
+    // 15:30Z now: a 17:00Z inspection has not happened yet even though the
+    // UTC date matches, so no forecast may be stored as observed conditions.
+    expect(() => pastDaysFor('2026-07-18T17:00:00.000Z', NOW)).toThrow('not future times');
+    // Within the one-hour allowance for clock skew and just-started work.
+    expect(pastDaysFor('2026-07-18T16:00:00.000Z', NOW)).toBe(0);
   });
 
   it('requests only rounded coordinates, units, and the covering window', () => {

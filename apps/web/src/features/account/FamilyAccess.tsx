@@ -36,8 +36,9 @@ export function FamilyAccess({
     const [memberResult, invitationResult] = await Promise.all([api.members(), api.invitations()]);
     setMembers(memberResult.items);
     setInvitations(invitationResult.items);
-    // Keep the offline-aware Overview Members card in step with roster changes.
-    await cacheMemberSummary(organizationId, memberResult.items);
+    // Keep the offline-aware Overview Members card in step with roster and
+    // invitation changes.
+    await cacheMemberSummary(organizationId, memberResult.items, invitationResult.items);
   }
 
   useEffect(() => {

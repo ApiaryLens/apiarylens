@@ -13,16 +13,23 @@ describe('offline-aware Members overview summary', () => {
     await db.settings.clear();
   });
 
-  it('counts active and invited members without inventing other states', () => {
+  it('counts active members and combines invited memberships with pending invitations', () => {
     expect(
-      summarizeMembers([
-        { status: 'active' },
-        { status: 'active' },
-        { status: 'invited' },
-        { status: 'revoked' },
-      ]),
-    ).toEqual({ activeMembers: 2, invitedMembers: 1 });
-    expect(summarizeMembers([])).toEqual({ activeMembers: 0, invitedMembers: 0 });
+      summarizeMembers(
+        [{ status: 'active' }, { status: 'active' }, { status: 'invited' }, { status: 'revoked' }],
+        [{ id: 'invitation-1' }],
+      ),
+    ).toEqual({ activeMembers: 2, invitedMembers: 2 });
+    expect(summarizeMembers([], [])).toEqual({ activeMembers: 0, invitedMembers: 0 });
+  });
+
+  it('records unknown invitations as null, never as a false zero', () => {
+    // A beekeeper or viewer session cannot read the invitations route; the
+    // summary must not claim there are no pending invitations.
+    expect(summarizeMembers([{ status: 'active' }])).toEqual({
+      activeMembers: 1,
+      invitedMembers: null,
+    });
   });
 
   it('returns no summary for a device that has never read the roster', async () => {
@@ -35,15 +42,31 @@ describe('offline-aware Members overview summary', () => {
     await cacheMemberSummary(
       organizationId,
       [{ status: 'active' }, { status: 'invited' }],
+      [{ id: 'invitation-1' }, { id: 'invitation-2' }],
       '2026-07-18T10:00:00.000Z',
     );
 
     expect(await cachedMemberSummary(organizationId)).toEqual({
       activeMembers: 1,
-      invitedMembers: 1,
+      invitedMembers: 3,
       fetchedAt: '2026-07-18T10:00:00.000Z',
     });
     expect(await cachedMemberSummary(otherOrganization)).toBeUndefined();
+  });
+
+  it('round-trips an unknown invitation count', async () => {
+    const organizationId = crypto.randomUUID();
+    await cacheMemberSummary(
+      organizationId,
+      [{ status: 'active' }],
+      undefined,
+      '2026-07-18T10:00:00.000Z',
+    );
+    expect(await cachedMemberSummary(organizationId)).toEqual({
+      activeMembers: 1,
+      invitedMembers: null,
+      fetchedAt: '2026-07-18T10:00:00.000Z',
+    });
   });
 
   it('rejects a malformed cached value instead of showing a misleading count', async () => {
