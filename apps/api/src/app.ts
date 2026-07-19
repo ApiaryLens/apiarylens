@@ -3,8 +3,10 @@ import {
   bootstrapRequestSchema,
   buildOpenApiDocument,
   createBuildIdentity,
+  ExportArchiveError,
   invitationAcceptSchema,
   invitationCreateSchema,
+  parseExportArchive,
   recoveryRequestSchema,
   resourceTypeSchema,
   rolePermissions,
@@ -12,6 +14,7 @@ import {
   syncPushRequestSchema,
   type ApiError,
   type BuildIdentity,
+  type ParsedExportArchive,
   type Permission,
   type ResourceType,
   type SessionView,
@@ -21,7 +24,7 @@ import { MemoryMediaStore, type MediaStore } from '@apiarylens/media';
 import { Hono, type Context, type MiddlewareHandler } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { secureHeaders } from 'hono/secure-headers';
-import { strToU8, zipSync } from 'fflate';
+import { strToU8, unzipSync, zipSync } from 'fflate';
 import { hashPassword, verifyPassword } from './password.js';
 
 interface Variables {
@@ -524,6 +527,7 @@ export function createApi(options: ApiOptions) {
         store.listResources(organizationId, entityType),
       ]),
     ) as Record<ResourceType, ReturnType<SqliteStore['listResources']>>;
+    const dataBytes = strToU8(JSON.stringify(resources, null, 2));
     const files: Record<string, Uint8Array> = {
       'manifest.json': strToU8(
         JSON.stringify(
@@ -534,12 +538,14 @@ export function createApi(options: ApiOptions) {
             exportedAt: new Date().toISOString(),
             organizationId,
             organizationName: session.organization.name,
+            // Restore verifies this checksum before touching any data.
+            dataSha256: createHash('sha256').update(dataBytes).digest('hex'),
           },
           null,
           2,
         ),
       ),
-      'data.json': strToU8(JSON.stringify(resources, null, 2)),
+      'data.json': dataBytes,
     };
     for (const entityType of ['apiary', 'hive', 'inspection'] as const) {
       files[`csv/${entityType}.csv`] = strToU8(toCsv(resources[entityType]));
@@ -558,6 +564,86 @@ export function createApi(options: ApiOptions) {
       },
     });
   });
+
+  // Restore a full-export archive over the organization's records (WEB-001).
+  // The archive is fully verified before anything changes, the replacement is
+  // one transaction, and the rewrite happens through ordinary versioned
+  // change rows so device replicas converge through their normal sync pull.
+  app.post(
+    '/api/v1/import/full',
+    requireSession,
+    requireCsrf,
+    permit('backup:operate'),
+    async (c) => {
+      const declaredLength = Number(c.req.header('content-length') ?? '0');
+      if (declaredLength > 256 * 1024 * 1024) {
+        return error(
+          c,
+          400,
+          'import_too_large',
+          'Backup archives over 256 MB cannot be restored here',
+        );
+      }
+      const bytes = new Uint8Array(await c.req.arrayBuffer());
+      if (bytes.byteLength === 0 || bytes.byteLength > 256 * 1024 * 1024) {
+        return error(c, 400, 'import_invalid', 'The uploaded backup file is empty or too large');
+      }
+      let archive: Record<string, Uint8Array>;
+      try {
+        archive = unzipSync(bytes);
+      } catch {
+        return error(
+          c,
+          400,
+          'import_invalid',
+          'The file is not a readable ApiaryLens backup archive',
+        );
+      }
+      let parsed: ParsedExportArchive;
+      try {
+        parsed = await parseExportArchive(archive, (value) =>
+          createHash('sha256').update(value).digest('hex'),
+        );
+      } catch (caught) {
+        if (caught instanceof ExportArchiveError) {
+          return error(
+            c,
+            400,
+            caught.code === 'corrupt' ? 'import_corrupt' : 'import_invalid',
+            caught.message,
+          );
+        }
+        throw caught;
+      }
+      // Honest gap: a record that claims a ready image whose bytes the archive
+      // never carried imports as `failed` instead of pretending the image exists.
+      for (const record of parsed.records.mediaAsset) {
+        if (parsed.missingMediaIds.includes(record.id)) {
+          record.fields = { ...record.fields, state: 'failed' };
+        }
+      }
+      const session = c.get('session');
+      const organizationId = session.organization.id;
+      const result = store.importOrganizationData(organizationId, session.user.id, parsed.records);
+      for (const removedId of result.removedMediaIds) {
+        await mediaStore.delete(organizationId, removedId);
+      }
+      for (const [mediaId, mediaContent] of parsed.mediaBytes) {
+        // Drop any pre-restore thumbnail so a stale derivative never outlives
+        // the restored original; clients regenerate from the original.
+        await mediaStore.delete(organizationId, mediaId, 'thumbnail');
+        await mediaStore.put(organizationId, mediaId, mediaContent);
+      }
+      return c.json({
+        status: 'restored',
+        imported: result.imported,
+        removed: result.removed,
+        mediaFiles: parsed.mediaBytes.size,
+        mediaMissing: parsed.missingMediaIds.length,
+        restoredAt: new Date().toISOString(),
+      });
+    },
+  );
 
   app.notFound((c) => error(c, 404, 'not_found', 'The requested endpoint does not exist'));
   app.onError((caught, c) => {

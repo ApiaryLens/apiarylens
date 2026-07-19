@@ -2,7 +2,7 @@ import { createHash, pbkdf2Sync, randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SqliteStore } from '@apiarylens/database';
 import { MemoryMediaStore } from '@apiarylens/media';
-import { strFromU8, unzipSync } from 'fflate';
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { createApi } from './app.js';
 
 describe('ApiaryLens API', () => {
@@ -749,5 +749,96 @@ describe('ApiaryLens API', () => {
       (await app.request(`/api/v1/media/${mediaId}/content`, { headers: { cookie: owner.cookie } }))
         .status,
     ).toBe(404);
+  });
+
+  it('restores a checksummed export archive and refuses a tampered one untouched (WEB-001)', async () => {
+    const owner = await bootstrap();
+    const csrfHeaders = {
+      cookie: owner.cookie,
+      'content-type': 'application/json',
+      'x-csrf-token': owner.body.csrfToken,
+    };
+    const apiaryId = randomUUID();
+    const push = await app.request('/api/v1/sync/push', {
+      method: 'POST',
+      headers: csrfHeaders,
+      body: JSON.stringify({
+        syncContractVersion: 1,
+        operations: [
+          {
+            operationId: randomUUID(),
+            clientId: randomUUID(),
+            entityType: 'apiary',
+            entityId: apiaryId,
+            action: 'create',
+            baseVersion: 0,
+            payload: { name: 'Original yard' },
+            queuedAt: new Date().toISOString(),
+          },
+        ],
+      }),
+    });
+    expect(push.status).toBe(200);
+
+    const exportResponse = await app.request('/api/v1/export/full', {
+      headers: { cookie: owner.cookie },
+    });
+    const archive = new Uint8Array(await exportResponse.arrayBuffer());
+    const files = unzipSync(archive);
+    const manifest = JSON.parse(strFromU8(files['manifest.json']!)) as { dataSha256?: string };
+    // The export records the data checksum a restore verifies.
+    expect(manifest.dataSha256).toBe(
+      createHash('sha256').update(files['data.json']!).digest('hex'),
+    );
+
+    // The family keeps working after the backup.
+    const rename = await app.request('/api/v1/sync/push', {
+      method: 'POST',
+      headers: csrfHeaders,
+      body: JSON.stringify({
+        syncContractVersion: 1,
+        operations: [
+          {
+            operationId: randomUUID(),
+            clientId: randomUUID(),
+            entityType: 'apiary',
+            entityId: apiaryId,
+            action: 'update',
+            baseVersion: 1,
+            payload: { name: 'Renamed after backup' },
+            queuedAt: new Date().toISOString(),
+          },
+        ],
+      }),
+    });
+    expect(rename.status).toBe(200);
+
+    // A tampered archive (data changed, checksum stale) is refused untouched.
+    const tampered = zipSync({
+      ...files,
+      'data.json': strToU8(strFromU8(files['data.json']!).replace('Original yard', 'Evil yard')),
+    });
+    const refused = await app.request('/api/v1/import/full', {
+      method: 'POST',
+      headers: { cookie: owner.cookie, 'x-csrf-token': owner.body.csrfToken },
+      body: tampered,
+    });
+    expect(refused.status).toBe(400);
+    expect(((await refused.json()) as { code: string }).code).toBe('import_corrupt');
+    expect(store.listResources(owner.body.organization.id, 'apiary')[0]?.name).toBe(
+      'Renamed after backup',
+    );
+
+    // The genuine archive restores the backup state.
+    const restored = await app.request('/api/v1/import/full', {
+      method: 'POST',
+      headers: { cookie: owner.cookie, 'x-csrf-token': owner.body.csrfToken },
+      body: archive,
+    });
+    expect(restored.status).toBe(200);
+    expect((await restored.json()) as object).toMatchObject({ status: 'restored', imported: 1 });
+    const after = store.listResources(owner.body.organization.id, 'apiary');
+    expect(after).toHaveLength(1);
+    expect(after[0]).toMatchObject({ id: apiaryId, name: 'Original yard', version: 3 });
   });
 });

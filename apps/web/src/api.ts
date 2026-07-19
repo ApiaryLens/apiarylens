@@ -66,6 +66,17 @@ export const api = {
    * `navigator.onLine` reports about external connectivity.
    */
   desktopStandalone: () => Boolean(desktopBridge()),
+  /**
+   * True when this is a local-only (standalone) session: the app is hosted by
+   * a shell that embeds the loopback backend and the family chose no cloud
+   * backend. Detection follows the connection-profile model (C7): a connected
+   * profile makes the shell load the deployed backend origin with NO desktop
+   * bridge, and a browser session always talks to a deployed backend — so the
+   * bridge exists exactly when the session is local-only. Owner rule for this
+   * mode (design v2 §1c, WEB-001): no sync affordance anywhere — absent, not
+   * disabled — and first-class local backup and restore instead.
+   */
+  localOnlySession: () => Boolean(desktopBridge()),
   deviceOwnerProvisioningAvailable: () =>
     typeof desktopBridge()?.provisionDeviceOwner === 'function',
   provisionDeviceOwner: async (): Promise<SessionView> => {
@@ -108,6 +119,24 @@ export const api = {
     return desktopBridge() && status.available ? { ...status, requiresToken: false } : status;
   },
   session: () => json<SessionView>('/api/v1/session'),
+  /**
+   * Restore the whole workspace from a downloaded backup archive. The server
+   * verifies the archive's integrity completely before replacing anything and
+   * refuses damaged or foreign files.
+   */
+  importFullBackup: (csrfToken: string, file: Blob) =>
+    json<{
+      status: 'restored';
+      imported: number;
+      removed: number;
+      mediaFiles: number;
+      mediaMissing: number;
+      restoredAt: string;
+    }>('/api/v1/import/full', {
+      method: 'POST',
+      headers: { 'x-csrf-token': csrfToken },
+      body: file,
+    }),
   bootstrap: (input: {
     identifier: string;
     displayName: string;

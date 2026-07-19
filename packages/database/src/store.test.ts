@@ -135,6 +135,49 @@ describe('SqliteStore', () => {
     expect(store.getResource(randomUUID(), 'apiary', operation.entityId)).toBeUndefined();
   });
 
+  it('replaces organization data from an import through ordinary versioned change rows', () => {
+    const session = bootstrap();
+    const organizationId = session.view.organization.id;
+    const kept = createApiary(organizationId);
+    const removed = createApiary(organizationId);
+    store.applyOperation(organizationId, session.view.user.id, kept);
+    store.applyOperation(organizationId, session.view.user.id, removed);
+    // A replica has already pulled everything before the restore.
+    const cursorBefore = Number(store.pullChanges(organizationId).nextCursor);
+
+    const result = store.importOrganizationData(organizationId, session.view.user.id, {
+      apiary: [
+        {
+          id: kept.entityId,
+          createdAt: '2026-06-01T10:00:00.000Z',
+          updatedAt: '2026-07-01T10:00:00.000Z',
+          fields: { name: 'Restored yard' },
+        },
+      ],
+    });
+    expect(result.imported).toBe(1);
+    expect(result.removed).toBe(1);
+
+    const apiaries = store.listResources(organizationId, 'apiary');
+    expect(apiaries).toHaveLength(1);
+    expect(apiaries[0]).toMatchObject({
+      id: kept.entityId,
+      name: 'Restored yard',
+      // Versions keep increasing across a restore so replicas never see a
+      // version regress: the kept record was at 1 and is upserted to 2.
+      version: 2,
+      createdAt: '2026-06-01T10:00:00.000Z',
+      deletedAt: null,
+    });
+
+    // The replica converges from its old cursor via the ordinary pull.
+    const page = store.pullChanges(organizationId, cursorBefore);
+    const actions = page.changes.map((change) => [change.action, change.entityId]);
+    expect(actions).toContainEqual(['delete', removed.entityId]);
+    expect(actions).toContainEqual(['upsert', kept.entityId]);
+    expect(store.getResource(organizationId, 'apiary', removed.entityId)?.deletedAt).toBeTruthy();
+  });
+
   it('temporarily throttles repeated sign-in failures without revealing account existence', () => {
     expect(store.signInAllowed('owner@example.test')).toBe(true);
     for (let attempt = 0; attempt < 5; attempt += 1) {

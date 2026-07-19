@@ -42,6 +42,12 @@ import { GlossaryPanel } from './features/glossary/GlossaryPanel.js';
 // service, so external connectivity (navigator.onLine) must never gate the
 // launch, synchronization, or onboarding paths (WIN-028).
 const desktopStandalone = api.desktopStandalone();
+// Local-only sessions (no cloud backend — design v2 §1c, WEB-001) show NO
+// sync affordance anywhere: no Sync now button, no sync status, no queued
+// counts. Writing to the embedded local database still happens continuously
+// in the background; it is plumbing, not family-facing state. In exchange,
+// local backup and restore are first-class (Administration → Backup & restore).
+const localOnly = api.localOnlySession();
 
 /** Minimal typing for the Chromium install prompt event (PWA install). */
 interface InstallPromptEvent extends Event {
@@ -134,10 +140,22 @@ export function App() {
       onSuccess: (trigger) => {
         setSyncing(false);
         setLastSyncAt(new Date());
-        setNotice(syncNotice(trigger));
+        // Local-only sessions never announce synchronization — background
+        // writes to this computer's database are silent plumbing (WEB-001).
+        if (!localOnly) setNotice(syncNotice(trigger));
       },
       onError: (error) => {
         setSyncing(false);
+        if (localOnly) {
+          setNotice(
+            isRetryableSyncError(error)
+              ? 'Your work is saved in the app and keeps writing to this computer automatically.'
+              : error instanceof Error
+                ? error.message
+                : 'Saving to this computer needs attention.',
+          );
+          return;
+        }
         setNotice(
           isRetryableSyncError(error)
             ? 'Your work is saved on this device. Synchronization will retry automatically.'
@@ -398,16 +416,33 @@ export function App() {
           ))}
         </nav>
         <div className="side-foot">
-          {offline ? <span className="q">● Offline</span> : <span className="on">● Online</span>}
-          {pendingWork > 0 && (
+          {localOnly ? (
+            // No connectivity, sync, or queue affordances in local-only mode:
+            // the only honest status is where the data lives (WEB-001).
             <>
-              {' '}
-              · <span className="q">{pendingWork} queued</span>
+              <span className="on">● Local</span> · all records stay on this computer
+              <br />
+            </>
+          ) : (
+            <>
+              {offline ? (
+                <span className="q">● Offline</span>
+              ) : (
+                <span className="on">● Online</span>
+              )}
+              {pendingWork > 0 && (
+                <>
+                  {' '}
+                  · <span className="q">{pendingWork} queued</span>
+                </>
+              )}
+              <br />
+              {lastSyncAt
+                ? `Last sync ${lastSyncAt.toLocaleTimeString()}`
+                : 'Not synced this session'}
+              <br />
             </>
           )}
-          <br />
-          {lastSyncAt ? `Last sync ${lastSyncAt.toLocaleTimeString()}` : 'Not synced this session'}
-          <br />
           <span className="mono">{session.organization.name}</span>
           <button type="button" onClick={() => setThemeMode((mode) => nextThemeMode(mode))}>
             {themeModeLabel(themeMode)}
@@ -442,10 +477,12 @@ export function App() {
           </span>
           <span className="spacer"></span>
           <div className="top-actions">
-            <span className={`connectivity ${offline ? 'offline' : ''}`}>
-              {offline ? 'OFFLINE' : 'ONLINE'}
-            </span>
-            {pendingWork > 0 && <span className="pill q">{pendingWork} QUEUED</span>}
+            {!localOnly && (
+              <span className={`connectivity ${offline ? 'offline' : ''}`}>
+                {offline ? 'OFFLINE' : 'ONLINE'}
+              </span>
+            )}
+            {!localOnly && pendingWork > 0 && <span className="pill q">{pendingWork} QUEUED</span>}
             <button
               className="button secondary"
               onClick={() => setGlossary({ open: true })}
@@ -453,13 +490,15 @@ export function App() {
             >
               Glossary
             </button>
-            <button
-              className="button secondary"
-              onClick={() => void sync()}
-              disabled={syncing || offline}
-            >
-              {syncing ? 'Syncing…' : 'Sync now'}
-            </button>
+            {!localOnly && (
+              <button
+                className="button secondary"
+                onClick={() => void sync()}
+                disabled={syncing || offline}
+              >
+                {syncing ? 'Syncing…' : 'Sync now'}
+              </button>
+            )}
             {canWrite && (
               <button
                 className="button primary"
@@ -486,12 +525,18 @@ export function App() {
               <strong>ApiaryLens update ready</strong>
               <span>
                 {pendingWork > 0
-                  ? `${pendingWork} local item${pendingWork === 1 ? '' : 's'} remain safely on this device. Synchronize them before updating.`
+                  ? localOnly
+                    ? `${pendingWork} recent item${pendingWork === 1 ? '' : 's'} are still being written to this computer. That finishes automatically — install afterwards.`
+                    : `${pendingWork} local item${pendingWork === 1 ? '' : 's'} remain safely on this device. Synchronize them before updating.`
                   : 'Your local work is clear. Install when you are ready.'}
               </span>
             </div>
             <button className="button secondary" disabled={pendingWork > 0} onClick={installUpdate}>
-              {pendingWork > 0 ? 'Waiting for sync' : 'Install update'}
+              {pendingWork > 0
+                ? localOnly
+                  ? 'Waiting for save'
+                  : 'Waiting for sync'
+                : 'Install update'}
             </button>
           </div>
         )}

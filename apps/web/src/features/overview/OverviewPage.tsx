@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { api } from '../../api.js';
-import { db, type LocalResource } from '../../db.js';
+import { db, lastLocalBackupAt, type LocalResource } from '../../db.js';
 import { useResources } from '../../local/use-resources.js';
 import type { PageRequest } from '../../navigation.js';
 import { Empty } from '../../components/Empty.js';
@@ -44,7 +44,11 @@ export function Dashboard({
   const miteCounts = useResources(organizationId, 'miteCount');
   const treatments = useResources(organizationId, 'treatmentEvent');
   const harvests = useResources(organizationId, 'harvest');
+  // Local-only sessions replace the pending-sync block with the local-backup
+  // block: no queued counts anywhere, first-class backup instead (WEB-001).
+  const localOnly = api.localOnlySession();
   const pending = useLiveQuery(() => db.outbox.count(), [], 0);
+  const lastBackup = useLiveQuery(() => lastLocalBackupAt(), [], undefined);
   // Refresh the roster reading opportunistically; when the session or the
   // connection is unavailable the card falls back to the last honest reading
   // (or a "not synced" state), never to a fabricated count.
@@ -209,22 +213,47 @@ export function Dashboard({
             className="metric metric-link"
             type="button"
             onClick={() => onNavigate({ page: 'version', accountSection: 'members' })}
-            aria-label="View family members. The roster has not synced to this device yet."
+            aria-label={
+              localOnly
+                ? 'View family members. The roster is not loaded yet.'
+                : 'View family members. The roster has not synced to this device yet.'
+            }
           >
             <span>Members</span>
             <div className="metric-row">
               <strong aria-hidden="true">–</strong>
             </div>
-            <small>Not synced to this device yet</small>
+            <small>{localOnly ? 'Not loaded yet' : 'Not synced to this device yet'}</small>
           </button>
         )}
-        <article className="metric pending">
-          <span>Outbox</span>
-          <div className="metric-row">
-            <strong>{pending}</strong>
-          </div>
-          <small>retries safe · no duplicates</small>
-        </article>
+        {localOnly ? (
+          <button
+            className="metric metric-link"
+            type="button"
+            onClick={() => onNavigate({ page: 'version', accountSection: 'backup' })}
+            aria-label={
+              lastBackup
+                ? `Open backup and restore. The newest backup from this device is from ${new Date(lastBackup).toLocaleString()}.`
+                : 'Open backup and restore. No backup has been recorded on this device.'
+            }
+          >
+            <span>Local backup</span>
+            <div className="metric-row">
+              <strong>{lastBackup ? new Date(lastBackup).toLocaleDateString() : '—'}</strong>
+            </div>
+            <small>
+              {lastBackup ? 'newest backup from this device' : 'no backup recorded on this device'}
+            </small>
+          </button>
+        ) : (
+          <article className="metric pending">
+            <span>Outbox</span>
+            <div className="metric-row">
+              <strong>{pending}</strong>
+            </div>
+            <small>retries safe · no duplicates</small>
+          </article>
+        )}
       </section>
 
       <div className="grid g2">
@@ -385,7 +414,7 @@ function FollowUpQueue({
                 <th>Due</th>
                 <th>Task</th>
                 <th>Hive</th>
-                <th>Sync</th>
+                {!api.localOnlySession() && <th>Sync</th>}
               </tr>
             </thead>
             <tbody>
@@ -412,11 +441,13 @@ function FollowUpQueue({
                     </button>
                   </td>
                   <td>{hiveNames.get(String(item.data.hiveId)) ?? '—'}</td>
-                  <td>
-                    <span className={`tag ${item.syncState === 'synchronized' ? 'ok' : 'warn'}`}>
-                      {item.syncState === 'synchronized' ? 'SYNCED' : 'QUEUED'}
-                    </span>
-                  </td>
+                  {!api.localOnlySession() && (
+                    <td>
+                      <span className={`tag ${item.syncState === 'synchronized' ? 'ok' : 'warn'}`}>
+                        {item.syncState === 'synchronized' ? 'SYNCED' : 'QUEUED'}
+                      </span>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

@@ -9,10 +9,17 @@ import {
   sessionViewSchema,
   type BuildIdentity,
 } from '@apiarylens/contracts';
-import { strFromU8, unzipSync } from 'fflate';
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { expect } from 'vitest';
 import { readErrorCode, readJson } from '../harness/actor.js';
-import { OWNER, apiaryFields, createOperation, jpegBytes, mediaAssetFields } from './data.js';
+import {
+  OWNER,
+  apiaryFields,
+  createOperation,
+  hiveFields,
+  jpegBytes,
+  mediaAssetFields,
+} from './data.js';
 import type { ConformanceFixture } from './types.js';
 
 const SESSION_COOKIE = '__Host-apiarylens-session';
@@ -332,6 +339,128 @@ export const apiFixtures: readonly ConformanceFixture[] = [
       );
       expect(mediaEntry).toBeDefined();
       expect(Array.from(files[mediaEntry!]!)).toEqual(Array.from(bytes));
+    },
+  },
+  {
+    contract: 'api/import.full-restore-round-trip',
+    title:
+      'a full export restores over later changes and replicas converge through the ordinary pull',
+    async run(world) {
+      const owner = await world.owner();
+      const bytes = jpegBytes(512, 0x37);
+      const apiaryOperation = createOperation('apiary', { ...apiaryFields });
+      const mediaOperation = createOperation('mediaAsset', mediaAssetFields(bytes));
+      await owner.mustPush([apiaryOperation, mediaOperation]);
+      const upload = await owner.request(`/api/v1/media/${mediaOperation.entityId}/content`, {
+        method: 'PUT',
+        headers: { 'content-type': 'image/jpeg' },
+        body: bytes,
+      });
+      expect(upload.status).toBe(200);
+
+      const exported = await owner.request('/api/v1/export/full');
+      expect(exported.status).toBe(200);
+      const archive = new Uint8Array(await exported.arrayBuffer());
+
+      // The family keeps working after the backup: a rename and a new hive.
+      await owner.mustPush([
+        createOperation(
+          'apiary',
+          { ...apiaryFields, name: 'Renamed after the backup' },
+          { entityId: apiaryOperation.entityId, action: 'update', baseVersion: 1 },
+        ),
+        createOperation('hive', hiveFields(apiaryOperation.entityId)),
+      ]);
+      const replicaCursor = await readJson<{ nextCursor: string }>(
+        await owner.request('/api/v1/sync/pull?limit=250'),
+      );
+
+      const restored = await owner.request('/api/v1/import/full', {
+        method: 'POST',
+        headers: { 'content-type': 'application/zip' },
+        body: archive,
+      });
+      expect(restored.status).toBe(200);
+      const summary = await readJson<{
+        status: string;
+        imported: number;
+        removed: number;
+        mediaFiles: number;
+        mediaMissing: number;
+      }>(restored);
+      expect(summary.status).toBe('restored');
+      expect(summary.imported).toBe(2);
+      expect(summary.removed).toBe(1);
+      expect(summary.mediaFiles).toBe(1);
+      expect(summary.mediaMissing).toBe(0);
+
+      // The workspace matches the backup contents again.
+      const apiaries = await readJson<{ items: Array<Record<string, unknown>> }>(
+        await owner.request('/api/v1/resources/apiary'),
+      );
+      expect(apiaries.items).toHaveLength(1);
+      expect(apiaries.items[0]?.name).toBe(apiaryFields.name);
+      const hives = await readJson<{ items: unknown[] }>(
+        await owner.request('/api/v1/resources/hive'),
+      );
+      expect(hives.items).toEqual([]);
+      const media = await owner.request(`/api/v1/media/${mediaOperation.entityId}/content`);
+      expect(media.status).toBe(200);
+      expect(Array.from(new Uint8Array(await media.arrayBuffer()))).toEqual(Array.from(bytes));
+
+      // A device replica pulling from its pre-restore cursor converges without
+      // any cursor reset: the restore is expressed as ordinary change rows.
+      const convergence = await readJson<{
+        changes: Array<{ entityType: string; entityId: string; action: string }>;
+      }>(await owner.request(`/api/v1/sync/pull?cursor=${replicaCursor.nextCursor}&limit=250`));
+      expect(
+        convergence.changes.some(
+          (change) => change.action === 'delete' && change.entityType === 'hive',
+        ),
+      ).toBe(true);
+      expect(
+        convergence.changes.some(
+          (change) => change.action === 'upsert' && change.entityId === apiaryOperation.entityId,
+        ),
+      ).toBe(true);
+    },
+  },
+  {
+    contract: 'api/import.integrity-refusal',
+    title: 'a tampered or foreign backup file is refused completely and changes nothing',
+    async run(world) {
+      const owner = await world.owner();
+      await owner.mustPush([createOperation('apiary', { ...apiaryFields })]);
+      const exported = await owner.request('/api/v1/export/full');
+      const files = unzipSync(new Uint8Array(await exported.arrayBuffer()));
+
+      // Modify the data without updating the manifest's recorded checksum.
+      const tampered = zipSync({
+        ...files,
+        'data.json': strToU8(
+          strFromU8(files['data.json']!).replace(apiaryFields.name, 'Tampered yard'),
+        ),
+      });
+      const corrupt = await owner.request('/api/v1/import/full', {
+        method: 'POST',
+        body: tampered,
+      });
+      expect(corrupt.status).toBe(400);
+      expect(await readErrorCode(corrupt)).toBe('import_corrupt');
+
+      // A file that is not an ApiaryLens export at all.
+      const foreign = await owner.request('/api/v1/import/full', {
+        method: 'POST',
+        body: new Uint8Array([0x01, 0x02, 0x03, 0x04]),
+      });
+      expect(foreign.status).toBe(400);
+      expect(await readErrorCode(foreign)).toBe('import_invalid');
+
+      const list = await readJson<{ items: Array<Record<string, unknown>> }>(
+        await owner.request('/api/v1/resources/apiary'),
+      );
+      expect(list.items).toHaveLength(1);
+      expect(list.items[0]?.name).toBe(apiaryFields.name);
     },
   },
 ];
