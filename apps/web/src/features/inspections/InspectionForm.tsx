@@ -3,6 +3,7 @@ import { queueCreate, queueUpdate, stageImage, type LocalResource } from '../../
 import { readManualWeatherSnapshot } from '../../weather-fields.js';
 import { fieldChoices } from '../../field-intelligence.js';
 import { GlossaryLink } from '../glossary/GlossaryLink.js';
+import { WeatherAssist } from './WeatherAssist.js';
 import { toLocalDateTime } from './format.js';
 
 export function InspectionForm({
@@ -183,7 +184,8 @@ export function InspectionForm({
       <fieldset>
         <legend>Optional manual weather snapshot</legend>
         <p className="field-hint">
-          Works without a connection and does not share your location with a weather provider.
+          Manual entries work without a connection and never share your location. The optional
+          provider lookup below runs only with your consent.
         </p>
         <div className="form-grid">
           <label>
@@ -302,6 +304,7 @@ export function InspectionForm({
             </select>
           </label>
         </div>
+        <WeatherAssist hives={hives} existingWeather={data?.weather} />
       </fieldset>
       <label>
         Inspection photos

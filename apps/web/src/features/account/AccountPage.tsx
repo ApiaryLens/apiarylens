@@ -248,7 +248,7 @@ export function VersionView({
         </section>
       )}
       {session.membership.role === 'owner' && session.csrfToken && (
-        <FamilyAccess csrfToken={session.csrfToken} />
+        <FamilyAccess csrfToken={session.csrfToken} organizationId={session.organization.id} />
       )}
     </>
   );
