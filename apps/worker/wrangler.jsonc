@@ -1,9 +1,13 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  // CAF/WAF naming: <workload>-<env>. This is the public demo worker (apiarylens.app).
-  "name": "apiarylens-demo",
-  // Owner decision 2026-07-19: deploy to the existing account (subdomain stays
-  // hybridsolutionscloud); demo is served on the apiarylens.app custom domain.
+  // CAF/WAF naming: <workload>-<role>. This is the production API BACKEND.
+  // It serves /api/v1 + /health + sync only; it is NOT a public site and is
+  // NOT bound to apiarylens.app (that domain belongs to the apiarylens.app
+  // repo's apiarylens-app worker, which service-binds to THIS worker as `API`).
+  // Renamed from the prohibited legacy `apiarylens-family-production`.
+  "name": "apiarylens-api",
+  // CF-001: pin the ApiaryLens Cloudflare account so deploys fail loudly
+  // instead of following whatever account the ambient token resolves to.
   "account_id": "5d8be56e19f1f800b8e482a449472dd9",
   "main": "src/index.ts",
   "compatibility_date": "2026-07-15",
@@ -11,28 +15,16 @@
   "send_metrics": false,
   "workers_dev": false,
   "preview_urls": false,
-  "routes": [
-    { "pattern": "apiarylens.app", "custom_domain": true },
-    { "pattern": "www.apiarylens.app", "custom_domain": true },
-  ],
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "d1-apiarylens-demo",
-      "database_id": "fd2ba9c5-13cb-4fac-85df-73502101acba",
+      "database_name": "d1-apiarylens-api",
+      "database_id": "0663dbdc-da50-47d3-afca-7f129e570a2e",
       "migrations_dir": "migrations",
     },
   ],
-  // No R2 bucket: the demo runs without media storage. The worker's MEDIA
-  // binding is optional (src/index.ts) and media routes return 503 when unbound.
-  // A media-enabled profile (Compose/self-host) binds its own R2 bucket.
-  // Serve the built PWA (apps/web) as static assets. /api/* runs the Worker first
-  // (the API); every other path serves a static asset, falling back to index.html
-  // for client-side SPA routes.
-  "assets": {
-    "directory": "../web/dist",
-    "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"],
-  },
+  // MEDIA (R2) is optional (src/index.ts): with no bucket bound, photo/thumbnail
+  // routes return 503 and backup/export degrade to DB-only. Bind
+  // r2-apiarylens-media-prod here when production media storage is provisioned.
   "observability": { "enabled": false },
 }
