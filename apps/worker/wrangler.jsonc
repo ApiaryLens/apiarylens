@@ -1,6 +1,11 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "apiarylens-family",
+  // CAF/WAF naming: <workload>-<role>. This is the production API BACKEND.
+  // It serves /api/v1 + /health + sync only; it is NOT a public site and is
+  // NOT bound to apiarylens.app (that domain belongs to the apiarylens.app
+  // repo's apiarylens-app worker, which service-binds to THIS worker as `API`).
+  // Renamed from the prohibited legacy `apiarylens-family-production`.
+  "name": "apiarylens-api",
   // CF-001: pin the ApiaryLens Cloudflare account so deploys fail loudly
   // instead of following whatever account the ambient token resolves to.
   "account_id": "5d8be56e19f1f800b8e482a449472dd9",
@@ -8,61 +13,18 @@
   "compatibility_date": "2026-07-15",
   "compatibility_flags": ["nodejs_compat"],
   "send_metrics": false,
+  "workers_dev": false,
+  "preview_urls": false,
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "apiarylens-family",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_name": "d1-apiarylens-api",
+      "database_id": "0663dbdc-da50-47d3-afca-7f129e570a2e",
       "migrations_dir": "migrations",
     },
   ],
-  "r2_buckets": [
-    {
-      "binding": "MEDIA",
-      "bucket_name": "apiarylens-family-media",
-    },
-  ],
+  // MEDIA (R2) is optional (src/index.ts): with no bucket bound, photo/thumbnail
+  // routes return 503 and backup/export degrade to DB-only. Bind
+  // r2-apiarylens-media-prod here when production media storage is provisioned.
   "observability": { "enabled": false },
-  "env": {
-    "uat": {
-      "name": "apiarylens-family-uat",
-      "workers_dev": true,
-      "preview_urls": false,
-      "d1_databases": [
-        {
-          "binding": "DB",
-          "database_name": "apiarylens-family-uat",
-          "database_id": "ae55b0ed-37a1-4341-b0d3-902b6d26fadd",
-          "migrations_dir": "migrations",
-        },
-      ],
-      "r2_buckets": [
-        {
-          "binding": "MEDIA",
-          "bucket_name": "apiarylens-family-media-uat",
-        },
-      ],
-      "observability": { "enabled": false },
-    },
-    "production": {
-      "name": "apiarylens-family-production",
-      "workers_dev": false,
-      "preview_urls": false,
-      "d1_databases": [
-        {
-          "binding": "DB",
-          "database_name": "apiarylens-family-production",
-          "database_id": "584a23df-c7ef-42a0-a3b1-62c1f58744ed",
-          "migrations_dir": "migrations",
-        },
-      ],
-      "r2_buckets": [
-        {
-          "binding": "MEDIA",
-          "bucket_name": "apiarylens-family-media-production",
-        },
-      ],
-      "observability": { "enabled": false },
-    },
-  },
 }

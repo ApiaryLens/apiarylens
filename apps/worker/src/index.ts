@@ -28,7 +28,10 @@ import { hashPassword, keyedHash, opaqueToken, sha256, verifyPassword } from './
 
 interface Bindings {
   DB: D1Database;
-  MEDIA: R2Bucket;
+  // Optional: a demo/lean deployment may run without media storage (no R2 bucket
+  // bound). Media routes degrade cleanly when it is absent; deployments that bind
+  // a bucket keep full photo/attachment behaviour.
+  MEDIA?: R2Bucket;
   BOOTSTRAP_TOKEN?: string;
   AUTH_ROOT_SECRET?: string;
   SCOUT_OPERATOR_TOKEN?: string;
@@ -550,8 +553,8 @@ app.post('/api/v1/sync/push', requireSession, requireCsrf, async (c) => {
       (result.status === 'accepted' || result.status === 'duplicate')
     ) {
       await Promise.all([
-        c.env.MEDIA.delete(mediaKey(c.get('session').organizationId, operation.entityId)),
-        c.env.MEDIA.delete(
+        c.env.MEDIA?.delete(mediaKey(c.get('session').organizationId, operation.entityId)),
+        c.env.MEDIA?.delete(
           mediaKey(c.get('session').organizationId, operation.entityId, 'thumbnail'),
         ),
       ]);
@@ -617,6 +620,8 @@ app.get('/api/v1/resources/:type/:id', requireSession, async (c) => {
 app.put('/api/v1/media/:id/content', requireSession, requireCsrf, async (c) => {
   if (!rolePermissions[c.get('session').role].includes('media:write'))
     return apiError(c, 403, 'permission_denied', 'You do not have permission for this action');
+  if (!c.env.MEDIA)
+    return apiError(c, 503, 'media_unavailable', 'Media storage is not configured for this deployment');
   const metadata = await resource(
     c.env.DB,
     c.get('session').organizationId,
@@ -655,6 +660,8 @@ app.put('/api/v1/media/:id/content', requireSession, requireCsrf, async (c) => {
 app.put('/api/v1/media/:id/thumbnail', requireSession, requireCsrf, async (c) => {
   if (!rolePermissions[c.get('session').role].includes('media:write'))
     return apiError(c, 403, 'permission_denied', 'You do not have permission for this action');
+  if (!c.env.MEDIA)
+    return apiError(c, 503, 'media_unavailable', 'Media storage is not configured for this deployment');
   const metadata = await resource(
     c.env.DB,
     c.get('session').organizationId,
@@ -688,6 +695,8 @@ app.put('/api/v1/media/:id/thumbnail', requireSession, requireCsrf, async (c) =>
 app.get('/api/v1/media/:id/content', requireSession, async (c) => {
   if (!rolePermissions[c.get('session').role].includes('media:read'))
     return apiError(c, 403, 'permission_denied', 'You do not have permission for this action');
+  if (!c.env.MEDIA)
+    return apiError(c, 503, 'media_unavailable', 'Media storage is not configured for this deployment');
   const metadata = await resource(
     c.env.DB,
     c.get('session').organizationId,
@@ -728,8 +737,8 @@ app.delete('/api/v1/media/:id/content', requireSession, requireCsrf, async (c) =
   );
   if (!metadata || metadata.deletedAt)
     return apiError(c, 404, 'media_not_found', 'The media record was not found');
-  await c.env.MEDIA.delete(mediaKey(c.get('session').organizationId, c.req.param('id')));
-  await c.env.MEDIA.delete(
+  await c.env.MEDIA?.delete(mediaKey(c.get('session').organizationId, c.req.param('id')));
+  await c.env.MEDIA?.delete(
     mediaKey(c.get('session').organizationId, c.req.param('id'), 'thumbnail'),
   );
   const updated = {
@@ -783,7 +792,8 @@ app.get('/api/v1/export/full', requireSession, async (c) => {
     files[`csv/${type}.csv`] = strToU8(toCsv(resources[type] ?? []));
   }
   for (const metadata of resources.mediaAsset ?? []) {
-    const object = await c.env.MEDIA.get(
+    // Deployments without media storage simply omit media bytes from the export.
+    const object = await c.env.MEDIA?.get(
       mediaKey(c.get('session').organizationId, String(metadata.id)),
     );
     if (object)
@@ -849,6 +859,15 @@ app.post('/api/v1/import/full', requireSession, requireCsrf, async (c) => {
   // against the record itself) or unreferenced until the records land.
   try {
     for (const [mediaId, mediaContent] of parsed.mediaBytes) {
+      // A deployment without media storage cannot restore an archive that
+      // carries media; fail before touching records so nothing is half-restored.
+      if (!c.env.MEDIA)
+        return apiError(
+          c,
+          503,
+          'media_unavailable',
+          'This deployment has no media storage; the archive contains media that cannot be restored.',
+        );
       // Drop any pre-restore thumbnail so a stale derivative never outlives
       // the restored original; clients regenerate on demand.
       await c.env.MEDIA.delete(mediaKey(organizationId, mediaId, 'thumbnail'));
@@ -958,8 +977,8 @@ app.post('/api/v1/import/full', requireSession, requireCsrf, async (c) => {
     .map((record) => record.id)
     .filter((id) => !parsed.mediaBytes.has(id));
   for (const staleId of [...removedMediaIds, ...staleImportedIds]) {
-    await c.env.MEDIA.delete(mediaKey(organizationId, staleId)).catch(() => undefined);
-    await c.env.MEDIA.delete(mediaKey(organizationId, staleId, 'thumbnail')).catch(() => undefined);
+    await c.env.MEDIA?.delete(mediaKey(organizationId, staleId)).catch(() => undefined);
+    await c.env.MEDIA?.delete(mediaKey(organizationId, staleId, 'thumbnail')).catch(() => undefined);
   }
   return c.json({
     status: 'restored',
@@ -990,15 +1009,18 @@ app.get('/api/v1/operator/backup', requireScoutOperator, async (c) => {
     >();
     files[`database/${table}.json`] = strToU8(JSON.stringify(response.results));
   }
-  let cursor: string | undefined;
-  do {
-    const page = await c.env.MEDIA.list(cursor ? { cursor } : {});
-    for (const entry of page.objects) {
-      const object = await c.env.MEDIA.get(entry.key);
-      if (object) files[`media/${entry.key}`] = new Uint8Array(await object.arrayBuffer());
-    }
-    cursor = page.truncated ? page.cursor : undefined;
-  } while (cursor);
+  // Deployments without media storage back up the database only.
+  if (c.env.MEDIA) {
+    let cursor: string | undefined;
+    do {
+      const page = await c.env.MEDIA.list(cursor ? { cursor } : {});
+      for (const entry of page.objects) {
+        const object = await c.env.MEDIA.get(entry.key);
+        if (object) files[`media/${entry.key}`] = new Uint8Array(await object.arrayBuffer());
+      }
+      cursor = page.truncated ? page.cursor : undefined;
+    } while (cursor);
+  }
   const archive = zipSync(files, { level: 6 });
   return new Response(archive.buffer as ArrayBuffer, {
     headers: {
@@ -1057,14 +1079,24 @@ app.post('/api/v1/operator/restore', requireScoutOperator, async (c) => {
     await runBatches(c.env.DB, statements);
   }
 
-  let cursor: string | undefined;
-  do {
-    const page = await c.env.MEDIA.list(cursor ? { cursor } : {});
-    await Promise.all(page.objects.map((entry) => c.env.MEDIA.delete(entry.key)));
-    cursor = page.truncated ? page.cursor : undefined;
-  } while (cursor);
-  for (const [path, value] of Object.entries(archive)) {
-    if (path.startsWith('media/')) await c.env.MEDIA.put(path.slice('media/'.length), value);
+  const archiveHasMedia = Object.keys(archive).some((path) => path.startsWith('media/'));
+  if (archiveHasMedia && !c.env.MEDIA)
+    return apiError(
+      c,
+      503,
+      'media_unavailable',
+      'This deployment has no media storage; the backup contains media that cannot be restored.',
+    );
+  if (c.env.MEDIA) {
+    let cursor: string | undefined;
+    do {
+      const page = await c.env.MEDIA.list(cursor ? { cursor } : {});
+      await Promise.all(page.objects.map((entry) => c.env.MEDIA?.delete(entry.key)));
+      cursor = page.truncated ? page.cursor : undefined;
+    } while (cursor);
+    for (const [path, value] of Object.entries(archive)) {
+      if (path.startsWith('media/')) await c.env.MEDIA.put(path.slice('media/'.length), value);
+    }
   }
   return c.json({ status: 'ok', restoredAt: now(), sessionsRevoked: true });
 });
@@ -1476,7 +1508,7 @@ function setSessionCookie(c: AppContext, token: string) {
 
 function apiError(
   c: AppContext,
-  status: 400 | 401 | 403 | 404 | 409 | 429 | 500,
+  status: 400 | 401 | 403 | 404 | 409 | 429 | 500 | 503,
   code: string,
   message: string,
 ) {
